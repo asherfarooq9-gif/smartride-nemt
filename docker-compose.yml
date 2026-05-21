@@ -1,0 +1,98 @@
+services:
+
+  postgres:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: smartride_postgres
+    environment:
+      POSTGRES_USER: smartride
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: smartride
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smartride"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: smartride_redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: smartride_backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://smartride:password@postgres:5432/smartride
+      REDIS_URL: redis://redis:6379/0
+      TRIAGE_SERVICE_URL: http://triage:8001
+      SECRET_KEY: ${SECRET_KEY:-dev_secret_change_in_prod}
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER:-}
+      DEBUG: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  triage:
+    build: ./ai-services/triage
+    container_name: smartride_triage
+    ports:
+      - "8001:8001"
+    environment:
+      MODEL_PATH: /app/model
+      REDIS_URL: redis://redis:6379/1
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./ai-services/triage:/app
+      - triage_model:/app/model
+    command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+
+  celery_worker:
+    build: ./backend
+    container_name: smartride_celery
+    command: celery -A app.core.celery_app worker --loglevel=info
+    environment:
+      DATABASE_URL: postgresql+asyncpg://smartride:password@postgres:5432/smartride
+      REDIS_URL: redis://redis:6379/0
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER:-}
+    depends_on:
+      - postgres
+      - redis
+      - backend
+
+  admin_dashboard:
+    build: ./admin-dashboard
+    container_name: smartride_admin
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  triage_model:
