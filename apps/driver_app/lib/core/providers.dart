@@ -24,12 +24,7 @@ class AuthState {
   bool get isLoggedIn => token != null;
 
   AuthState copyWith({String? token, String? userId, bool? loading, String? error}) {
-    return AuthState(
-      token: token ?? this.token,
-      userId: userId ?? this.userId,
-      loading: loading ?? this.loading,
-      error: error,
-    );
+    return AuthState(token: token ?? this.token, userId: userId ?? this.userId, loading: loading ?? this.loading, error: error);
   }
 }
 
@@ -68,6 +63,96 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> logout() async {
     await clearToken();
     state = const AuthState();
+  }
+}
+
+// ── Driver Profile ────────────────────────────────────────────────────────────
+
+final driverProfileProvider = StateNotifierProvider<DriverProfileNotifier, DriverProfileState>((ref) {
+  return DriverProfileNotifier(ref.read(dioProvider));
+});
+
+class DriverProfileState {
+  final Map<String, dynamic>? data;
+  final bool loading;
+  final String? error;
+
+  const DriverProfileState({this.data, this.loading = false, this.error});
+
+  DriverProfileState copyWith({Map<String, dynamic>? data, bool? loading, String? error}) {
+    return DriverProfileState(data: data ?? this.data, loading: loading ?? this.loading, error: error);
+  }
+}
+
+class DriverProfileNotifier extends StateNotifier<DriverProfileState> {
+  final Dio _dio;
+
+  DriverProfileNotifier(this._dio) : super(const DriverProfileState());
+
+  Future<void> load() async {
+    state = state.copyWith(loading: true, error: null);
+    try {
+      final res = await _dio.get('/api/v1/drivers/me');
+      state = state.copyWith(data: res.data as Map<String, dynamic>, loading: false);
+    } on DioException catch (e) {
+      final msg = (e.response?.data is Map ? e.response?.data['detail'] : null) ?? e.message ?? 'Failed';
+      state = state.copyWith(loading: false, error: msg.toString());
+    }
+  }
+
+  Future<bool> update(Map<String, dynamic> body) async {
+    try {
+      final res = await _dio.patch('/api/v1/drivers/me', data: body);
+      state = state.copyWith(data: res.data as Map<String, dynamic>);
+      return true;
+    } on DioException catch (e) {
+      final msg = (e.response?.data is Map ? e.response?.data['detail'] : null) ?? e.message ?? 'Update failed';
+      state = state.copyWith(error: msg.toString());
+      return false;
+    }
+  }
+}
+
+// ── Ride History ──────────────────────────────────────────────────────────────
+
+final rideHistoryProvider = StateNotifierProvider<RideHistoryNotifier, RideHistoryState>((ref) {
+  return RideHistoryNotifier(ref.read(dioProvider));
+});
+
+class RideHistoryState {
+  final List<Map<String, dynamic>> rides;
+  final bool loading;
+  final String? error;
+
+  const RideHistoryState({this.rides = const [], this.loading = false, this.error});
+
+  RideHistoryState copyWith({List<Map<String, dynamic>>? rides, bool? loading, String? error}) {
+    return RideHistoryState(rides: rides ?? this.rides, loading: loading ?? this.loading, error: error);
+  }
+
+  double get totalEarnings => rides
+      .where((r) => r['final_fare_pkr'] != null)
+      .fold(0.0, (sum, r) => sum + (r['final_fare_pkr'] as num).toDouble());
+
+  int get completedCount => rides.where((r) => r['status'] == 'completed').length;
+  int get emergencyCount => rides.where((r) => r['ride_type'] == 'emergency').length;
+}
+
+class RideHistoryNotifier extends StateNotifier<RideHistoryState> {
+  final Dio _dio;
+
+  RideHistoryNotifier(this._dio) : super(const RideHistoryState());
+
+  Future<void> load() async {
+    state = state.copyWith(loading: true, error: null);
+    try {
+      final res = await _dio.get('/api/v1/rides/mine?page_size=100');
+      final items = (res.data['items'] as List).cast<Map<String, dynamic>>();
+      state = state.copyWith(rides: items, loading: false);
+    } on DioException catch (e) {
+      final msg = (e.response?.data is Map ? e.response?.data['detail'] : null) ?? e.message ?? 'Failed';
+      state = state.copyWith(loading: false, error: msg.toString());
+    }
   }
 }
 
@@ -160,9 +245,7 @@ class GpsStreamNotifier extends StateNotifier<bool> {
     if (perm == LocationPermission.denied) perm = await Geolocator.requestPermission();
     if (perm == LocationPermission.deniedForever) return;
 
-    _channel = WebSocketChannel.connect(
-      Uri.parse('$_wsBase/ws/driver/$rideId?token=$token'),
-    );
+    _channel = WebSocketChannel.connect(Uri.parse('$_wsBase/ws/driver/$rideId?token=$token'));
 
     _gpsSub = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 10),

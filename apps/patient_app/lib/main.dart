@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'core/router.dart';
+import 'core/theme.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -28,11 +29,7 @@ class SmartRideApp extends ConsumerWidget {
     final router = ref.watch(routerProvider);
     return MaterialApp.router(
       title: 'SmartRide Patient',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1976D2)),
-        useMaterial3: true,
-        appBarTheme: const AppBarTheme(centerTitle: true),
-      ),
+      theme: buildTheme(),
       routerConfig: router,
       debugShowCheckedModeBanner: false,
     );

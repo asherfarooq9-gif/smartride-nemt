@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Any, Dict
 from datetime import datetime
 from pydantic import BaseModel
 from app.models.models import RideType, RideStatus
@@ -20,6 +20,7 @@ class ScheduledRideRequest(BaseModel):
 
 class RideStatusUpdate(BaseModel):
     status: RideStatus
+    cancel_reason: Optional[str] = None
 
 
 class RideResponse(BaseModel):
@@ -44,6 +45,13 @@ class RideResponse(BaseModel):
     final_fare_pkr: Optional[float] = None
 
     model_config = {"from_attributes": True}
+
+
+class RideDetailResponse(RideResponse):
+    patient: Optional[Dict[str, Any]] = None
+    driver: Optional[Dict[str, Any]] = None
+    hospital: Optional[Dict[str, Any]] = None
+    triage: Optional[Dict[str, Any]] = None
 
 
 class RideListResponse(BaseModel):

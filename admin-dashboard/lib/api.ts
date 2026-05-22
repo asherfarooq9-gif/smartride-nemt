@@ -30,6 +30,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return res.json()
 }
 
+function qs(params: Record<string, string | number | boolean | undefined>): string {
+  const parts = Object.entries(params)
+    .filter(([, v]) => v !== undefined && v !== '')
+    .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
+  return parts.length ? '?' + parts.join('&') : ''
+}
+
 export const api = {
   login: (phone: string, password: string) =>
     request<{ access_token: string; role: string }>('/api/v1/auth/login', {
@@ -39,16 +46,34 @@ export const api = {
 
   summary: () => request<DashboardSummary>('/api/v1/analytics/summary'),
 
-  rides: (page = 1) =>
-    request<{ items: Ride[]; total: number }>(`/api/v1/rides?page=${page}&page_size=20`),
-
-  drivers: (page = 1) =>
-    request<{ items: Driver[]; total: number; page: number }>(
-      `/api/v1/drivers?page=${page}&page_size=20`
+  rides: (page = 1, status?: string, ride_type?: string, search?: string) =>
+    request<{ items: Ride[]; total: number }>(
+      `/api/v1/rides${qs({ page, page_size: 20, status, ride_type, search })}`
     ),
 
-  verifyDriver: (id: string) =>
-    request<Driver>(`/api/v1/drivers/${id}/verify`, { method: 'PATCH' }),
+  rideDetail: (id: string) => request<RideDetail>(`/api/v1/rides/${id}/detail`),
+
+  cancelRide: (id: string) =>
+    request<Ride>(`/api/v1/rides/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'cancelled' }),
+    }),
+
+  drivers: (page = 1, status?: string, is_verified?: string, search?: string) =>
+    request<{ items: Driver[]; total: number; page: number }>(
+      `/api/v1/drivers${qs({ page, page_size: 20, status, is_verified, search })}`
+    ),
+
+  verifyDriver: (id: string, verified: boolean) =>
+    request<Driver>(`/api/v1/drivers/${id}/verify`, {
+      method: 'PATCH',
+      body: JSON.stringify({ is_verified: verified }),
+    }),
+
+  patients: (page = 1, search?: string) =>
+    request<{ items: Patient[]; total: number }>(
+      `/api/v1/patients${qs({ page, page_size: 20, search })}`
+    ),
 
   hospitals: () => request<{ items: Hospital[]; total: number }>('/api/v1/hospitals?active_only=false'),
 
@@ -66,6 +91,7 @@ export const api = {
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
 export interface Ride {
   id: string
   patient_id: string
@@ -79,6 +105,20 @@ export interface Ride {
   requested_at: string
   driver_assigned_at: string | null
   completed_at: string | null
+  estimated_fare_pkr: number | null
+  final_fare_pkr: number | null
+}
+
+export interface RideDetail extends Ride {
+  patient: { full_name: string; phone: string; mobility_needs: string | null } | null
+  driver: { full_name: string; phone: string; vehicle_plate: string; vehicle_type: string } | null
+  hospital: { name: string; address: string; city: string } | null
+  triage: {
+    symptom_text: string
+    predicted_specialty: string
+    confidence_score: number
+    severity_level: string
+  } | null
 }
 
 export interface Driver {
@@ -94,6 +134,19 @@ export interface Driver {
   current_lng: number | null
   last_seen_at: string | null
   created_at: string
+}
+
+export interface Patient {
+  id: string
+  user_id: string
+  phone: string
+  full_name: string
+  date_of_birth: string | null
+  mobility_needs: string | null
+  emergency_contact_name: string | null
+  emergency_contact_phone: string | null
+  created_at: string
+  total_rides?: number
 }
 
 export interface Hospital {

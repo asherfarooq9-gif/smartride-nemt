@@ -4,6 +4,8 @@ import 'api_client.dart';
 
 final dioProvider = Provider<Dio>((ref) => createDio());
 
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   return AuthNotifier(ref.read(dioProvider));
 });
@@ -83,6 +85,55 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 }
 
+// ── Profile ───────────────────────────────────────────────────────────────────
+
+final profileProvider = StateNotifierProvider<ProfileNotifier, ProfileState>((ref) {
+  return ProfileNotifier(ref.read(dioProvider));
+});
+
+class ProfileState {
+  final Map<String, dynamic>? data;
+  final bool loading;
+  final String? error;
+
+  const ProfileState({this.data, this.loading = false, this.error});
+
+  ProfileState copyWith({Map<String, dynamic>? data, bool? loading, String? error}) {
+    return ProfileState(data: data ?? this.data, loading: loading ?? this.loading, error: error);
+  }
+}
+
+class ProfileNotifier extends StateNotifier<ProfileState> {
+  final Dio _dio;
+
+  ProfileNotifier(this._dio) : super(const ProfileState());
+
+  Future<void> load() async {
+    state = state.copyWith(loading: true, error: null);
+    try {
+      final res = await _dio.get('/api/v1/patients/me');
+      state = state.copyWith(data: res.data as Map<String, dynamic>, loading: false);
+    } on DioException catch (e) {
+      final msg = (e.response?.data is Map ? e.response?.data['detail'] : null) ?? e.message ?? 'Failed';
+      state = state.copyWith(loading: false, error: msg.toString());
+    }
+  }
+
+  Future<bool> update(Map<String, dynamic> body) async {
+    try {
+      final res = await _dio.patch('/api/v1/patients/me', data: body);
+      state = state.copyWith(data: res.data as Map<String, dynamic>);
+      return true;
+    } on DioException catch (e) {
+      final msg = (e.response?.data is Map ? e.response?.data['detail'] : null) ?? e.message ?? 'Update failed';
+      state = state.copyWith(error: msg.toString());
+      return false;
+    }
+  }
+}
+
+// ── Rides ─────────────────────────────────────────────────────────────────────
+
 final ridesProvider = StateNotifierProvider<RidesNotifier, RidesState>((ref) {
   return RidesNotifier(ref.read(dioProvider));
 });
@@ -134,12 +185,41 @@ class RidesNotifier extends StateNotifier<RidesState> {
     }
   }
 
+  Future<Map<String, dynamic>?> bookScheduled({
+    required double lat,
+    required double lng,
+    String? address,
+    required DateTime scheduledFor,
+  }) async {
+    state = state.copyWith(loading: true, error: null);
+    try {
+      final res = await _dio.post('/api/v1/rides/scheduled', data: {
+        'pickup_lat': lat,
+        'pickup_lng': lng,
+        if (address != null) 'pickup_address': address,
+        'scheduled_for': scheduledFor.toUtc().toIso8601String(),
+      });
+      final ride = res.data as Map<String, dynamic>;
+      state = state.copyWith(loading: false);
+      return ride;
+    } on DioException catch (e) {
+      final msg = (e.response?.data is Map ? e.response?.data['detail'] : null) ?? e.message ?? 'Request failed';
+      state = state.copyWith(loading: false, error: msg.toString());
+      return null;
+    }
+  }
+
   Future<void> loadHistory() async {
     state = state.copyWith(loading: true, error: null);
     try {
       final res = await _dio.get('/api/v1/rides/mine');
       final items = (res.data['items'] as List).cast<Map<String, dynamic>>();
-      state = state.copyWith(rides: items, loading: false);
+      // Find active ride
+      final active = items.where((r) {
+        final s = r['status'] as String;
+        return s == 'pending' || s == 'driver_assigned' || s == 'driver_en_route' || s == 'patient_picked_up' || s == 'arrived_at_hospital';
+      }).toList();
+      state = state.copyWith(rides: items, loading: false, activeRide: active.isNotEmpty ? active.first : null);
     } on DioException catch (e) {
       final msg = (e.response?.data is Map ? e.response?.data['detail'] : null) ?? e.message ?? 'Failed to load rides';
       state = state.copyWith(loading: false, error: msg.toString());
@@ -153,5 +233,48 @@ class RidesNotifier extends StateNotifier<RidesState> {
     } catch (_) {
       return null;
     }
+  }
+
+  Future<Map<String, dynamic>?> getRideDetail(String rideId) async {
+    try {
+      final res = await _dio.get('/api/v1/rides/$rideId/detail');
+      return res.data as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<bool> cancelRide(String rideId) async {
+    try {
+      await _dio.patch('/api/v1/rides/$rideId/status', data: {'status': 'cancelled'});
+      await loadHistory();
+      return true;
+    } on DioException catch (e) {
+      final msg = (e.response?.data is Map ? e.response?.data['detail'] : null) ?? e.message ?? 'Cancel failed';
+      state = state.copyWith(error: msg.toString());
+      return false;
+    }
+  }
+}
+
+// ── Hospitals ─────────────────────────────────────────────────────────────────
+
+final hospitalsProvider = StateNotifierProvider<HospitalsNotifier, List<Map<String, dynamic>>>((ref) {
+  return HospitalsNotifier(ref.read(dioProvider));
+});
+
+class HospitalsNotifier extends StateNotifier<List<Map<String, dynamic>>> {
+  final Dio _dio;
+
+  HospitalsNotifier(this._dio) : super([]) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final res = await _dio.get('/api/v1/hospitals');
+      final items = (res.data['items'] as List).cast<Map<String, dynamic>>();
+      state = items;
+    } catch (_) {}
   }
 }
