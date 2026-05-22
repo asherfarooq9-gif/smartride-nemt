@@ -54,8 +54,23 @@ Patient/Driver Apps (Flutter)
 | 6 | Realtime GPS (WebSocket) | pending |
 | 7 | Analytics & demand forecast | pending |
 | 8 | Admin dashboard | pending |
-| 9 | Flutter mobile apps | pending |
+| 9 | Flutter patient & driver apps (Riverpod + Dio, emergency flow, FCM) | pending |
 | 10 | Tests, load, CI/CD, deploy | pending |
+
+## Milestone 9 — Flutter apps scope
+
+**Patient app** (`apps/patient_app`): Riverpod + Dio (auth interceptor). Screens: splash → login/register → home (large red Emergency button + Book Ride) → symptom input (WCAG-AA quick-select + free text) → live tracking map (google_maps_flutter) → ride history. Emergency flow: capture GPS (geolocator) → POST /rides/emergency → poll GET /rides/{id} until driver assigned → open live map.
+
+**Driver app** (`apps/driver_app`): Login → availability toggle (PATCH /drivers/status) → stream GPS to WebSocket → incoming ride card (accept/decline 30 s timer) → turn-by-turn navigation → status buttons (picked up / arrived / completed via PATCH /rides/{id}/status).
+
+Both apps: FCM push notifications for ride status / new requests.
+
+Done when: both apps compile (`flutter build apk --debug`) and the emergency flow works against the local backend.
+
+Prerequisites (check before writing app code):
+1. `flutter --version` — SDK must be present; if not, install from https://docs.flutter.dev/get-started/install
+2. `flutter doctor -v` — Flutter SDK + Android toolchain + accepted licences must be green
+3. Run target: connected device with USB debugging **or** a launched emulator
 
 ## Env variables
 
