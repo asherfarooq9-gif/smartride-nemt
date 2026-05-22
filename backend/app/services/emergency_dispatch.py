@@ -82,13 +82,15 @@ async def dispatch_emergency(
     """
     pipeline_start = time.time()
 
-    # ── STEP 1: parallel triage + load hospitals ───────────────────────────
+    # ── STEP 1: parallel triage + load hospitals + load patient ───────────
     triage_task    = asyncio.create_task(call_triage_service(symptom_text))
     hospitals_task = asyncio.create_task(load_active_hospitals(db))
+    patient_task   = asyncio.create_task(load_patient(db, ride.patient_id))
 
-    triage_result, hospital_rows = await asyncio.gather(triage_task, hospitals_task)
+    triage_result, hospital_rows, patient = await asyncio.gather(
+        triage_task, hospitals_task, patient_task
+    )
 
-    # rule-based severity override
     if detect_severity_override(symptom_text):
         triage_result["severity"] = "5"
         triage_result["rule_override"] = True
@@ -146,9 +148,6 @@ async def dispatch_emergency(
     await db.commit()
 
     # ── STEP 5: parallel — family SMS + hospital pre-alert ─────────────────
-    patient_result = await db.execute(select(Patient).where(Patient.id == ride.patient_id))
-    patient = patient_result.scalar_one()
-
     await asyncio.gather(
         send_family_sms(patient=patient, ride=ride, driver=driver, hospital_name=matches[0].hospital_name),
         send_hospital_alert(ride=ride, triage=triage_result, hospital=matches[0], patient=patient),
@@ -175,3 +174,8 @@ async def dispatch_emergency(
 async def load_active_hospitals(db: AsyncSession):
     result = await db.execute(select(Hospital).where(Hospital.is_active == True))
     return result.scalars().all()
+
+
+async def load_patient(db: AsyncSession, patient_id):
+    result = await db.execute(select(Patient).where(Patient.id == patient_id))
+    return result.scalar_one()

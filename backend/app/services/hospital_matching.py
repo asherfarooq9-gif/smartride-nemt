@@ -30,6 +30,7 @@ class MatchResult:
     score: float
     distance_km: float
     ed_occupancy_pct: float
+    fhir_endpoint: Optional[str]
     has_fhir: bool
     coordinator_phone: Optional[str]
 
@@ -67,18 +68,16 @@ def match_hospitals(
             return False
         return True
 
-    filtered = []
-    for h in candidates:
-        dist = haversine_km(patient_lat, patient_lng, h.lat, h.lng)
-        if passes_filter(h, dist):
-            filtered.append((h, dist))
+    all_with_dist = [(h, haversine_km(patient_lat, patient_lng, h.lat, h.lng)) for h in candidates]
+
+    filtered = [(h, d) for h, d in all_with_dist if passes_filter(h, d)]
 
     if not filtered:
-        # fallback: relax specialty filter, keep nearest with capacity
-        for h in candidates:
-            dist = haversine_km(patient_lat, patient_lng, h.lat, h.lng)
-            if dist <= max_radius_km and h.ed_current_load < h.ed_capacity:
-                filtered.append((h, dist))
+        # fallback: relax specialty filter, reuse already-computed distances
+        filtered = [
+            (h, d) for h, d in all_with_dist
+            if d <= max_radius_km and h.ed_current_load < h.ed_capacity
+        ]
 
     if not filtered:
         return []
@@ -115,6 +114,7 @@ def match_hospitals(
             score=round(score, 4),
             distance_km=round(dist, 2),
             ed_occupancy_pct=round((h.ed_current_load / max(h.ed_capacity, 1)) * 100, 1),
+            fhir_endpoint=h.fhir_endpoint,
             has_fhir=bool(h.fhir_endpoint),
             coordinator_phone=h.coordinator_phone,
         ))
