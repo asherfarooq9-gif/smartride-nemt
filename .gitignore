@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# Alembic compiled
+backend/alembic/__pycache__/
+backend/alembic/versions/__pycache__/
+
+# Node
+node_modules/
+.next/
+.turbo/
+admin-dashboard/.next/
+admin-dashboard/node_modules/
+
+# Env — never commit real secrets
+.env
+*.env.local
+
+# Docker volumes / data
+mnt/
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Flutter
+apps/*/build/
+apps/*/.dart_tool/
+apps/*/.flutter-plugins
+apps/*/.flutter-plugins-dependencies
