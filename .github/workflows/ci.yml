@@ -7,10 +7,91 @@ on:
     branches: [main]
 
 jobs:
-  # Implemented in Milestone 10
-  placeholder:
+  backend-tests:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4-alpine
+        env:
+          POSTGRES_USER: smartride
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: smartride_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U smartride"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://smartride:password@localhost:5432/smartride_test
+      REDIS_URL: redis://localhost:6379/0
+      SECRET_KEY: ci_test_secret_key_32_chars_long
+      TRIAGE_SERVICE_URL: http://localhost:8001
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Run tests
+        run: |
+          cd backend
+          pytest -v --tb=short
+
+  flutter-analyze:
+    name: Flutter Analyze
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.4"
+          channel: stable
+          cache: true
+
+      - name: Patient app analyze
+        run: |
+          cd apps/patient_app
+          flutter pub get
+          flutter analyze
+
+      - name: Driver app analyze
+        run: |
+          cd apps/driver_app
+          flutter pub get
+          flutter analyze
+
+  docker-compose-validate:
+    name: docker-compose config
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Scaffold check
-        run: echo "CI pipeline — full implementation in Milestone 10"
+      - name: Validate compose file
+        run: docker compose config --quiet

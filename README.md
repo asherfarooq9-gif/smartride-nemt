@@ -2,14 +2,32 @@
 
 AI-Powered Emergency & Non-Emergency Medical Transportation platform for Pakistan (Islamabad/Rawalpindi pilot).
 
-## Quick start
+## Quick start (localhost)
 
 ```bash
-# 1. Copy env template and fill in your secrets
-cp .env.example .env
+# 1. Copy env template
+cp .env.example .env          # Windows: copy .env.example .env
 
-# 2. Start all services
-docker compose up --build
+# 2. Build and start all services (first run takes ~5 min)
+docker compose up --build -d
+
+# 3. Seed admin user + demo hospitals
+docker exec smartride_backend python seed.py
+
+# 4. Open the admin dashboard
+#    http://localhost:3000
+#    Login: phone=+92300000001  password=admin123
+```
+
+### Common commands
+```bash
+make logs          # tail all service logs
+make ps            # show running containers
+make seed          # re-run seed script
+make test          # run backend pytest suite locally
+make shell-backend # bash inside the backend container
+make down          # stop everything
+make clean         # stop + remove volumes (fresh start)
 ```
 
 ## Services
@@ -54,8 +72,8 @@ Patient/Driver Apps (Flutter)
 | 6 | Realtime GPS (WebSocket) | pending |
 | 7 | Analytics & demand forecast | pending |
 | 8 | Admin dashboard | pending |
-| 9 | Flutter patient & driver apps (Riverpod + Dio, emergency flow, FCM) | pending |
-| 10 | Tests, load, CI/CD, deploy | pending |
+| 9 | Flutter patient & driver apps (Riverpod + Dio, emergency flow, FCM) | ✅ |
+| 10 | CI/CD (GitHub Actions), seed data, localhost docker-compose | ✅ |
 
 ## Milestone 9 — Flutter apps scope
 
