@@ -82,14 +82,14 @@ async def dispatch_emergency(
     """
     pipeline_start = time.time()
 
-    # ── STEP 1: parallel triage + load hospitals + load patient ───────────
-    triage_task    = asyncio.create_task(call_triage_service(symptom_text))
-    hospitals_task = asyncio.create_task(load_active_hospitals(db))
-    patient_task   = asyncio.create_task(load_patient(db, ride.patient_id))
-
-    triage_result, hospital_rows, patient = await asyncio.gather(
-        triage_task, hospitals_task, patient_task
-    )
+    # ── STEP 1: triage HTTP runs concurrently while DB queries run sequentially
+    # (asyncio.gather on two DB coroutines sharing one connection causes
+    #  "concurrent operations not permitted" — only the HTTP call benefits from
+    #  true parallelism here anyway)
+    triage_task = asyncio.create_task(call_triage_service(symptom_text))
+    hospital_rows = await load_active_hospitals(db)
+    patient = await load_patient(db, ride.patient_id)
+    triage_result = await triage_task
 
     if detect_severity_override(symptom_text):
         triage_result["severity"] = "5"
