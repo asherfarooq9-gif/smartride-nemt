@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 
 from app.core.config import settings
 from app.core.database import engine, Base
-from app.routers import auth, patients, drivers, hospitals, rides, analytics
+from app.routers import auth, patients, drivers, hospitals, rides, analytics, ws
 
 
 @asynccontextmanager
@@ -43,6 +43,7 @@ app.include_router(drivers.router,   prefix="/api/v1/drivers",   tags=["Drivers"
 app.include_router(hospitals.router, prefix="/api/v1/hospitals", tags=["Hospitals"])
 app.include_router(rides.router,     prefix="/api/v1/rides",     tags=["Rides"])
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytics"])
+app.include_router(ws.router,        prefix="/ws",              tags=["WebSocket"])
 
 
 @app.get("/health")
