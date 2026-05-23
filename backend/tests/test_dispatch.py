@@ -237,3 +237,26 @@ async def test_dispatch_triage_fallback_on_service_error(session: AsyncSession):
 
     # pipeline completes (hospital has general_emergency specialty for fallback)
     assert "ride_id" in result or "error" in result
+
+
+@pytest.mark.asyncio
+async def test_emergency_dispatch_when_no_drivers_available(client):
+    """Ride should be created even when no driver is available in the test DB."""
+    reg = await client.post("/api/v1/auth/register", json={
+        "phone": "+92300099003",
+        "password": "Passw0rd!",
+        "role": "patient",
+        "full_name": "No Driver Test",
+    })
+    assert reg.status_code == 201
+    token = reg.json()["access_token"]
+
+    resp = await client.post(
+        "/api/v1/rides/emergency",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"symptom_text": "headache", "pickup_lat": 33.72, "pickup_lng": 73.04},
+    )
+    assert resp.status_code in (200, 201)
+    body = resp.json()
+    assert "id" in body
+    assert body["status"] in ("pending", "driver_assigned")
