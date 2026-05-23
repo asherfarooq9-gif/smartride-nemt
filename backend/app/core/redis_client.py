@@ -27,3 +27,23 @@ async def ping_redis() -> bool:
         return await r.ping()
     except Exception:
         return False
+
+
+import json as _json
+from typing import Any, Callable, Awaitable
+
+
+async def get_cached(key: str, ttl: int, loader: Callable[[], Awaitable[Any]]) -> Any:
+    """Return cached JSON value, or call loader(), cache, and return."""
+    r = await get_redis()
+    raw = await r.get(key)
+    if raw is not None:
+        return _json.loads(raw)
+    value = await loader()
+    await r.setex(key, ttl, _json.dumps(value, default=str))
+    return value
+
+
+async def invalidate_cache(key: str) -> None:
+    r = await get_redis()
+    await r.delete(key)

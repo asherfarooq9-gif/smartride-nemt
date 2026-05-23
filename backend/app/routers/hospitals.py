@@ -4,10 +4,14 @@ from sqlalchemy import select, func
 
 from app.core.database import get_db
 from app.core.security import require_admin
+from app.core.redis_client import get_cached, invalidate_cache
 from app.models.models import Hospital, User
 from app.schemas.hospitals import (
     HospitalResponse, HospitalCreate, HospitalUpdate, HospitalListResponse,
 )
+
+HOSPITALS_CACHE_KEY = "cache:hospitals:active"
+HOSPITALS_CACHE_TTL = 300  # 5 minutes
 
 router = APIRouter()
 
@@ -38,9 +42,19 @@ async def list_hospitals(
     active_only: bool = Query(True),
     db: AsyncSession = Depends(get_db),
 ):
-    query = select(Hospital)
     if active_only:
-        query = query.where(Hospital.is_active.is_(True))
+        async def _load():
+            result = await db.execute(
+                select(Hospital).where(Hospital.is_active.is_(True)).order_by(Hospital.name)
+            )
+            hospitals = result.scalars().all()
+            return [HospitalResponse.model_validate(h).model_dump(mode="json") for h in hospitals]
+
+        items_data = await get_cached(HOSPITALS_CACHE_KEY, HOSPITALS_CACHE_TTL, _load)
+        items = [HospitalResponse(**item) for item in items_data]
+        return HospitalListResponse(items=items, total=len(items))
+
+    query = select(Hospital)
     result = await db.execute(query)
     hospitals = result.scalars().all()
     return HospitalListResponse(items=[_to_response(h) for h in hospitals], total=len(hospitals))
@@ -67,6 +81,7 @@ async def create_hospital(
     db.add(h)
     await db.commit()
     await db.refresh(h)
+    await invalidate_cache(HOSPITALS_CACHE_KEY)
     return _to_response(h)
 
 
@@ -85,4 +100,5 @@ async def update_hospital(
         setattr(h, field, value)
     await db.commit()
     await db.refresh(h)
+    await invalidate_cache(HOSPITALS_CACHE_KEY)
     return _to_response(h)
