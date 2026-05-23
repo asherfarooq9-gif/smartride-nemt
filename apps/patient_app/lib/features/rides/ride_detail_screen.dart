@@ -23,6 +23,7 @@ class RideDetailScreen extends ConsumerWidget {
         error: (e, _) => Center(
             child: Text('Error: $e', style: const TextStyle(color: Colors.red))),
         data: (ride) {
+          final patient = ride['patient'] as Map<String, dynamic>?;
           final driver = ride['driver'] as Map<String, dynamic>?;
           final hospital = ride['hospital'] as Map<String, dynamic>?;
           final triage = ride['triage'] as Map<String, dynamic>?;
@@ -49,6 +50,15 @@ class RideDetailScreen extends ConsumerWidget {
                   if (ride['final_fare_pkr'] != null)
                     _Row('Final Fare', 'PKR ${ride['final_fare_pkr']}'),
                 ]),
+                if (patient != null) ...[
+                  const SizedBox(height: 12),
+                  _Section(title: 'Patient', children: [
+                    _Row('Name', patient['full_name'] as String),
+                    _Row('Phone', patient['phone'] as String),
+                    if (patient['mobility_needs'] != null)
+                      _Row('Mobility Needs', patient['mobility_needs'] as String),
+                  ]),
+                ],
                 if (driver != null) ...[
                   const SizedBox(height: 12),
                   _Section(title: 'Driver', children: [
