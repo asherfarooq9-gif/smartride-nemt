@@ -12,14 +12,18 @@ final _rideDetailProvider =
 // Maps current status → next status on button press
 const _nextStatus = {
   'pending': 'driver_assigned',
-  'driver_assigned': 'active',
-  'active': 'completed',
+  'driver_assigned': 'driver_en_route',
+  'driver_en_route': 'patient_picked_up',
+  'patient_picked_up': 'arrived_at_hospital',
+  'arrived_at_hospital': 'completed',
 };
 
 const _nextLabel = {
   'pending': 'Accept Ride',
-  'driver_assigned': 'Start Ride',
-  'active': 'Complete Ride',
+  'driver_assigned': 'Start Driving',
+  'driver_en_route': 'Arrived at Patient',
+  'patient_picked_up': 'Arrived at Hospital',
+  'arrived_at_hospital': 'Complete Ride',
 };
 
 class ActiveRideScreen extends ConsumerWidget {
@@ -132,7 +136,7 @@ class ActiveRideScreen extends ConsumerWidget {
                               fontSize: 16, fontWeight: FontWeight.w600)),
                     ),
                   ),
-                if (status == 'active') ...[
+                if (status == 'driver_assigned' || status == 'driver_en_route') ...[
                   const SizedBox(height: 10),
                   OutlinedButton(
                     onPressed: () async {
