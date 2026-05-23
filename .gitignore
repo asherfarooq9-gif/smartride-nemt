@@ -46,3 +46,10 @@ apps/*/build/
 apps/*/.dart_tool/
 apps/*/.flutter-plugins
 apps/*/.flutter-plugins-dependencies
+
+# Tools / generated
+.superpowers/
+graphify-out/
+.mcp.json
+install-claude-skills.ps1
+.claude/
