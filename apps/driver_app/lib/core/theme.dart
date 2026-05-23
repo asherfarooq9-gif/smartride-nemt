@@ -49,3 +49,18 @@ final appTheme = ThemeData(
     ),
   ),
 );
+
+/// Primary teal — use for branded UI elements
+const Color driverPrimary = Color(0xFF00695C);
+
+/// Dark teal — use for section headers, emphasized text
+const Color driverPrimaryDark = Color(0xFF004D40);
+
+/// Online status green
+const Color statusOnline = Color(0xFF2E7D32);
+
+/// Offline / neutral grey
+const Color statusOffline = Color(0xFF757575);
+
+/// Error / danger red
+const Color statusError = Color(0xFFD32F2F);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../core/theme.dart';
 import 'dashboard_notifier.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -55,7 +56,7 @@ class DashboardScreen extends ConsumerWidget {
                         Icon(
                           Icons.circle,
                           size: 12,
-                          color: state.isOnline ? Colors.green : Colors.grey,
+                          color: state.isOnline ? statusOnline : statusOffline,
                         ),
                         const SizedBox(width: 8),
                         Text(
@@ -65,8 +66,8 @@ class DashboardScreen extends ConsumerWidget {
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             color: state.isOnline
-                                ? Colors.green[700]
-                                : Colors.grey,
+                                ? statusOnline
+                                : statusOffline,
                           ),
                         ),
                         const Spacer(),
@@ -75,8 +76,8 @@ class DashboardScreen extends ConsumerWidget {
                           onChanged: (_) => ref
                               .read(dashboardNotifierProvider.notifier)
                               .toggleOnline(),
-                          activeThumbColor: Colors.green,
-                          activeTrackColor: Colors.green[200],
+                          activeThumbColor: statusOnline,
+                          activeTrackColor: statusOnline.withValues(alpha: 0.4),
                         ),
                       ],
                     ),
@@ -88,7 +89,7 @@ class DashboardScreen extends ConsumerWidget {
                   style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF004D40)),
+                      color: driverPrimaryDark),
                 ),
                 const SizedBox(height: 12),
                 if (state.pendingRides.isEmpty)
@@ -135,8 +136,8 @@ class _RideRequestCard extends StatelessWidget {
                   ? Icons.emergency
                   : Icons.directions_car,
               color: ride.rideType == 'emergency'
-                  ? Colors.red
-                  : const Color(0xFF00695C),
+                  ? statusError
+                  : driverPrimary,
               size: 28,
             ),
             const SizedBox(width: 12),
@@ -160,7 +161,7 @@ class _RideRequestCard extends StatelessWidget {
             ElevatedButton(
               onPressed: onAccept,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00695C),
+                backgroundColor: driverPrimary,
                 minimumSize: const Size(70, 36),
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 shape: RoundedRectangleBorder(
