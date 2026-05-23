@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/app_text_field.dart';
+import '../../core/api_client.dart';
 import 'auth_notifier.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -38,13 +39,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     ref.listen(authNotifierProvider, (_, next) {
       if (next.hasError) {
+        final err = next.error;
+        final message = err is ApiException ? err.message : 'An unexpected error occurred';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              next.error.toString()
-                  .replaceFirst('ApiException(', '')
-                  .replaceAll(')', ''),
-            ),
+            content: Text(message),
             backgroundColor: Colors.red[700],
           ),
         );

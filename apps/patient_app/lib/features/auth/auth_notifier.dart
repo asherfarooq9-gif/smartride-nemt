@@ -27,7 +27,10 @@ class AuthNotifier extends AsyncNotifier<AuthUser?> {
         'password': password,
       }) as Map<String, dynamic>;
 
-      final token = data['access_token'] as String;
+      final token = data['access_token'] as String?;
+      if (token == null || token.isEmpty) {
+        throw const ApiException('Server returned invalid response');
+      }
       final role = data['role'] as String? ?? 'patient';
 
       // Persist token in secure storage before updating state
