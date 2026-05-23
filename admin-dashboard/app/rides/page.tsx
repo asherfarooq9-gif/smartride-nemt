@@ -26,11 +26,13 @@ export default function RidesPage() {
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
   const [selected, setSelected] = useState<RideDetail | null>(null)
   const [modalLoading, setModalLoading] = useState(false)
+  const [cancelError, setCancelError] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -45,6 +47,11 @@ export default function RidesPage() {
       setLoading(false)
     }
   }, [page, statusFilter, typeFilter, search])
+
+  useEffect(() => {
+    const t = setTimeout(() => { setSearch(searchInput); setPage(1) }, 400)
+    return () => clearTimeout(t)
+  }, [searchInput])
 
   useEffect(() => { load() }, [load])
 
@@ -82,8 +89,8 @@ export default function RidesPage() {
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             placeholder="Search pickup address…"
-            value={search}
-            onChange={e => { setSearch(e.target.value); setPage(1) }}
+            value={searchInput}
+            onChange={e => setSearchInput(e.target.value)}
             className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
           />
         </div>
@@ -171,32 +178,37 @@ export default function RidesPage() {
       )}
 
       {/* Detail Modal */}
-      <Modal open={selected !== null || modalLoading} onClose={() => setSelected(null)} title="Ride Details" width="xl">
+      <Modal open={selected !== null || modalLoading} onClose={() => { setSelected(null); setCancelError('') }} title="Ride Details" width="xl">
         {modalLoading && (
           <div className="space-y-3 animate-pulse">
             {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-10 bg-gray-100 rounded-xl" />)}
           </div>
         )}
-        {selected && <RideDetailView ride={selected} onClose={() => setSelected(null)} onUpdate={load} />}
+        {selected && <RideDetailView ride={selected} onClose={() => { setSelected(null); setCancelError('') }} onUpdate={load} cancelError={cancelError} setCancelError={setCancelError} />}
       </Modal>
     </div>
   )
 }
 
-function RideDetailView({ ride, onClose, onUpdate }: { ride: RideDetail; onClose: () => void; onUpdate: () => void }) {
+function RideDetailView({ ride, onClose, onUpdate, cancelError, setCancelError }: {
+  ride: RideDetail; onClose: () => void; onUpdate: () => void
+  cancelError: string; setCancelError: (e: string) => void
+}) {
   const [cancelling, setCancelling] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   const canCancel = ride.status === 'pending' || ride.status === 'driver_assigned'
 
   async function cancelRide() {
-    if (!confirm('Cancel this ride?')) return
+    setConfirmOpen(false)
     setCancelling(true)
+    setCancelError('')
     try {
       await api.cancelRide(ride.id)
       onUpdate()
       onClose()
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : 'Error')
+      setCancelError(e instanceof Error ? e.message : 'Error cancelling ride')
     } finally {
       setCancelling(false)
     }
@@ -204,6 +216,16 @@ function RideDetailView({ ride, onClose, onUpdate }: { ride: RideDetail; onClose
 
   return (
     <div className="space-y-5">
+      {cancelError && (
+        <div className="text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm">{cancelError}</div>
+      )}
+      <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Cancel Ride">
+        <p className="text-sm text-gray-700 mb-6">Are you sure you want to cancel this ride? This cannot be undone.</p>
+        <div className="flex gap-3 justify-end">
+          <button onClick={() => setConfirmOpen(false)} className="px-4 py-2 text-sm border border-gray-200 rounded-xl hover:border-gray-300 transition">Keep ride</button>
+          <button onClick={cancelRide} className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-xl transition">Yes, cancel</button>
+        </div>
+      </Modal>
       {/* Status + Type */}
       <div className="flex items-center gap-3 flex-wrap">
         <StatusBadge value={ride.status} size="md" />
@@ -212,7 +234,7 @@ function RideDetailView({ ride, onClose, onUpdate }: { ride: RideDetail; onClose
         </span>
         {canCancel && (
           <button
-            onClick={cancelRide}
+            onClick={() => setConfirmOpen(true)}
             disabled={cancelling}
             className="ml-auto text-sm bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded-xl disabled:opacity-40 transition"
           >

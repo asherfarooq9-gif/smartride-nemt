@@ -29,7 +29,11 @@ export default function DashboardPage() {
     }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+    const interval = setInterval(load, 30_000)
+    return () => clearInterval(interval)
+  }, [])
 
   function handleRefresh() {
     setRefreshing(true)

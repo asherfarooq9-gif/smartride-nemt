@@ -2,7 +2,7 @@
 import './globals.css'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { clearToken, getToken } from '@/lib/api'
+import { api, clearToken, getToken } from '@/lib/api'
 import { useEffect, useState } from 'react'
 import {
   LayoutDashboard, Car, Users, Hospital, BarChart2,
@@ -29,7 +29,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     if (!isLogin && !getToken()) router.replace('/login')
   }, [isLogin, router])
 
-  function handleLogout() {
+  async function handleLogout() {
+    try { await api.logout() } catch {}
     clearToken()
     router.replace('/login')
   }

@@ -14,11 +14,13 @@ export default function DriversPage() {
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [verifiedFilter, setVerifiedFilter] = useState('')
   const [selected, setSelected] = useState<Driver | null>(null)
   const [verifying, setVerifying] = useState<string | null>(null)
+  const [verifyError, setVerifyError] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -33,6 +35,11 @@ export default function DriversPage() {
     }
   }, [page, statusFilter, verifiedFilter, search])
 
+  useEffect(() => {
+    const t = setTimeout(() => { setSearch(searchInput); setPage(1) }, 400)
+    return () => clearTimeout(t)
+  }, [searchInput])
+
   useEffect(() => { load() }, [load])
 
   async function verify(id: string, verified: boolean) {
@@ -42,7 +49,7 @@ export default function DriversPage() {
       setDrivers(ds => ds.map(d => d.id === id ? updated : d))
       if (selected?.id === id) setSelected(updated)
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : 'Error')
+      setVerifyError(e instanceof Error ? e.message : 'Error updating driver')
     } finally {
       setVerifying(null)
     }
@@ -64,8 +71,8 @@ export default function DriversPage() {
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             placeholder="Search name, phone, plate…"
-            value={search}
-            onChange={e => { setSearch(e.target.value); setPage(1) }}
+            value={searchInput}
+            onChange={e => setSearchInput(e.target.value)}
             className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
           />
         </div>
@@ -92,6 +99,7 @@ export default function DriversPage() {
       </div>
 
       {error && <div className="text-red-600 bg-red-50 border border-red-200 rounded-xl p-4 text-sm">{error}</div>}
+      {verifyError && <div className="text-red-600 bg-red-50 border border-red-200 rounded-xl p-4 text-sm">{verifyError}</div>}
 
       <div className="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
         <table className="w-full text-sm">

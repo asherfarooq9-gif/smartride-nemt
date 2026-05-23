@@ -43,13 +43,18 @@ class DashboardNotifier extends AsyncNotifier<DashboardState> {
   Future<DashboardState> build() => _fetch();
 
   Future<DashboardState> _fetch() async {
-    final data = await ApiClient.get('/api/v1/rides/mine',
-            query: {'status': 'pending', 'page_size': 20})
-        as Map<String, dynamic>;
-    final rides = (data['items'] as List)
+    final results = await Future.wait([
+      ApiClient.get('/api/v1/drivers/me'),
+      ApiClient.get('/api/v1/rides/mine',
+          query: {'status': 'pending', 'page_size': 20}),
+    ]);
+    final driverData = results[0] as Map<String, dynamic>;
+    final ridesData = results[1] as Map<String, dynamic>;
+    final isOnline = (driverData['status'] as String?) != 'offline';
+    final rides = (ridesData['items'] as List)
         .map((e) => PendingRide.fromJson(e as Map<String, dynamic>))
         .toList();
-    return DashboardState(pendingRides: rides);
+    return DashboardState(isOnline: isOnline, pendingRides: rides);
   }
 
   Future<void> toggleOnline() async {
@@ -57,7 +62,7 @@ class DashboardNotifier extends AsyncNotifier<DashboardState> {
     if (current == null) return;
     final newStatus = !current.isOnline;
     try {
-      await ApiClient.patch('/api/v1/drivers/me/status',
+      await ApiClient.patch('/api/v1/drivers/status',
           body: {'status': newStatus ? 'available' : 'offline'});
       state = AsyncData(current.copyWith(isOnline: newStatus));
     } on ApiException catch (e) {

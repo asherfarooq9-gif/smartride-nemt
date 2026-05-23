@@ -23,6 +23,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       ...(options.headers ?? {}),
     },
   })
+  if (res.status === 401) {
+    clearToken()
+    if (typeof window !== 'undefined') window.location.href = '/login'
+    throw new Error('Session expired. Please sign in again.')
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }))
     throw new Error(err.detail ?? 'Request failed')
@@ -84,6 +89,8 @@ export const api = {
 
   updateHospital: (id: string, body: Partial<Hospital>) =>
     request<Hospital>(`/api/v1/hospitals/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+
+  logout: () => request<void>('/api/v1/auth/logout', { method: 'POST' }),
 
   forecast: (city: string, hours = 12) =>
     request<ForecastResponse>(`/api/v1/analytics/forecast?city=${city}&hours_ahead=${hours}`),
