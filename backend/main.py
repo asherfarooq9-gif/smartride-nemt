@@ -35,6 +35,14 @@ async def lifespan(app: FastAPI):
             "and set it in your .env file."
         )
 
+    if not settings.DEBUG and "*" in settings.ALLOWED_ORIGINS:
+        import warnings
+        warnings.warn(
+            "ALLOWED_ORIGINS contains '*' in a non-DEBUG deployment. "
+            "Set ALLOWED_ORIGINS in your .env to explicit origins.",
+            stacklevel=2,
+        )
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
