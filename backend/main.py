@@ -4,7 +4,8 @@ Phase 1: Project scaffold with all core structure
 """
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -15,6 +16,7 @@ from slowapi.util import get_remote_address
 from app.core.config import settings
 from app.core.database import engine, Base
 from app.routers import auth, patients, drivers, hospitals, rides, analytics, ws
+from app.schemas.errors import ErrorResponse
 
 _WEAK_SECRET = "change_me_to_a_32_char_random_string_here"
 
@@ -61,6 +63,25 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    first = exc.errors()[0] if exc.errors() else {}
+    msg = first.get("msg", "Validation error")
+    return JSONResponse(
+        status_code=422,
+        content=ErrorResponse(detail=msg, code="validation_error").model_dump(),
+    )
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=ErrorResponse(detail=str(exc.detail), code="error").model_dump(),
+    )
+
 
 app.include_router(auth.router,      prefix="/api/v1/auth",      tags=["Auth"])
 app.include_router(patients.router,  prefix="/api/v1/patients",  tags=["Patients"])

@@ -81,3 +81,13 @@ async def test_short_password_rejected(client: AsyncClient):
     payload = {**PATIENT_PAYLOAD, "phone": "+92-300-5555555", "password": "ab"}
     resp = await client.post("/api/v1/auth/register", json=payload)
     assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_login_wrong_password_returns_standard_error_shape(client: AsyncClient):
+    phone = "+92-000-0000000"
+    resp = await client.post("/api/v1/auth/login", json={"phone": phone, "password": "wrong"})
+    assert resp.status_code == 401
+    body = resp.json()
+    assert "detail" in body
+    assert "code" in body
