@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartRide — App Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Onest:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --p: #1565C0;
+      --p2: #1976D2;
+      --p-bg: #F0F4FF;
+      --d: #00695C;
+      --d2: #00796B;
+      --d-bg: #F0FAF7;
+      --red: #E53935;
+      --bg: #07090E;
+      --card: #0E1320;
+      --border: rgba(255,255,255,0.07);
+      --text: #EAE6DD;
+      --muted: rgba(234,230,221,0.42);
+      --green: #2E7D32;
+      --orange: #E65100;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Onest', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* grain */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      opacity: 0.04;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 9999;
+    }
+
+    /* ── HEADER ─────────────────────────────── */
+    .page-header {
+      padding: 64px 56px 44px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+
+    .page-header::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(21,101,192,0.4), rgba(0,105,92,0.4), transparent);
+    }
+
+    .wordmark {
+      font-family: 'Syne', sans-serif;
+      font-size: 52px;
+      font-weight: 800;
+      letter-spacing: -2.5px;
+      line-height: 1;
+    }
+    .wordmark em { color: var(--p); font-style: normal; }
+
+    .tagline {
+      margin-top: 8px;
+      font-size: 14px;
+      color: var(--muted);
+      letter-spacing: 0.01em;
+    }
+
+    .header-right { text-align: right; }
+
+    .pill {
+      display: inline-block;
+      padding: 4px 13px;
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .stack-note {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* ── GRID ───────────────────────────────── */
+    .preview-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-height: calc(100vh - 160px);
+    }
+
+    .app-col {
+      padding: 52px 44px 64px;
+      position: relative;
+    }
+
+    .app-col + .app-col {
+      border-left: 1px solid var(--border);
+    }
+
+    /* subtle bg glow per column */
+    .patient-col::before {
+      content: '';
+      position: absolute;
+      top: -60px; left: -40px;
+      width: 340px; height: 340px;
+      background: radial-gradient(circle, rgba(21,101,192,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .driver-col::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -40px;
+      width: 340px; height: 340px;
+      background: radial-gradient(circle, rgba(0,105,92,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* ── COLUMN HEADER ──────────────────────── */
+    .col-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 40px;
+    }
+
+    .col-icon {
+      width: 42px; height: 42px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+
+    .patient-col .col-icon { background: var(--p); }
+    .driver-col  .col-icon { background: var(--d); }
+
+    .col-name {
+      font-family: 'Syne', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.4px;
+    }
+
+    .col-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* ── PHONE MOCKUP ───────────────────────── */
+    .phone-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 22px;
+    }
+
+    .phone-frame {
+      width: 280px;
+      height: 590px;
+      background: #111215;
+      border-radius: 46px;
+      padding: 10px;
+      position: relative;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.11),
+        0 0 0 2px rgba(0,0,0,0.9),
+        0 32px 80px rgba(0,0,0,0.55);
+    }
+
+    .patient-col .phone-frame { box-shadow: 0 0 0 1px rgba(255,255,255,0.11), 0 0 0 2px rgba(0,0,0,0.9), 0 32px 80px rgba(0,0,0,0.55), 0 0 70px rgba(21,101,192,0.10); }
+    .driver-col  .phone-frame { box-shadow: 0 0 0 1px rgba(255,255,255,0.11), 0 0 0 2px rgba(0,0,0,0.9), 0 32px 80px rgba(0,0,0,0.55), 0 0 70px rgba(0,105,92,0.10); }
+
+    /* glow puddle under phone */
+    .patient-col .phone-frame::after {
+      content: '';
+      position: absolute;
+      bottom: -44px; left: 50%;
+      transform: translateX(-50%);
+      width: 180px; height: 50px;
+      background: var(--p);
+      filter: blur(36px);
+      opacity: 0.18;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .driver-col .phone-frame::after {
+      content: '';
+      position: absolute;
+      bottom: -44px; left: 50%;
+      transform: translateX(-50%);
+      width: 180px; height: 50px;
+      background: var(--d);
+      filter: blur(36px);
+      opacity: 0.18;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .phone-screen {
+      width: 100%; height: 100%;
+      border-radius: 38px;
+      overflow: hidden;
+      position: relative;
+      background: #fff;
+    }
+
+    /* dynamic island */
+    .phone-screen::before {
+      content: '';
+      position: absolute;
+      top: 12px; left: 50%;
+      transform: translateX(-50%);
+      width: 86px; height: 26px;
+      background: #000;
+      border-radius: 20px;
+      z-index: 200;
+    }
+
+    /* ── SCREENS ────────────────────────────── */
+    .screen {
+      position: absolute; inset: 0;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .screen.active {
+      display: flex;
+      animation: fadeSlide 0.25s ease;
+    }
+
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateX(12px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    /* ── COMMON SCREEN PARTS ────────────────── */
+    .sb {                          /* status bar */
+      height: 44px;
+      display: flex; align-items: center;
+      padding: 0 20px;
+      flex-shrink: 0;
+      font-size: 11px; font-weight: 700;
+      position: relative; z-index: 10;
+    }
+
+    .sb .si { margin-left: auto; font-size: 10px; display: flex; gap: 4px; align-items: center; }
+
+    .ab {                          /* app bar */
+      height: 50px;
+      display: flex; align-items: center;
+      padding: 0 14px;
+      flex-shrink: 0;
+    }
+
+    .ab-title { font-size: 16px; font-weight: 700; flex: 1; text-align: center; }
+    .ab-icon  { width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; font-size: 13px; }
+    .ab-back  { font-size: 18px; color: inherit; width: 30px; }
+
+    .sbody {                       /* scrollable body */
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+    .sbody::-webkit-scrollbar { display: none; }
+
+    /* ── PATIENT: LOGIN ─────────────────────── */
+    .p-login { background: var(--p); }
+    .p-login .sb { color: #fff; }
+
+    .login-hero {
+      background: var(--p);
+      padding: 20px 20px 32px;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .hero-icon {
+      width: 50px; height: 50px;
+      background: rgba(255,255,255,0.18);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px;
+    }
+
+    .hero-title { font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -0.5px; }
+    .hero-sub   { font-size: 12px; color: rgba(255,255,255,0.65); }
+
+    .login-card {
+      background: var(--p-bg);
+      border-radius: 22px 22px 0 0;
+      padding: 26px 18px 20px;
+      flex: 1;
+      overflow-y: auto;
+    }
+    .login-card::-webkit-scrollbar { display: none; }
+
+    .lc-title { font-size: 18px; font-weight: 700; color: #0D1B3E; }
+    .lc-sub   { font-size: 12px; color: #777; margin: 3px 0 22px; }
+
+    .ff { margin-bottom: 13px; }
+    .fl { font-size: 11px; font-weight: 600; color: #555; display: block; margin-bottom: 4px; }
+
+    .fi-wrap { position: relative; }
+    .fi-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); font-size: 13px; color: #aaa; }
+
+    .fi {
+      width: 100%; height: 42px;
+      background: #fff;
+      border: 1.5px solid #C3D8F5;
+      border-radius: 10px;
+      padding: 0 12px 0 33px;
+      font-size: 13px; color: #aaa;
+      display: flex; align-items: center;
+    }
+
+    .btn-p {
+      width: 100%; height: 46px;
+      background: var(--p); border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      font-size: 14px; font-weight: 700; color: #fff;
+      margin-top: 18px;
+    }
+
+    .btn-d {
+      width: 100%; height: 46px;
+      background: var(--d); border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      font-size: 14px; font-weight: 700; color: #fff;
+      margin-top: 18px;
+    }
+
+    /* ── PATIENT: HOME ──────────────────────── */
+    .p-home { background: var(--p-bg); }
+    .p-home .sb { background: var(--p); color: #fff; }
+    .p-home .ab { background: var(--p); color: #fff; }
+
+    .home-pad { padding: 13px 13px; }
+
+    .loc-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px;
+      background: #fff;
+      border: 1px solid #D5E5F8;
+      border-radius: 100px;
+      font-size: 10px; color: var(--p);
+      margin-bottom: 14px;
+    }
+
+    .emer-btn {
+      width: 100%; height: 56px;
+      background: var(--red);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      color: #fff;
+      font-size: 13px; font-weight: 800; letter-spacing: 1px;
+      margin-bottom: 16px;
+      position: relative;
+      animation: epulse 2s ease-in-out infinite;
+    }
+
+    .emer-btn::before {
+      content: '';
+      position: absolute; inset: -5px;
+      border-radius: 18px;
+      background: var(--red);
+      opacity: 0;
+      animation: ering 2s ease-in-out infinite;
+      z-index: -1;
+    }
+
+    @keyframes epulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.015)} }
+    @keyframes ering  { 0%,100%{transform:scale(1);opacity:.25} 50%{transform:scale(1.06);opacity:0} }
+
+    .active-banner {
+      background: linear-gradient(135deg, var(--p), var(--p2));
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex; align-items: center; gap: 10px;
+      color: #fff;
+      margin-bottom: 16px;
+    }
+
+    .active-banner .bi { font-size: 26px; flex-shrink: 0; }
+    .active-banner h4  { font-size: 10px; opacity: 0.7; font-weight: 500; }
+    .active-banner p   { font-size: 13px; font-weight: 700; }
+    .active-banner .ch { margin-left: auto; font-size: 18px; opacity: 0.65; }
+
+    .sec-title { font-size: 14px; font-weight: 700; color: #0D1B3E; margin-bottom: 9px; }
+
+    .ride-card {
+      background: #fff;
+      border: 1px solid #DDE8FA;
+      border-radius: 12px;
+      padding: 12px 13px;
+      margin-bottom: 7px;
+    }
+
+    .rc-head { display: flex; align-items: center; gap: 5px; margin-bottom: 7px; }
+    .rc-type { font-size: 10px; font-weight: 700; color: #444; text-transform: uppercase; letter-spacing: 0.4px; flex: 1; }
+
+    .chip {
+      padding: 2px 7px; border-radius: 100px;
+      font-size: 10px; font-weight: 600;
+    }
+
+    .chip-active    { background: rgba(21,101,192,.1);  color: var(--p); }
+    .chip-done      { background: rgba(46,125,50,.1);   color: var(--green); }
+    .chip-pending   { background: rgba(230,81,0,.08);   color: var(--orange); }
+    .chip-cancelled { background: rgba(198,40,40,.08);  color: #C62828; }
+    .chip-assigned  { background: rgba(21,101,192,.08); color: var(--p); }
+
+    .rc-addr {
+      font-size: 12px; font-weight: 500; color: #222;
+      margin-bottom: 5px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .rc-meta { display: flex; align-items: center; font-size: 10px; color: #aaa; gap: 3px; }
+    .rc-meta .fare { margin-left: auto; font-size: 11px; font-weight: 600; color: var(--p); }
+
+    /* ── PATIENT: RIDE DETAIL ───────────────── */
+    .p-detail { background: var(--p-bg); }
+    .p-detail .sb { background: var(--p); color: #fff; }
+    .p-detail .ab { background: var(--p); color: #fff; }
+
+    .detail-pad { padding: 13px; }
+
+    .status-badge {
+      width: 100%; padding: 9px;
+      border-radius: 10px;
+      text-align: center;
+      font-size: 12px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase;
+      margin-bottom: 11px;
+    }
+
+    .sb-active    { background: rgba(21,101,192,.1); border: 1px solid rgba(21,101,192,.22); color: var(--p); }
+    .sb-completed { background: rgba(46,125,50,.1);  border: 1px solid rgba(46,125,50,.22);  color: var(--green); }
+
+    .info-card {
+      background: #fff;
+      border: 1px solid #DDE8FA;
+      border-radius: 12px;
+      padding: 13px;
+      margin-bottom: 9px;
+    }
+
+    .ic-title {
+      font-size: 11px; font-weight: 700; color: var(--p);
+      margin-bottom: 9px; padding-bottom: 7px;
+      border-bottom: 1px solid #EEF4FC;
+    }
+
+    .ir { display: flex; gap: 7px; margin-bottom: 6px; }
+    .ir:last-child { margin-bottom: 0; }
+    .ir-label { width: 72px; font-size: 11px; color: #999; font-weight: 500; flex-shrink: 0; }
+    .ir-val   { font-size: 11px; color: #222; font-weight: 500; flex: 1; }
+
+    /* ── PATIENT: PROFILE ───────────────────── */
+    .p-profile { background: var(--p-bg); }
+    .p-profile .sb { background: var(--p); color: #fff; }
+    .p-profile .ab { background: var(--p); color: #fff; }
+
+    .prof-body {
+      padding: 20px 13px;
+      display: flex; flex-direction: column; align-items: center;
+    }
+
+    .av {
+      width: 68px; height: 68px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; font-weight: 700; color: #fff;
+      margin-bottom: 9px;
+    }
+
+    .av-p { background: var(--p); }
+    .av-d { background: var(--d); }
+
+    .prof-name  { font-size: 16px; font-weight: 700; color: #0D1B3E; }
+    .prof-phone { font-size: 12px; color: #888; margin-bottom: 18px; }
+
+    .ic-d { background: #fff; border: 1px solid #B2DFDB; border-radius: 12px; padding: 13px; margin-bottom: 9px; width: 100%; }
+    .ic-d-title { font-size: 11px; font-weight: 700; color: var(--d); margin-bottom: 9px; padding-bottom: 7px; border-bottom: 1px solid #E0F2F1; }
+
+    /* ── DRIVER: LOGIN ──────────────────────── */
+    .d-login { background: var(--d); }
+    .d-login .sb { color: #fff; }
+
+    .d-hero { background: var(--d); padding: 20px 20px 32px; display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0; }
+    .d-hero .hero-title { font-size: 20px; }
+
+    .d-card { background: var(--d-bg); border-radius: 22px 22px 0 0; padding: 26px 18px 20px; flex: 1; overflow-y: auto; }
+    .d-card::-webkit-scrollbar { display: none; }
+    .d-card .lc-title { color: #004D40; }
+    .d-card .fi { border-color: #B2DFDB; }
+
+    /* ── DRIVER: DASHBOARD ──────────────────── */
+    .d-dash { background: var(--d-bg); }
+    .d-dash .sb { background: var(--d); color: #fff; }
+    .d-dash .ab { background: var(--d); color: #fff; }
+
+    .dash-pad { padding: 13px; }
+
+    .avail-card {
+      background: #fff;
+      border: 1px solid #B2DFDB;
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 14px;
+      display: flex; align-items: center;
+    }
+
+    .avail-text h4 { font-size: 13px; font-weight: 700; color: #004D40; }
+    .avail-text p  { font-size: 11px; color: #888; }
+
+    .toggle {
+      margin-left: auto;
+      width: 48px; height: 26px;
+      background: var(--d);
+      border-radius: 13px;
+      position: relative; flex-shrink: 0;
+    }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      width: 20px; height: 20px;
+      background: #fff;
+      border-radius: 50%;
+      top: 3px; right: 3px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .stats-row { display: flex; gap: 7px; margin-bottom: 16px; }
+
+    .stat {
+      flex: 1;
+      background: #fff;
+      border: 1px solid #B2DFDB;
+      border-radius: 11px;
+      padding: 10px 8px;
+      text-align: center;
+    }
+
+    .stat-v { font-size: 16px; font-weight: 700; color: var(--d); line-height: 1.1; }
+    .stat-l { font-size: 9px; color: #888; margin-top: 2px; }
+
+    .sec-title-d { font-size: 14px; font-weight: 700; color: #004D40; margin-bottom: 9px; }
+
+    .req-card {
+      background: #fff;
+      border: 1px solid #B2DFDB;
+      border-radius: 12px;
+      padding: 13px;
+      margin-bottom: 9px;
+    }
+
+    .req-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; }
+    .req-type { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+    .req-type-emer  { color: var(--red); }
+    .req-type-sched { color: var(--orange); }
+    .req-dist { font-size: 10px; color: #aaa; }
+    .req-addr { font-size: 12px; font-weight: 500; color: #222; margin-bottom: 3px; }
+    .req-hosp { font-size: 11px; color: #666; margin-bottom: 11px; }
+
+    .req-actions { display: flex; gap: 7px; }
+
+    .btn-accept {
+      flex: 1; height: 34px;
+      background: var(--d); border: none; border-radius: 8px;
+      color: #fff; font-size: 12px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .btn-decline {
+      flex: 1; height: 34px;
+      background: transparent; border: 1.5px solid #ccc; border-radius: 8px;
+      color: #888; font-size: 12px; font-weight: 600;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* ── DRIVER: ACTIVE RIDE ────────────────── */
+    .d-active { background: var(--d-bg); }
+    .d-active .sb { background: var(--d); color: #fff; }
+    .d-active .ab { background: var(--d); color: #fff; }
+
+    .active-pad { padding: 13px; }
+
+    .pat-card {
+      background: #fff;
+      border: 1px solid #B2DFDB;
+      border-radius: 12px;
+      padding: 13px;
+      margin-bottom: 11px;
+      display: flex; align-items: center; gap: 11px;
+    }
+
+    .pat-av {
+      width: 42px; height: 42px;
+      background: var(--p);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 17px; font-weight: 700; flex-shrink: 0;
+    }
+
+    .pat-info h4 { font-size: 13px; font-weight: 700; color: #004D40; }
+    .pat-info .pi { font-size: 11px; color: #888; }
+    .pat-info .mob { font-size: 10px; font-weight: 600; color: var(--p); margin-top: 2px; }
+
+    .call-btn {
+      margin-left: auto;
+      width: 34px; height: 34px;
+      background: var(--d);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; flex-shrink: 0;
+    }
+
+    .timeline {
+      background: #fff;
+      border: 1px solid #B2DFDB;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 11px;
+    }
+
+    .tl-title { font-size: 11px; font-weight: 700; color: var(--d); margin-bottom: 12px; }
+
+    .tl-step { display: flex; align-items: center; gap: 9px; margin-bottom: 10px; }
+    .tl-step:last-child { margin-bottom: 0; }
+
+    .tl-dot {
+      width: 19px; height: 19px; border-radius: 50%;
+      border: 2px solid #ccc;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; flex-shrink: 0;
+    }
+
+    .tl-dot.done    { background: var(--d); border-color: var(--d); color: #fff; }
+    .tl-dot.current { border-color: var(--d); background: rgba(0,105,92,.1); }
+
+    .tl-label { font-size: 11px; color: #666; font-weight: 500; }
+    .tl-label.done    { color: #222; font-weight: 600; }
+    .tl-label.current { color: var(--d); font-weight: 700; }
+
+    .btn-complete {
+      width: 100%; height: 48px;
+      background: var(--d); border: none; border-radius: 12px;
+      color: #fff; font-size: 14px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+    }
+
+    /* ── DRIVER: PROFILE ────────────────────── */
+    .d-profile { background: var(--d-bg); }
+    .d-profile .sb { background: var(--d); color: #fff; }
+    .d-profile .ab { background: var(--d); color: #fff; }
+
+    .verified-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px;
+      background: rgba(0,105,92,.1);
+      border-radius: 100px;
+      font-size: 11px; font-weight: 600; color: var(--d);
+      margin-bottom: 15px;
+    }
+
+    /* ── SCREEN TABS ────────────────────────── */
+    .tabs { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+
+    .tab {
+      padding: 5px 13px;
+      border-radius: 100px;
+      font-size: 11px; font-weight: 600;
+      font-family: 'Onest', sans-serif;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      transition: all 0.18s ease;
+      letter-spacing: 0.02em;
+    }
+
+    .tab:hover { border-color: rgba(255,255,255,0.2); color: var(--text); }
+    .patient-col .tab.active { background: var(--p); border-color: var(--p); color: #fff; }
+    .driver-col  .tab.active { background: var(--d); border-color: var(--d); color: #fff; }
+
+    /* ── FOOTER ─────────────────────────────── */
+    footer {
+      padding: 28px 56px;
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    footer p { font-size: 12px; color: var(--muted); }
+
+    .tech-chips { display: flex; gap: 7px; flex-wrap: wrap; }
+
+    .tc {
+      padding: 3px 10px;
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 10px; color: var(--muted);
+      letter-spacing: 0.04em;
+    }
+
+    /* ── RESPONSIVE ─────────────────────────── */
+    @media (max-width: 880px) {
+      .preview-grid { grid-template-columns: 1fr; }
+      .app-col + .app-col { border-left: none; border-top: 1px solid var(--border); }
+      .page-header { padding: 40px 24px 32px; flex-direction: column; align-items: flex-start; gap: 14px; }
+      .app-col { padding: 40px 24px 52px; }
+      .wordmark { font-size: 38px; }
+      footer { flex-direction: column; gap: 14px; padding: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══════════════════════════════════════════════════════ -->
+<header class="page-header">
+  <div>
+    <div class="wordmark">Smart<em>Ride</em></div>
+    <p class="tagline">Non-Emergency Medical Transportation · Flutter App Preview</p>
+  </div>
+  <div class="header-right">
+    <span class="pill">FYP · 2026</span>
+    <p class="stack-note">Flutter 3.x · Riverpod · Material 3 · FastAPI</p>
+  </div>
+</header>
+
+<!-- ═══ PREVIEW GRID ═════════════════════════════════════════════════ -->
+<div class="preview-grid">
+
+  <!-- ════════════════════ PATIENT APP ════════════════════ -->
+  <div class="app-col patient-col">
+    <div class="col-header">
+      <div class="col-icon">🏥</div>
+      <div>
+        <div class="col-name">Patient App</div>
+        <div class="col-desc">Healthcare blue · SmartRide Patient Portal</div>
+      </div>
+    </div>
+
+    <div class="phone-wrap">
+      <div class="phone-frame">
+        <div class="phone-screen">
+
+          <!-- P1: Login -->
+          <div class="screen p-login active" id="p-1">
+            <div class="sb"><span>9:41</span><span class="si">●●● 5G 🔋</span></div>
+            <div class="login-hero">
+              <div class="hero-icon">🚖</div>
+              <div class="hero-title">SmartRide</div>
+              <div class="hero-sub">Patient Portal</div>
+            </div>
+            <div class="login-card">
+              <div class="lc-title">Sign in</div>
+              <div class="lc-sub">Enter your registered phone number</div>
+              <div class="ff">
+                <label class="fl">Phone Number</label>
+                <div class="fi-wrap">
+                  <span class="fi-icon">📱</span>
+                  <div class="fi">+92300000000</div>
+                </div>
+              </div>
+              <div class="ff">
+                <label class="fl">Password</label>
+                <div class="fi-wrap">
+                  <span class="fi-icon">🔒</span>
+                  <div class="fi">••••••••</div>
+                </div>
+              </div>
+              <div class="btn-p">🔑 Sign In</div>
+            </div>
+          </div>
+
+          <!-- P2: Home -->
+          <div class="screen p-home" id="p-2">
+            <div class="sb"><span>9:41</span><span class="si">●●● 5G 🔋</span></div>
+            <div class="ab">
+              <div class="ab-icon">👤</div>
+              <div class="ab-title">SmartRide</div>
+              <div class="ab-icon">⚙️</div>
+            </div>
+            <div class="sbody">
+              <div class="home-pad">
+                <div class="loc-chip">📍 33.6844, 73.0479</div>
+                <div class="emer-btn">🚨 EMERGENCY RIDE</div>
+                <div class="active-banner">
+                  <div class="bi">🚗</div>
+                  <div>
+                    <h4>Active Ride</h4>
+                    <p>DRIVER ASSIGNED</p>
+                  </div>
+                  <div class="ch">›</div>
+                </div>
+                <div class="sec-title">Recent Rides</div>
+                <div class="ride-card">
+                  <div class="rc-head">
+                    <span>🚑</span>
+                    <span class="rc-type">Emergency</span>
+                    <span class="chip chip-assigned">Driver Assigned</span>
+                  </div>
+                  <div class="rc-addr">Services Hospital, Lahore</div>
+                  <div class="rc-meta">⏰ 23 May, 9:30 AM <span class="fare">PKR 450</span></div>
+                </div>
+                <div class="ride-card">
+                  <div class="rc-head">
+                    <span>🚗</span>
+                    <span class="rc-type">Scheduled</span>
+                    <span class="chip chip-done">Completed</span>
+                  </div>
+                  <div class="rc-addr">Shaukat Khanum Hospital</div>
+                  <div class="rc-meta">⏰ 22 May, 2:15 PM <span class="fare">PKR 320</span></div>
+                </div>
+                <div class="ride-card">
+                  <div class="rc-head">
+                    <span>🚗</span>
+                    <span class="rc-type">Scheduled</span>
+                    <span class="chip chip-pending">Pending</span>
+                  </div>
+                  <div class="rc-addr">PIMS Hospital, Islamabad</div>
+                  <div class="rc-meta">⏰ 24 May, 10:00 AM <span class="fare">PKR 280</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- P3: Ride Detail -->
+          <div class="screen p-detail" id="p-3">
+            <div class="sb"><span>9:41</span><span class="si">●●● 5G 🔋</span></div>
+            <div class="ab">
+              <div class="ab-back">‹</div>
+              <div class="ab-title">Ride Details</div>
+              <div style="width:30px;"></div>
+            </div>
+            <div class="sbody">
+              <div class="detail-pad">
+                <div class="status-badge sb-active">🚗 Driver Assigned</div>
+                <div class="info-card">
+                  <div class="ic-title">Trip Info</div>
+                  <div class="ir"><span class="ir-label">Type</span><span class="ir-val">Emergency</span></div>
+                  <div class="ir"><span class="ir-label">Requested</span><span class="ir-val">23 May 2026, 9:30 AM</span></div>
+                  <div class="ir"><span class="ir-label">Pickup</span><span class="ir-val">House 14, St 5, Gulberg III</span></div>
+                  <div class="ir"><span class="ir-label">Est. Fare</span><span class="ir-val">PKR 450</span></div>
+                </div>
+                <div class="info-card">
+                  <div class="ic-title">Driver</div>
+                  <div class="ir"><span class="ir-label">Name</span><span class="ir-val">Zubair Ahmed</span></div>
+                  <div class="ir"><span class="ir-label">Phone</span><span class="ir-val">+92 311 234 5678</span></div>
+                  <div class="ir"><span class="ir-label">Vehicle</span><span class="ir-val">Alto · LHR-4421</span></div>
+                </div>
+                <div class="info-card">
+                  <div class="ic-title">Hospital</div>
+                  <div class="ir"><span class="ir-label">Name</span><span class="ir-val">Services Hospital</span></div>
+                  <div class="ir"><span class="ir-label">Address</span><span class="ir-val">Jail Rd, Lahore</span></div>
+                  <div class="ir"><span class="ir-label">Specialty</span><span class="ir-val">Cardiology</span></div>
+                </div>
+                <div class="info-card">
+                  <div class="ic-title">Triage</div>
+                  <div class="ir"><span class="ir-label">Symptoms</span><span class="ir-val">Chest pain, shortness of breath</span></div>
+                  <div class="ir"><span class="ir-label">Severity</span><span class="ir-val" style="color:var(--red);font-weight:700;">High</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- P4: Profile -->
+          <div class="screen p-profile" id="p-4">
+            <div class="sb"><span>9:41</span><span class="si">●●● 5G 🔋</span></div>
+            <div class="ab">
+              <div class="ab-back">‹</div>
+              <div class="ab-title">Profile</div>
+              <div style="width:30px;"></div>
+            </div>
+            <div class="sbody">
+              <div class="prof-body">
+                <div class="av av-p">A</div>
+                <div class="prof-name">Asher Farooq</div>
+                <div class="prof-phone">+92 300 123 4567</div>
+                <div class="info-card" style="width:100%;">
+                  <div class="ic-title">Personal Info</div>
+                  <div class="ir"><span class="ir-label">Date of Birth</span><span class="ir-val">14 Jan 1998</span></div>
+                  <div class="ir"><span class="ir-label">Mobility</span><span class="ir-val">Wheelchair required</span></div>
+                </div>
+                <div class="info-card" style="width:100%;">
+                  <div class="ic-title">Emergency Contact</div>
+                  <div class="ir"><span class="ir-label">Name</span><span class="ir-val">Sara Farooq</span></div>
+                  <div class="ir"><span class="ir-label">Phone</span><span class="ir-val">+92 333 765 4321</span></div>
+                </div>
+                <div style="width:100%;margin-top:4px;">
+                  <div style="width:100%;height:42px;border:1.5px solid #fcc;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:600;color:#C62828;">
+                    Sign Out
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /phone-screen -->
+      </div><!-- /phone-frame -->
+
+      <!-- Tabs -->
+      <div class="tabs" id="pt">
+        <button class="tab active" onclick="sw('p','p-1',this,'pt')">Login</button>
+        <button class="tab"        onclick="sw('p','p-2',this,'pt')">Home</button>
+        <button class="tab"        onclick="sw('p','p-3',this,'pt')">Ride Detail</button>
+        <button class="tab"        onclick="sw('p','p-4',this,'pt')">Profile</button>
+      </div>
+    </div>
+  </div><!-- /patient-col -->
+
+  <!-- ════════════════════ DRIVER APP ═════════════════════ -->
+  <div class="app-col driver-col">
+    <div class="col-header">
+      <div class="col-icon">🚙</div>
+      <div>
+        <div class="col-name">Driver App</div>
+        <div class="col-desc">Teal accent · SmartRide Driver Portal</div>
+      </div>
+    </div>
+
+    <div class="phone-wrap">
+      <div class="phone-frame">
+        <div class="phone-screen">
+
+          <!-- D1: Login -->
+          <div class="screen d-login active" id="d-1">
+            <div class="sb"><span>9:41</span><span class="si">●●● 5G 🔋</span></div>
+            <div class="d-hero">
+              <div class="hero-icon">🚙</div>
+              <div class="hero-title">SmartRide Driver</div>
+              <div class="hero-sub">Driver Portal</div>
+            </div>
+            <div class="d-card">
+              <div class="lc-title" style="color:#004D40;">Driver Sign In</div>
+              <div class="lc-sub">Enter your registered credentials</div>
+              <div class="ff">
+                <label class="fl">Phone Number</label>
+                <div class="fi-wrap">
+                  <span class="fi-icon">📱</span>
+                  <div class="fi" style="border-color:#B2DFDB;">+92311 000 0000</div>
+                </div>
+              </div>
+              <div class="ff">
+                <label class="fl">Password</label>
+                <div class="fi-wrap">
+                  <span class="fi-icon">🔒</span>
+                  <div class="fi" style="border-color:#B2DFDB;">••••••••</div>
+                </div>
+              </div>
+              <div class="btn-d">🔑 Sign In</div>
+            </div>
+          </div>
+
+          <!-- D2: Dashboard -->
+          <div class="screen d-dash" id="d-2">
+            <div class="sb"><span>9:41</span><span class="si">●●● 5G 🔋</span></div>
+            <div class="ab">
+              <div style="width:30px;"></div>
+              <div class="ab-title">Driver Dashboard</div>
+              <div class="ab-icon">👤</div>
+            </div>
+            <div class="sbody">
+              <div class="dash-pad">
+                <div class="avail-card">
+                  <div class="avail-text">
+                    <h4>Available for Rides</h4>
+                    <p>Online · Accepting requests</p>
+                  </div>
+                  <div class="toggle"></div>
+                </div>
+                <div class="stats-row">
+                  <div class="stat"><div class="stat-v">7</div><div class="stat-l">Rides Today</div></div>
+                  <div class="stat"><div class="stat-v">3,240</div><div class="stat-l">PKR Earned</div></div>
+                  <div class="stat"><div class="stat-v">4.8⭐</div><div class="stat-l">Rating</div></div>
+                </div>
+                <div class="sec-title-d">Incoming Requests</div>
+                <div class="req-card">
+                  <div class="req-head">
+                    <span class="req-type req-type-emer">🚑 Emergency</span>
+                    <span class="req-dist">2.3 km away</span>
+                  </div>
+                  <div class="req-addr">📍 House 14, Gulberg III, Lahore</div>
+                  <div class="req-hosp">🏥 → Services Hospital, Jail Rd</div>
+                  <div class="req-actions">
+                    <div class="btn-accept">✓ Accept</div>
+                    <div class="btn-decline">✗ Decline</div>
+                  </div>
+                </div>
+                <div class="req-card">
+                  <div class="req-head">
+                    <span class="req-type req-type-sched">🚗 Scheduled</span>
+                    <span class="req-dist">4.1 km away</span>
+                  </div>
+                  <div class="req-addr">📍 DHA Phase 5, Lahore</div>
+                  <div class="req-hosp">🏥 → Shaukat Khanum Hospital</div>
+                  <div class="req-actions">
+                    <div class="btn-accept">✓ Accept</div>
+                    <div class="btn-decline">✗ Decline</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- D3: Active Ride -->
+          <div class="screen d-active" id="d-3">
+            <div class="sb"><span>9:41</span><span class="si">●●● 5G 🔋</span></div>
+            <div class="ab">
+              <div class="ab-back">‹</div>
+              <div class="ab-title">Active Ride</div>
+              <div style="width:30px;"></div>
+            </div>
+            <div class="sbody">
+              <div class="active-pad">
+                <div class="status-badge" style="background:rgba(0,105,92,.1);border:1px solid rgba(0,105,92,.22);color:var(--d);margin-bottom:11px;">
+                  🟢 At Location
+                </div>
+                <div class="pat-card">
+                  <div class="pat-av">A</div>
+                  <div class="pat-info">
+                    <h4>Asher Farooq</h4>
+                    <p class="pi">+92 300 123 4567</p>
+                    <p class="mob">♿ Wheelchair required</p>
+                  </div>
+                  <div class="call-btn">📞</div>
+                </div>
+                <div class="ic-d" style="margin-bottom:11px;">
+                  <div class="ic-d-title">Destination</div>
+                  <div class="ir"><span class="ir-label">Hospital</span><span class="ir-val">Services Hospital</span></div>
+                  <div class="ir"><span class="ir-label">Address</span><span class="ir-val">Jail Rd, Lahore</span></div>
+                  <div class="ir"><span class="ir-label">Est. Fare</span><span class="ir-val">PKR 450</span></div>
+                </div>
+                <div class="timeline">
+                  <div class="tl-title">Ride Status</div>
+                  <div class="tl-step"><div class="tl-dot done">✓</div><span class="tl-label done">Accepted</span></div>
+                  <div class="tl-step"><div class="tl-dot done">✓</div><span class="tl-label done">En Route to Patient</span></div>
+                  <div class="tl-step"><div class="tl-dot current">●</div><span class="tl-label current">At Location</span></div>
+                  <div class="tl-step"><div class="tl-dot"></div><span class="tl-label" style="color:#bbb;">Completed</span></div>
+                </div>
+                <div class="btn-complete">🏁 Complete Ride</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- D4: Profile -->
+          <div class="screen d-profile" id="d-4">
+            <div class="sb"><span>9:41</span><span class="si">●●● 5G 🔋</span></div>
+            <div class="ab">
+              <div class="ab-back">‹</div>
+              <div class="ab-title">My Profile</div>
+              <div style="width:30px;"></div>
+            </div>
+            <div class="sbody">
+              <div class="prof-body">
+                <div class="av av-d">Z</div>
+                <div class="prof-name">Zubair Ahmed</div>
+                <div class="prof-phone">+92 311 234 5678</div>
+                <div class="verified-badge">✅ Verified Driver</div>
+                <div class="ic-d">
+                  <div class="ic-d-title">Vehicle Info</div>
+                  <div class="ir"><span class="ir-label">Type</span><span class="ir-val">Suzuki Alto</span></div>
+                  <div class="ir"><span class="ir-label">Plate</span><span class="ir-val">LHR-4421</span></div>
+                  <div class="ir"><span class="ir-label">Year</span><span class="ir-val">2022</span></div>
+                  <div class="ir"><span class="ir-label">Color</span><span class="ir-val">White</span></div>
+                </div>
+                <div class="ic-d" style="margin-top:9px;">
+                  <div class="ic-d-title">Stats</div>
+                  <div class="ir"><span class="ir-label">Total Rides</span><span class="ir-val">234</span></div>
+                  <div class="ir"><span class="ir-label">Rating</span><span class="ir-val">4.8 ⭐ (198 reviews)</span></div>
+                  <div class="ir"><span class="ir-label">Member</span><span class="ir-val">Since Jan 2026</span></div>
+                </div>
+                <div style="width:100%;margin-top:12px;">
+                  <div style="width:100%;height:42px;border:1.5px solid #B2DFDB;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:600;color:#C62828;">
+                    Sign Out
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /phone-screen -->
+      </div><!-- /phone-frame -->
+
+      <!-- Tabs -->
+      <div class="tabs" id="dt">
+        <button class="tab active" onclick="sw('d','d-1',this,'dt')">Login</button>
+        <button class="tab"        onclick="sw('d','d-2',this,'dt')">Dashboard</button>
+        <button class="tab"        onclick="sw('d','d-3',this,'dt')">Active Ride</button>
+        <button class="tab"        onclick="sw('d','d-4',this,'dt')">Profile</button>
+      </div>
+    </div>
+  </div><!-- /driver-col -->
+
+</div><!-- /preview-grid -->
+
+<!-- ═══ FOOTER ═══════════════════════════════════════════════════════ -->
+<footer>
+  <p>SmartRide NEMT · Final Year Project · 2026</p>
+  <div class="tech-chips">
+    <span class="tc">Flutter 3.x</span>
+    <span class="tc">Riverpod 2.5</span>
+    <span class="tc">Material 3</span>
+    <span class="tc">Dio 5.6</span>
+    <span class="tc">go_router</span>
+    <span class="tc">FastAPI</span>
+    <span class="tc">PostgreSQL</span>
+  </div>
+</footer>
+
+<script>
+  function sw(app, screenId, btn, tabsId) {
+    const prefix = app === 'p' ? 'p-' : 'd-';
+    document.querySelectorAll('[id^="' + prefix + '"]').forEach(s => s.classList.remove('active'));
+    document.getElementById(screenId).classList.add('active');
+    document.querySelectorAll('#' + tabsId + ' .tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+  }
+</script>
+
+</body>
+</html>
