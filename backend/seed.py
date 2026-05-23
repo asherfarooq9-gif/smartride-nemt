@@ -6,15 +6,16 @@ Or locally:
   cd backend && python seed.py
 """
 import asyncio
+import json
 import os
-import sys
+import uuid
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.core.config import settings
 from app.core.security import hash_password
-from app.models.models import User, Hospital, UserRole
 
 DB_URL = os.environ.get("DATABASE_URL", settings.DATABASE_URL)
 
@@ -47,25 +48,34 @@ async def seed() -> None:
     factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
     async with factory() as db:
-        # Admin user
-        existing = await db.execute(select(User).where(User.phone == "+92300000001"))
-        if existing.scalar_one_or_none() is None:
-            admin = User(
-                phone="+92300000001",
-                password_hash=hash_password("admin123"),
-                role=UserRole.admin,
-                is_active=True,
-            )
-            db.add(admin)
+        # Admin user — use raw SQL to avoid Python enum → Postgres type mismatch
+        row = await db.execute(text("SELECT id FROM users WHERE phone = '+92300000001'"))
+        if row.first() is None:
+            await db.execute(text(
+                "INSERT INTO users (id, phone, password_hash, role, is_active) "
+                "VALUES (:id, :phone, :pw, 'admin'::user_role, true)"
+            ), {"id": str(uuid.uuid4()), "phone": "+92300000001", "pw": hash_password("admin123")})
             print("  Created admin user  phone=+92300000001  password=admin123")
         else:
             print("  Admin user already exists — skipped")
 
-        # Hospitals
+        # Hospitals — raw SQL to avoid same enum issue with specialties JSON
         for h in HOSPITALS:
-            existing = await db.execute(select(Hospital).where(Hospital.name == h["name"]))
-            if existing.scalar_one_or_none() is None:
-                db.add(Hospital(**h))
+            row = await db.execute(text("SELECT id FROM hospitals WHERE name = :name"), {"name": h["name"]})
+            if row.first() is None:
+                await db.execute(text(
+                    "INSERT INTO hospitals (id, name, address, city, lat, lng, specialties, "
+                    "ed_capacity, ed_current_load, is_active) "
+                    "VALUES (:id, :name, :address, :city, :lat, :lng, :specialties::json, "
+                    ":ed_capacity, :ed_current_load, :is_active)"
+                ), {
+                    "id": str(uuid.uuid4()),
+                    "name": h["name"], "address": h["address"], "city": h["city"],
+                    "lat": h["lat"], "lng": h["lng"],
+                    "specialties": json.dumps(h["specialties"]),
+                    "ed_capacity": h["ed_capacity"], "ed_current_load": h["ed_current_load"],
+                    "is_active": h["is_active"],
+                })
                 print(f"  Created hospital: {h['name']}")
             else:
                 print(f"  Hospital already exists — skipped: {h['name']}")
