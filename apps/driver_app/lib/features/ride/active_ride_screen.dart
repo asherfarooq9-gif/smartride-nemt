@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
+import '../../core/theme.dart';
 
 final _rideDetailProvider =
     FutureProvider.family<Map<String, dynamic>, String>((ref, id) async {
@@ -26,13 +27,46 @@ const _nextLabel = {
   'arrived_at_hospital': 'Complete Ride',
 };
 
-class ActiveRideScreen extends ConsumerWidget {
+class ActiveRideScreen extends ConsumerStatefulWidget {
   final String rideId;
   const ActiveRideScreen({super.key, required this.rideId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final rideAsync = ref.watch(_rideDetailProvider(rideId));
+  ConsumerState<ActiveRideScreen> createState() => _ActiveRideScreenState();
+}
+
+class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
+  bool _submitting = false;
+
+  Future<void> _advanceStatus(String nextStatus) async {
+    if (_submitting) return;
+    setState(() => _submitting = true);
+    try {
+      await ApiClient.patch(
+        '/api/v1/rides/${widget.rideId}/status',
+        body: {'status': nextStatus},
+      );
+      ref.invalidate(_rideDetailProvider(widget.rideId));
+      if (nextStatus == 'completed' && mounted) {
+        context.pop();
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.message),
+            backgroundColor: statusError,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rideAsync = ref.watch(_rideDetailProvider(widget.rideId));
 
     return Scaffold(
       appBar: AppBar(title: const Text('Active Ride')),
@@ -105,35 +139,27 @@ class ActiveRideScreen extends ConsumerWidget {
                   SizedBox(
                     width: double.infinity,
                     height: 52,
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        try {
-                          await ApiClient.patch(
-                              '/api/v1/rides/$rideId/status',
-                              body: {'status': nextS});
-                          ref.invalidate(_rideDetailProvider(rideId));
-                          if (nextS == 'completed' && context.mounted) {
-                            context.pop();
-                          }
-                        } on ApiException catch (e) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(e.message),
-                                backgroundColor: Colors.red[700],
-                              ),
-                            );
-                          }
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF00695C),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                    child: Semantics(
+                      label: nextL,
+                      button: true,
+                      child: ElevatedButton(
+                        onPressed: _submitting ? null : () => _advanceStatus(nextS),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF00695C),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: _submitting
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white),
+                              )
+                            : Text(nextL ?? '',
+                                style: const TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.w600)),
                       ),
-                      child: Text(nextL ?? '',
-                          style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w600)),
                     ),
                   ),
                 if (status == 'driver_assigned' || status == 'driver_en_route') ...[
@@ -163,7 +189,7 @@ class ActiveRideScreen extends ConsumerWidget {
                       if (confirm == true) {
                         try {
                           await ApiClient.patch(
-                              '/api/v1/rides/$rideId/status',
+                              '/api/v1/rides/${widget.rideId}/status',
                               body: {'status': 'cancelled'});
                           if (context.mounted) context.pop();
                         } on ApiException catch (e) {

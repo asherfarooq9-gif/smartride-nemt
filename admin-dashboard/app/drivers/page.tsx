@@ -5,6 +5,7 @@ import StatusBadge from '@/components/ui/StatusBadge'
 import Modal from '@/components/ui/Modal'
 import LoadingRows from '@/components/ui/LoadingRows'
 import { Search, Filter, Users, CheckCircle, XCircle, MapPin, Clock } from 'lucide-react'
+import EmptyState from '@/components/ui/EmptyState'
 
 const STATUS_OPTS = ['', 'available', 'busy', 'offline']
 
@@ -111,14 +112,20 @@ export default function DriversPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-blue-50">
-            {loading
-              ? <LoadingRows cols={7} />
-              : drivers.length === 0
-                ? <tr><td colSpan={7} className="px-4 py-16 text-center text-gray-400">
-                    <Users size={32} className="mx-auto mb-3 opacity-30" />
-                    <p>No drivers found</p>
-                  </td></tr>
-                : drivers.map(d => (
+            {loading ? (
+              <LoadingRows cols={7} />
+            ) : drivers.length === 0 ? (
+              <tr>
+                <td colSpan={7}>
+                  <EmptyState
+                    icon={Users}
+                    title="No drivers found"
+                    description={search || statusFilter || verifiedFilter ? 'Try adjusting your filters.' : 'Registered drivers will appear here.'}
+                  />
+                </td>
+              </tr>
+            ) : (
+              drivers.map(d => (
                 <tr
                   key={d.id}
                   className="hover:bg-blue-50/40 cursor-pointer transition-colors"
@@ -151,7 +158,7 @@ export default function DriversPage() {
                   </td>
                 </tr>
               ))
-            }
+            )}
           </tbody>
         </table>
       </div>

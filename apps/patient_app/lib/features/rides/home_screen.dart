@@ -106,11 +106,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ref.read(ridesNotifierProvider.notifier).refresh();
         context.push('/ride/$rideId');
       }
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message), backgroundColor: Colors.red),
-      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Emergency request failed: $e'),
+            backgroundColor: Colors.red[700],
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: _callEmergency,
+            ),
+            duration: const Duration(seconds: 8),
+          ),
+        );
+      }
+    } finally {
+      // No loading state to reset in this method.
     }
   }
 
@@ -155,10 +167,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       const Icon(Icons.location_on,
                           size: 14, color: Color(0xFF1565C0)),
                       const SizedBox(width: 4),
-                      Text(
-                        _locationLabel!,
-                        style: const TextStyle(
-                            fontSize: 12, color: Color(0xFF1565C0)),
+                      Semantics(
+                        label: 'Current location: ${_locationLabel ?? "unavailable"}',
+                        child: Text(
+                          _locationLabel!,
+                          style: const TextStyle(
+                              fontSize: 12, color: Color(0xFF1565C0)),
+                        ),
                       ),
                     ],
                   ),
@@ -171,23 +186,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   scale: 1.0 + (_pulseCtrl.value * 0.03),
                   child: child,
                 ),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 64,
-                  child: ElevatedButton.icon(
-                    onPressed: _callEmergency,
-                    icon: const Icon(Icons.emergency, size: 24),
-                    label: const Text(
-                      'EMERGENCY RIDE',
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red[700],
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16)),
+                child: Semantics(
+                  label: 'Emergency — tap to request immediate medical transport',
+                  button: true,
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 64,
+                    child: ElevatedButton.icon(
+                      onPressed: _callEmergency,
+                      icon: const Icon(Icons.emergency, size: 24),
+                      label: const Text(
+                        'EMERGENCY RIDE',
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red[700],
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                      ),
                     ),
                   ),
                 ),

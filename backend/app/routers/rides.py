@@ -3,6 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
+from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.core.security import get_current_user, require_patient, require_driver, require_admin
@@ -152,7 +153,15 @@ async def get_ride_detail(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Ride).where(Ride.id == ride_id))
+    result = await db.execute(
+        select(Ride)
+        .where(Ride.id == ride_id)
+        .options(
+            selectinload(Ride.patient).selectinload(Patient.user),
+            selectinload(Ride.driver).selectinload(Driver.user),
+            selectinload(Ride.hospital),
+        )
+    )
     ride = result.scalar_one_or_none()
     if not ride:
         raise HTTPException(404, "Ride not found")
@@ -167,33 +176,23 @@ async def get_ride_detail(
         if ride.driver_id != driver_rec.id:
             raise HTTPException(403, "Forbidden")
 
-    # Load related records
+    # Build response from eagerly loaded relationships
     patient_data = None
-    if ride.patient_id:
-        pr = await db.execute(
-            select(Patient, User).join(User, Patient.user_id == User.id).where(Patient.id == ride.patient_id)
-        )
-        row = pr.one_or_none()
-        if row:
-            p, u = row
-            patient_data = {"full_name": p.full_name, "phone": u.phone, "mobility_needs": p.mobility_needs}
+    if ride.patient:
+        p = ride.patient
+        u = p.user
+        patient_data = {"full_name": p.full_name, "phone": u.phone, "mobility_needs": p.mobility_needs}
 
     driver_data = None
-    if ride.driver_id:
-        dr = await db.execute(
-            select(Driver, User).join(User, Driver.user_id == User.id).where(Driver.id == ride.driver_id)
-        )
-        row = dr.one_or_none()
-        if row:
-            d, u = row
-            driver_data = {"full_name": d.full_name, "phone": u.phone, "vehicle_plate": d.vehicle_plate, "vehicle_type": d.vehicle_type}
+    if ride.driver:
+        d = ride.driver
+        u = d.user
+        driver_data = {"full_name": d.full_name, "phone": u.phone, "vehicle_plate": d.vehicle_plate, "vehicle_type": d.vehicle_type}
 
     hospital_data = None
-    if ride.hospital_id:
-        hr = await db.execute(select(Hospital).where(Hospital.id == ride.hospital_id))
-        h = hr.scalar_one_or_none()
-        if h:
-            hospital_data = {"name": h.name, "address": h.address, "city": h.city}
+    if ride.hospital:
+        h = ride.hospital
+        hospital_data = {"name": h.name, "address": h.address, "city": h.city}
 
     triage_data = None
     tr = await db.execute(select(TriageEvent).where(TriageEvent.ride_id == ride.id).order_by(TriageEvent.created_at.desc()).limit(1))

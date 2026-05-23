@@ -63,9 +63,30 @@ class _ScheduledRidesScreenState
                         .where((r) => r.status == _selectedStatus)
                         .toList();
                 if (filtered.isEmpty) {
-                  return const Center(
-                    child: Text('No rides',
-                        style: TextStyle(color: Colors.grey)),
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.directions_car_outlined,
+                            size: 56, color: Color(0xFFBBD3F5)),
+                        const SizedBox(height: 16),
+                        Text(
+                          _selectedStatus == 'all'
+                              ? 'No rides yet'
+                              : 'No ${_capitalize(_selectedStatus)} rides',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF1565C0),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Your ride history will appear here.',
+                          style: TextStyle(color: Colors.grey, fontSize: 13),
+                        ),
+                      ],
+                    ),
                   );
                 }
                 return RefreshIndicator(

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
+import '../../core/theme.dart';
 import 'dashboard_notifier.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -55,7 +55,7 @@ class DashboardScreen extends ConsumerWidget {
                         Icon(
                           Icons.circle,
                           size: 12,
-                          color: state.isOnline ? Colors.green : Colors.grey,
+                          color: state.isOnline ? statusOnline : statusOffline,
                         ),
                         const SizedBox(width: 8),
                         Text(
@@ -65,8 +65,8 @@ class DashboardScreen extends ConsumerWidget {
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             color: state.isOnline
-                                ? Colors.green[700]
-                                : Colors.grey,
+                                ? statusOnline
+                                : statusOffline,
                           ),
                         ),
                         const Spacer(),
@@ -75,8 +75,8 @@ class DashboardScreen extends ConsumerWidget {
                           onChanged: (_) => ref
                               .read(dashboardNotifierProvider.notifier)
                               .toggleOnline(),
-                          activeThumbColor: Colors.green,
-                          activeTrackColor: Colors.green[200],
+                          activeThumbColor: statusOnline,
+                          activeTrackColor: statusOnline.withValues(alpha: 0.4),
                         ),
                       ],
                     ),
@@ -88,24 +88,29 @@ class DashboardScreen extends ConsumerWidget {
                   style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF004D40)),
+                      color: driverPrimaryDark),
                 ),
                 const SizedBox(height: 12),
                 if (state.pendingRides.isEmpty)
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(32),
-                      child: Text('No pending rides',
-                          style: TextStyle(color: Colors.grey)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Column(
+                      children: [
+                        Icon(Icons.inbox_outlined,
+                            size: 48,
+                            color: driverPrimary.withValues(alpha: 0.3)),
+                        const SizedBox(height: 12),
+                        Text(
+                          state.isOnline
+                              ? 'Waiting for ride requests…'
+                              : 'Go online to receive rides',
+                          style: const TextStyle(color: statusOffline, fontSize: 14),
+                        ),
+                      ],
                     ),
                   )
                 else
-                  ...state.pendingRides.map(
-                    (r) => _RideRequestCard(
-                      ride: r,
-                      onAccept: () => context.push('/ride/${r.id}'),
-                    ),
-                  ),
+                  ...state.pendingRides.map((r) => _RideCard(ride: r)),
               ],
             ),
           ),
@@ -115,63 +120,120 @@ class DashboardScreen extends ConsumerWidget {
   }
 }
 
-class _RideRequestCard extends StatelessWidget {
+class _RideCard extends StatefulWidget {
   final PendingRide ride;
-  final VoidCallback onAccept;
-  const _RideRequestCard({required this.ride, required this.onAccept});
+  const _RideCard({required this.ride});
+
+  @override
+  State<_RideCard> createState() => _RideCardState();
+}
+
+class _RideCardState extends State<_RideCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  static const _duration = Duration(seconds: 30);
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: _duration)..forward();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final dt = DateTime.tryParse(ride.requestedAt)?.toLocal();
-    final formatted = dt != null ? DateFormat('h:mm a').format(dt) : '';
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Icon(
-              ride.rideType == 'emergency'
-                  ? Icons.emergency
-                  : Icons.directions_car,
-              color: ride.rideType == 'emergency'
-                  ? Colors.red
-                  : const Color(0xFF00695C),
-              size: 28,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    ride.pickupAddress,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 14),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (context, _) {
+        final secondsLeft = ((_duration.inSeconds) * (1 - _ctrl.value)).ceil();
+        final isUrgent = secondsLeft <= 10;
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        widget.ride.pickupAddress,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          CircularProgressIndicator(
+                            value: 1 - _ctrl.value,
+                            strokeWidth: 3,
+                            backgroundColor: Colors.grey.shade200,
+                            valueColor: AlwaysStoppedAnimation(
+                              isUrgent ? statusError : driverPrimary,
+                            ),
+                          ),
+                          Text(
+                            '$secondsLeft',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: isUrgent ? statusError : driverPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  widget.ride.rideType.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: widget.ride.rideType == 'emergency'
+                        ? statusError
+                        : statusOffline,
+                    fontWeight: FontWeight.w600,
                   ),
-                  Text(formatted,
-                      style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                ],
-              ),
+                ),
+                const SizedBox(height: 12),
+                if (secondsLeft > 0)
+                  Semantics(
+                    label: 'Accept ride request',
+                    button: true,
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => context.push('/ride/${widget.ride.id}'),
+                        child: const Text('Accept Ride'),
+                      ),
+                    ),
+                  )
+                else
+                  const Center(
+                    child: Text(
+                      'Request expired',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ),
+              ],
             ),
-            const SizedBox(width: 8),
-            ElevatedButton(
-              onPressed: onAccept,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00695C),
-                minimumSize: const Size(70, 36),
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
-              ),
-              child:
-                  const Text('Accept', style: TextStyle(fontSize: 13)),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

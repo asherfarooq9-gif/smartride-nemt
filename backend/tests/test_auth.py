@@ -81,3 +81,39 @@ async def test_short_password_rejected(client: AsyncClient):
     payload = {**PATIENT_PAYLOAD, "phone": "+92-300-5555555", "password": "ab"}
     resp = await client.post("/api/v1/auth/register", json=payload)
     assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_login_wrong_password_returns_standard_error_shape(client: AsyncClient):
+    phone = "+92-000-0000000"
+    resp = await client.post("/api/v1/auth/login", json={"phone": phone, "password": "wrong"})
+    assert resp.status_code == 401
+    body = resp.json()
+    assert "detail" in body
+    assert "code" in body
+
+
+@pytest.mark.asyncio
+async def test_refresh_returns_new_token(client):
+    resp = await client.post("/api/v1/auth/register", json={
+        "phone": "+92300000099",
+        "password": "Passw0rd!",
+        "role": "patient",
+        "full_name": "Refresh User",
+    })
+    assert resp.status_code == 201
+    old_token = resp.json()["access_token"]
+
+    resp2 = await client.post(
+        "/api/v1/auth/refresh",
+        headers={"Authorization": f"Bearer {old_token}"},
+    )
+    assert resp2.status_code == 200
+    new_token = resp2.json()["access_token"]
+    assert new_token != old_token
+
+
+@pytest.mark.asyncio
+async def test_refresh_rejects_no_token(client):
+    resp = await client.post("/api/v1/auth/refresh")
+    assert resp.status_code in (401, 403, 422)
