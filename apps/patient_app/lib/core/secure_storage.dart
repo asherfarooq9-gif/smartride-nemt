@@ -3,12 +3,11 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// Single access point for JWT token persistence.
 /// All other files must use this class — never import flutter_secure_storage directly.
 class SecureStorage {
-  // Use encrypted shared prefs on Android, Keychain on iOS
+  // Encrypted storage per platform; web uses localStorage via WebOptions
   static const _storage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
-    iOptions: IOSOptions(
-      accessibility: KeychainAccessibility.first_unlock,
-    ),
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
+    wOptions: WebOptions(dbName: 'smartride_patient', publicKey: 'smartride'),
   );
 
   static const _tokenKey = 'auth_token';

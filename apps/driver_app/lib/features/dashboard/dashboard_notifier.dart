@@ -43,7 +43,7 @@ class DashboardNotifier extends AsyncNotifier<DashboardState> {
   Future<DashboardState> build() => _fetch();
 
   Future<DashboardState> _fetch() async {
-    final data = await ApiClient.get('/api/v1/rides',
+    final data = await ApiClient.get('/api/v1/rides/mine',
             query: {'status': 'pending', 'page_size': 20})
         as Map<String, dynamic>;
     final rides = (data['items'] as List)

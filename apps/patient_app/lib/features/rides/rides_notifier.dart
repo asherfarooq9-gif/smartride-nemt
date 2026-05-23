@@ -48,7 +48,7 @@ class RidesNotifier extends AsyncNotifier<RidesState> {
   Future<RidesState> build() => _fetch();
 
   Future<RidesState> _fetch() async {
-    final data = await ApiClient.get('/api/v1/rides', query: {'page_size': 50})
+    final data = await ApiClient.get('/api/v1/rides/mine', query: {'page_size': 50})
         as Map<String, dynamic>;
     final items = (data['items'] as List)
         .map((e) => Ride.fromJson(e as Map<String, dynamic>))
