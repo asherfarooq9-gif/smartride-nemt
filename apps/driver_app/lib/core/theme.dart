@@ -1,52 +1,51 @@
 import 'package:flutter/material.dart';
 
-const kGreen = Color(0xFF16A34A);
-const kBlue = Color(0xFF1565C0);
-const kRed = Color(0xFFDC2626);
-const kAmber = Color(0xFFF59E0B);
-const kSurface = Color(0xFFF8F9FA);
+// Driver app uses teal/green to distinguish from the patient app (blue)
+const _seed = Color(0xFF00695C);
 
-ThemeData buildDriverTheme() {
-  return ThemeData(
-    useMaterial3: true,
-    colorSchemeSeed: kGreen,
-    scaffoldBackgroundColor: kSurface,
-    appBarTheme: const AppBarTheme(
-      elevation: 0,
-      backgroundColor: Colors.white,
-      foregroundColor: Color(0xFF111827),
-      titleTextStyle: TextStyle(color: Color(0xFF111827), fontSize: 18, fontWeight: FontWeight.w700),
-      surfaceTintColor: Colors.transparent,
+final appTheme = ThemeData(
+  useMaterial3: true,
+  colorScheme: ColorScheme.fromSeed(seedColor: _seed),
+  scaffoldBackgroundColor: const Color(0xFFF0FAF7),
+  appBarTheme: const AppBarTheme(
+    backgroundColor: Color(0xFF00695C),
+    foregroundColor: Colors.white,
+    elevation: 0,
+    centerTitle: true,
+  ),
+  inputDecorationTheme: InputDecorationTheme(
+    filled: true,
+    fillColor: Colors.white,
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Color(0xFFB2DFDB)),
     ),
-    cardTheme: CardThemeData(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: Color(0xFFE5E7EB)),
-      ),
-      color: Colors.white,
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Color(0xFF00695C), width: 2),
     ),
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: kGreen,
-        foregroundColor: Colors.white,
-        minimumSize: const Size(double.infinity, 52),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-        elevation: 0,
-      ),
+    errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Colors.red),
     ),
-    inputDecorationTheme: InputDecorationTheme(
-      filled: true,
-      fillColor: const Color(0xFFF9FAFB),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFD1D5DB))),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFD1D5DB))),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: kGreen, width: 2)),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    ),
-    snackBarTheme: SnackBarThemeData(
-      behavior: SnackBarBehavior.floating,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+  ),
+  elevatedButtonTheme: ElevatedButtonThemeData(
+    style: ElevatedButton.styleFrom(
+      backgroundColor: _seed,
+      foregroundColor: Colors.white,
+      minimumSize: const Size(double.infinity, 52),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
     ),
-  );
-}
+  ),
+  cardTheme: CardThemeData(
+    color: Colors.white,
+    elevation: 0,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+      side: const BorderSide(color: Color(0xFFB2DFDB)),
+    ),
+  ),
+);
