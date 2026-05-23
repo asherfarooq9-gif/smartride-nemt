@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional, List
 from sqlalchemy import (
     String, Boolean, DateTime, ForeignKey, Text, Numeric,
-    Integer, Enum as SAEnum, ARRAY, JSON
+    Integer, Enum as SAEnum, ARRAY, JSON, Index
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB, DOUBLE_PRECISION
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -119,6 +119,11 @@ class Driver(Base):
     last_seen_at:  Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     created_at:    Mapped[datetime]           = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+    __table_args__ = (
+        Index("ix_drivers_status", "status"),
+        Index("ix_drivers_user_id", "user_id"),
+    )
+
     user:  Mapped["User"]       = relationship("User", back_populates="driver")
     rides: Mapped[List["Ride"]] = relationship("Ride", back_populates="driver")
 
@@ -170,6 +175,14 @@ class Ride(Base):
     final_fare_pkr:      Mapped[Optional[float]]      = mapped_column(Numeric(10, 2))
     created_at:          Mapped[datetime]             = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+    __table_args__ = (
+        Index("ix_rides_status", "status"),
+        Index("ix_rides_ride_type", "ride_type"),
+        Index("ix_rides_requested_at", "requested_at"),
+        Index("ix_rides_patient_id", "patient_id"),
+        Index("ix_rides_driver_id", "driver_id"),
+    )
+
     patient:        Mapped["Patient"]              = relationship("Patient", back_populates="rides")
     driver:         Mapped[Optional["Driver"]]     = relationship("Driver",  back_populates="rides")
     triage_events:  Mapped[List["TriageEvent"]]    = relationship("TriageEvent",  back_populates="ride")
@@ -192,6 +205,10 @@ class TriageEvent(Base):
     model_version:       Mapped[str]         = mapped_column(String(50))
     inference_ms:        Mapped[Optional[int]] = mapped_column(Integer)
     created_at:          Mapped[datetime]    = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        Index("ix_triage_ride_id", "ride_id"),
+    )
 
     ride: Mapped["Ride"] = relationship("Ride", back_populates="triage_events")
 
