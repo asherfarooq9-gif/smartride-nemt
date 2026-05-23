@@ -1,8 +1,10 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
+
     # JWT
     SECRET_KEY: str = "change_me_to_a_32_char_random_string_here"
     JWT_ALGORITHM: str = "HS256"
@@ -32,10 +34,7 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     ALLOWED_ORIGINS: List[str] = ["*"]
     EMERGENCY_PIPELINE_TARGET_SECONDS: float = 60.0
-
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    LOG_LEVEL: str = "INFO"
 
 
 settings = Settings()
