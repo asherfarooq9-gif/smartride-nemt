@@ -17,6 +17,7 @@ from sqlalchemy import text
 from app.core.config import settings
 from app.core.database import engine, Base
 from app.core.redis_client import ping_redis
+from app.core.logging import StructuredLoggingMiddleware
 from app.routers import auth, patients, drivers, hospitals, rides, analytics, ws
 from app.schemas.errors import ErrorResponse
 
@@ -65,6 +66,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(StructuredLoggingMiddleware)
 
 
 @app.exception_handler(RequestValidationError)
