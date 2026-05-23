@@ -165,6 +165,34 @@ The project is already functional: FastAPI backend with full routers (auth, ride
 
 ---
 
+## Stage 9 — Flutter UI Polish (`senior-frontend` / `ui-ux-pro-max` skill)
+
+**Scope:** Both Flutter apps — `apps/patient_app` and `apps/driver_app`. Structure: `lib/features/` (auth, rides/ride, profile, dashboard) + `lib/widgets/`.
+
+**Patient app areas:**
+- Consistent loading states across all async screens (rides list, live tracking, booking)
+- Empty state for ride history when no past rides exist
+- Error snackbars / dialogs with retry actions on API failures (not just silent fails)
+- WCAG-AA contrast check on the emergency button and symptom input screen
+- Semantic accessibility labels on interactive widgets (`Semantics`, `Tooltip`)
+- Screen size responsiveness for smaller Android devices (≥ 360 dp width)
+
+**Driver app areas:**
+- Loading and error states on dashboard and incoming ride card
+- Empty state when no ride is assigned
+- 30-second accept/decline timer — visual countdown indicator (progress ring or animated bar)
+- Profile screen — form validation feedback (inline errors, not just snackbars)
+- Status button row — disable buttons during in-flight PATCH to prevent double-taps
+
+**Shared / cross-cutting:**
+- Extract repeated `CircularProgressIndicator` + error scaffold into a shared `AsyncStateWidget`
+- Consistent color/typography tokens — verify both apps use the same theme constants from `core/`
+- Remove any hardcoded colors or font sizes outside the theme
+
+**Success criteria:** Both apps compile (`flutter build apk --debug`); no hardcoded colors outside theme; all list/async screens have loading, error, and empty states; accessibility labels present on all tap targets.
+
+---
+
 ## Execution Order and Dependencies
 
 ```
@@ -176,15 +204,15 @@ Stage 5 (API Design) — depends on Stage 1 findings                    ├─ A
 Stage 6 (Performance) — depends on Stage 1 findings                   │
 Stage 7 (Backend Arch) — depends on Stages 1, 5, 6                   │
 Stage 8 (Admin Dashboard) — independent of Stages 1-7               ──┘
+Stage 9 (Flutter UI) — independent of all backend stages
 ```
 
-Stages 2, 4, 8 can run in parallel with earlier stages if desired. Stages 3, 5, 6 should wait for Stage 1 findings. Stage 7 should be last among the backend stages.
+Stages 2, 4, 8, 9 can run in parallel with earlier stages if desired. Stages 3, 5, 6 should wait for Stage 1 findings. Stage 7 should be last among the backend stages.
 
 ---
 
 ## Out of Scope
 
 - New feature development (AI demand forecasting, FHIR notifications, payment integration)
-- Flutter app changes (apps are considered complete)
 - Infrastructure changes (no new required Docker services)
 - Database data migrations (schema-only changes)
