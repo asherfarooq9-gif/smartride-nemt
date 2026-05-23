@@ -19,10 +19,14 @@ class ApiClient {
   static final Dio _dio = _buildDio();
 
   static Dio _buildDio() {
+    // Assert fires in debug; StateError fires in release — both crash fast rather than leak data
     assert(
       _baseUrl.startsWith('https://') || _baseUrl.startsWith('http://10.0.2.2'),
       'API_BASE_URL must use HTTPS in production. Got: $_baseUrl',
     );
+    if (!_baseUrl.startsWith('https://') && !_baseUrl.startsWith('http://10.0.2.2')) {
+      throw StateError('API_BASE_URL must use HTTPS in production. Got: $_baseUrl');
+    }
     final dio = Dio(
       BaseOptions(
         baseUrl: _baseUrl,

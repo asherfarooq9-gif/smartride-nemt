@@ -31,6 +31,9 @@ class AppTextField extends StatelessWidget {
     return TextFormField(
       controller: controller,
       obscureText: obscureText,
+      // Disable autocorrect and suggestions for password fields
+      autocorrect: !obscureText,
+      enableSuggestions: !obscureText,
       keyboardType: keyboardType,
       textInputAction: textInputAction,
       onFieldSubmitted: onSubmitted,

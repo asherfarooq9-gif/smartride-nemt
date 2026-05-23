@@ -53,36 +53,36 @@ class RideDetailScreen extends ConsumerWidget {
                 if (patient != null) ...[
                   const SizedBox(height: 12),
                   _Section(title: 'Patient', children: [
-                    _Row('Name', patient['full_name'] as String),
-                    _Row('Phone', patient['phone'] as String),
-                    if (patient['mobility_needs'] != null)
+                    _Row('Name', patient['full_name'] as String? ?? 'N/A'),
+                    _Row('Phone', patient['phone'] as String? ?? 'N/A'),
+                    if ((patient['mobility_needs'] as String?) != null)
                       _Row('Mobility Needs', patient['mobility_needs'] as String),
                   ]),
                 ],
                 if (driver != null) ...[
                   const SizedBox(height: 12),
                   _Section(title: 'Driver', children: [
-                    _Row('Name', driver['full_name'] as String),
-                    _Row('Phone', driver['phone'] as String),
+                    _Row('Name', driver['full_name'] as String? ?? 'N/A'),
+                    _Row('Phone', driver['phone'] as String? ?? 'N/A'),
                     _Row('Vehicle',
-                        '${driver['vehicle_type']} — ${driver['vehicle_plate']}'),
+                        '${driver['vehicle_type'] ?? 'N/A'} — ${driver['vehicle_plate'] ?? 'N/A'}'),
                   ]),
                 ],
                 if (hospital != null) ...[
                   const SizedBox(height: 12),
                   _Section(title: 'Hospital', children: [
-                    _Row('Name', hospital['name'] as String),
-                    _Row('Address', hospital['address'] as String),
-                    _Row('City', hospital['city'] as String),
+                    _Row('Name', hospital['name'] as String? ?? 'N/A'),
+                    _Row('Address', hospital['address'] as String? ?? 'N/A'),
+                    _Row('City', hospital['city'] as String? ?? 'N/A'),
                   ]),
                 ],
                 if (triage != null) ...[
                   const SizedBox(height: 12),
                   _Section(title: 'Triage', children: [
-                    _Row('Symptoms', triage['symptom_text'] as String),
+                    _Row('Symptoms', triage['symptom_text'] as String? ?? 'N/A'),
                     _Row('Specialty',
-                        triage['predicted_specialty'] as String),
-                    _Row('Severity', triage['severity_level'] as String),
+                        triage['predicted_specialty'] as String? ?? 'N/A'),
+                    _Row('Severity', triage['severity_level'] as String? ?? 'N/A'),
                   ]),
                 ],
               ],

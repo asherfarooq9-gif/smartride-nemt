@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
+import '../../core/api_client.dart';
 import '../../widgets/ride_card.dart';
 import '../../widgets/loading_overlay.dart';
 import 'rides_notifier.dart';
@@ -17,6 +18,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _pulseCtrl;
   String? _locationLabel;
+  Position? _currentPosition;
 
   @override
   void initState() {
@@ -44,8 +46,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       }
       final pos = await Geolocator.getCurrentPosition();
       if (mounted) {
-        setState(() => _locationLabel =
-            '${pos.latitude.toStringAsFixed(4)}, ${pos.longitude.toStringAsFixed(4)}');
+        setState(() {
+          _currentPosition = pos;
+          _locationLabel =
+              '${pos.latitude.toStringAsFixed(4)}, ${pos.longitude.toStringAsFixed(4)}';
+        });
       }
     } catch (_) {
       if (mounted) setState(() => _locationLabel = 'Location unavailable');
@@ -72,10 +77,41 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       ),
     );
     if (confirm != true || !mounted) return;
-    // Emergency ride request would be implemented here via ApiClient.post
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Emergency ride requested!')),
-    );
+    try {
+      final pos = _currentPosition;
+      if (pos == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Location unavailable — enable GPS and try again'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+      final result = await ApiClient.post('/api/v1/rides/emergency', body: {
+        'pickup_lat': pos.latitude,
+        'pickup_lng': pos.longitude,
+        'symptom_text': 'Emergency ride requested via app',
+      }) as Map<String, dynamic>;
+      if (!mounted) return;
+      final rideId = result['ride_id'] as String?;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Emergency ride dispatched — a driver will be assigned shortly'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      if (rideId != null) {
+        // Refresh rides list so the new ride appears
+        ref.read(ridesNotifierProvider.notifier).refresh();
+        context.push('/ride/$rideId');
+      }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+      );
+    }
   }
 
   @override

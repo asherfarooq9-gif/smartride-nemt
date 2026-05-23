@@ -90,9 +90,9 @@ class ActiveRideScreen extends ConsumerWidget {
                                   fontSize: 14,
                                   color: Color(0xFF00695C))),
                           const Divider(height: 16),
-                          _InfoRow('Name', patient['full_name'] as String),
-                          _InfoRow('Phone', patient['phone'] as String),
-                          if (patient['mobility_needs'] != null)
+                          _InfoRow('Name', patient['full_name'] as String? ?? 'N/A'),
+                          _InfoRow('Phone', patient['phone'] as String? ?? 'N/A'),
+                          if ((patient['mobility_needs'] as String?) != null)
                             _InfoRow('Mobility Needs',
                                 patient['mobility_needs'] as String),
                         ],

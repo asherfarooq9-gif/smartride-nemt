@@ -61,7 +61,7 @@ class RidesNotifier extends AsyncNotifier<RidesState> {
     return RidesState(
       rides: items,
       activeRide: active,
-      total: (data['total'] as num).toInt(),
+      total: (data['total'] as num?)?.toInt() ?? 0,
     );
   }
 
