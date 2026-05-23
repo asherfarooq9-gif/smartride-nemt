@@ -19,3 +19,11 @@ async def block_token(jti: str, ttl_seconds: int) -> None:
 async def is_token_blocked(jti: str) -> bool:
     r = await get_redis()
     return bool(await r.exists(f"blocklist:{jti}"))
+
+
+async def ping_redis() -> bool:
+    try:
+        r = await get_redis()
+        return await r.ping()
+    except Exception:
+        return False

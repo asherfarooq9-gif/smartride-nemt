@@ -12,9 +12,11 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
+from sqlalchemy import text
 
 from app.core.config import settings
 from app.core.database import engine, Base
+from app.core.redis_client import ping_redis
 from app.routers import auth, patients, drivers, hospitals, rides, analytics, ws
 from app.schemas.errors import ErrorResponse
 
@@ -95,3 +97,21 @@ app.include_router(ws.router,        prefix="/ws",               tags=["WebSocke
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "SmartRide API", "version": "1.0.0"}
+
+
+@app.get("/ready")
+async def ready():
+    db_ok = False
+    redis_ok = False
+    async with engine.connect() as conn:
+        try:
+            await conn.execute(text("SELECT 1"))
+            db_ok = True
+        except Exception:
+            pass
+    redis_ok = await ping_redis()
+    status_code = 200 if (db_ok and redis_ok) else 503
+    return JSONResponse(
+        status_code=status_code,
+        content={"status": "ready" if status_code == 200 else "degraded", "db": db_ok, "redis": redis_ok},
+    )
