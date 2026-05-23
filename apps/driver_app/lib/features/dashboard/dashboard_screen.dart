@@ -93,11 +93,21 @@ class DashboardScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
                 if (state.pendingRides.isEmpty)
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(32),
-                      child: Text('No pending rides',
-                          style: TextStyle(color: Colors.grey)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Column(
+                      children: [
+                        Icon(Icons.inbox_outlined,
+                            size: 48,
+                            color: driverPrimary.withValues(alpha: 0.3)),
+                        const SizedBox(height: 12),
+                        Text(
+                          state.isOnline
+                              ? 'Waiting for ride requests…'
+                              : 'Go online to receive rides',
+                          style: const TextStyle(color: statusOffline, fontSize: 14),
+                        ),
+                      ],
                     ),
                   )
                 else
