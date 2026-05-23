@@ -22,7 +22,7 @@ function EdLoadBar({ current, capacity }: { current: number; capacity: number })
   const color = pct >= 80 ? 'bg-red-500' : pct >= 60 ? 'bg-amber-500' : 'bg-green-500'
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+      <div className="flex-1 bg-blue-100 rounded-full h-2 overflow-hidden">
         <div className={`h-full rounded-full ${color} transition-all`} style={{ width: `${pct}%` }} />
       </div>
       <span className={`text-xs font-medium ${pct >= 80 ? 'text-red-600' : 'text-gray-600'}`}>
@@ -115,8 +115,8 @@ export default function HospitalsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Hospitals <span className="text-gray-400 font-normal text-lg">({hospitals.length})</span>
+        <h1 className="text-2xl font-bold text-blue-900">
+          Hospitals <span className="text-blue-300 font-normal text-lg">({hospitals.length})</span>
         </h1>
         <button
           onClick={() => setShowForm(s => !s)}
@@ -131,8 +131,8 @@ export default function HospitalsPage() {
 
       {/* Add form */}
       {showForm && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <h2 className="font-semibold text-gray-900 mb-4">New Hospital</h2>
+        <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-6">
+          <h2 className="font-semibold text-blue-900 mb-4">New Hospital</h2>
           <div className="grid grid-cols-2 gap-4">
             {(['name', 'address', 'city'] as const).map(f => (
               <div key={f} className={f === 'address' ? 'col-span-2' : ''}>
@@ -190,16 +190,16 @@ export default function HospitalsPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-500 text-xs uppercase border-b border-gray-100">
+          <thead className="bg-blue-50 text-blue-600 text-xs uppercase border-b border-blue-100">
             <tr>
               {['Name', 'City', 'ED Load', 'Specialties', 'Active', 'Action'].map(h => (
                 <th key={h} className="px-4 py-3 text-left font-medium">{h}</th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
+          <tbody className="divide-y divide-blue-50">
             {loading
               ? <LoadingRows cols={6} />
               : hospitals.length === 0
@@ -244,7 +244,7 @@ export default function HospitalsPage() {
         {selected && (
           <div className="space-y-5">
             {/* ED Load */}
-            <div className="bg-gray-50 rounded-xl p-4">
+            <div className="bg-blue-50 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-3">
                 <Activity size={14} className="text-blue-600" />
                 <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">ED Capacity</span>

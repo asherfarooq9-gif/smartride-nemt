@@ -59,7 +59,7 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <h1 className="text-2xl font-bold text-blue-900">Dashboard</h1>
           <p className="text-sm text-gray-500 mt-0.5">
             Last updated: {new Date(data.snapshot_at).toLocaleString()}
           </p>
@@ -83,7 +83,7 @@ export default function DashboardPage() {
 
       {/* ETA card */}
       {data.avg_eta_seconds_24h !== null && (
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm inline-flex items-center gap-4">
+        <div className="bg-white rounded-2xl border border-blue-100 p-5 shadow-sm inline-flex items-center gap-4">
           <div className="p-3 bg-cyan-50 border border-cyan-200 rounded-xl text-cyan-700">
             <Clock size={20} />
           </div>
@@ -95,8 +95,8 @@ export default function DashboardPage() {
       )}
 
       {/* Recent Rides */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+      <div className="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-blue-100">
           <div className="flex items-center gap-2">
             <TrendingUp size={16} className="text-blue-600" />
             <h2 className="font-semibold text-gray-900">Recent Rides</h2>
@@ -104,14 +104,14 @@ export default function DashboardPage() {
           <Link href="/rides" className="text-xs text-blue-600 hover:underline font-medium">View all →</Link>
         </div>
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+          <thead className="bg-blue-50 text-blue-600 text-xs uppercase">
             <tr>
               {['ID', 'Type', 'Status', 'Pickup', 'Requested'].map(h => (
                 <th key={h} className="px-4 py-3 text-left font-medium">{h}</th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
+          <tbody className="divide-y divide-blue-50">
             {recent.map(r => (
               <tr key={r.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3 font-mono text-xs text-gray-400">{r.id.slice(0, 8)}…</td>

@@ -23,7 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const pathname = usePathname()
   const router = useRouter()
   const isLogin = pathname === '/login'
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(true)
 
   useEffect(() => {
     if (!isLogin && !getToken()) router.replace('/login')
@@ -37,27 +37,30 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   if (isLogin) {
     return (
       <html lang="en">
-        <body className="bg-gradient-to-br from-slate-900 to-blue-950 min-h-screen text-gray-900">{children}</body>
+        <body className="min-h-screen text-gray-900">{children}</body>
       </html>
     )
   }
 
   return (
     <html lang="en">
-      <body className="bg-gray-50 text-gray-900 flex h-screen overflow-hidden">
+      <body className="bg-blue-50 text-gray-900 flex h-screen overflow-hidden">
         {/* Sidebar */}
-        <aside className={`${collapsed ? 'w-16' : 'w-60'} bg-slate-900 text-white flex flex-col shrink-0 transition-all duration-300`}>
+        <aside
+          className={`${collapsed ? 'w-16' : 'w-64'} bg-gradient-to-b from-blue-700 to-blue-900 text-white flex flex-col shrink-0 transition-all duration-300 ${collapsed ? 'cursor-pointer' : ''}`}
+          onClick={collapsed ? () => setCollapsed(false) : undefined}
+        >
           {/* Header */}
-          <div className={`flex items-center ${collapsed ? 'justify-center px-3' : 'justify-between px-4'} py-4 border-b border-slate-700`}>
+          <div className={`flex items-center ${collapsed ? 'justify-center px-3' : 'justify-between px-4'} py-4 border-b border-white/20`}>
             {!collapsed && (
               <div>
                 <p className="font-bold text-base leading-tight text-white">SmartRide</p>
-                <p className="text-slate-400 text-xs">NEMT Admin</p>
+                <p className="text-blue-200 text-xs">NEMT Admin</p>
               </div>
             )}
             <button
-              onClick={() => setCollapsed(c => !c)}
-              className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white transition"
+              onClick={e => { e.stopPropagation(); setCollapsed(c => !c) }}
+              className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition"
               aria-label="Toggle sidebar"
             >
               {collapsed ? <Menu size={18} /> : <X size={18} />}
@@ -73,10 +76,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   key={href}
                   href={href}
                   title={collapsed ? label : undefined}
+                  onClick={e => e.stopPropagation()}
                   className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
                     active
-                      ? 'bg-blue-600 text-white'
-                      : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+                      ? 'bg-white/20 text-white shadow-sm'
+                      : 'text-white/70 hover:bg-white/10 hover:text-white'
                   }`}
                 >
                   <Icon size={18} className="shrink-0" />
@@ -87,11 +91,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </nav>
 
           {/* Footer */}
-          <div className="p-3 border-t border-slate-700">
+          <div className="p-3 border-t border-white/20">
             <button
-              onClick={handleLogout}
+              onClick={e => { e.stopPropagation(); handleLogout() }}
               title={collapsed ? 'Sign out' : undefined}
-              className="flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-sm font-medium text-slate-400 hover:bg-slate-700 hover:text-white transition"
+              className="flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-sm font-medium text-white/60 hover:bg-white/10 hover:text-white transition"
             >
               <LogOut size={18} className="shrink-0" />
               {!collapsed && <span>Sign out</span>}
@@ -102,9 +106,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Main */}
         <main className="flex-1 overflow-auto">
           {/* Top bar */}
-          <div className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-gray-100 px-6 py-3 flex items-center gap-3">
+          <div className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-blue-100 px-6 py-3 flex items-center gap-3">
             <Activity size={16} className="text-blue-600" />
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">
               {NAV.find(n => pathname === n.href || (n.href !== '/' && pathname.startsWith(n.href)))?.label ?? 'SmartRide Admin'}
             </span>
           </div>

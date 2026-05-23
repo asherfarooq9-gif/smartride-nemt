@@ -91,7 +91,7 @@ export default function AlertsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-gray-900">Alerts</h1>
+          <h1 className="text-2xl font-bold text-blue-900">Alerts</h1>
           {activeCount > 0 && (
             <span className="bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">{activeCount}</span>
           )}
@@ -104,7 +104,7 @@ export default function AlertsPage() {
       </div>
 
       {/* Filter tabs */}
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 bg-blue-100/60 rounded-xl p-1 w-fit">
         {(['all', 'active', 'acknowledged'] as const).map(f => (
           <button
             key={f}
@@ -118,7 +118,7 @@ export default function AlertsPage() {
 
       <div className="space-y-3">
         {filtered.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-16 text-center text-gray-400">
+          <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-16 text-center text-gray-400">
             <CheckCircle size={36} className="mx-auto mb-3 text-green-400" />
             <p className="font-medium">All clear</p>
             <p className="text-sm mt-1">No {filter === 'active' ? 'active' : ''} alerts</p>

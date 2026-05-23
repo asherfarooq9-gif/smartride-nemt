@@ -38,11 +38,13 @@ function qs(params: Record<string, string | number | boolean | undefined>): stri
 }
 
 export const api = {
-  login: (phone: string, password: string) =>
-    request<{ access_token: string; role: string }>('/api/v1/auth/login', {
+  login: async (phone: string, password: string) => {
+    clearToken()
+    return request<{ access_token: string; role: string }>('/api/v1/auth/login', {
       method: 'POST',
       body: JSON.stringify({ phone, password }),
-    }),
+    })
+  },
 
   summary: () => request<DashboardSummary>('/api/v1/analytics/summary'),
 

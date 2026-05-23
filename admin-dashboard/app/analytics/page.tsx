@@ -60,10 +60,10 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
+        <h1 className="text-2xl font-bold text-blue-900">Analytics</h1>
         <div className="flex items-center gap-2 flex-wrap">
           {/* City toggle */}
-          <div className="flex bg-gray-100 rounded-xl p-1 gap-1">
+          <div className="flex bg-blue-100/60 rounded-xl p-1 gap-1">
             {CITIES.map(c => (
               <button
                 key={c}
@@ -102,15 +102,15 @@ export default function AnalyticsPage() {
       {/* KPI bar */}
       {forecast && (
         <div className="grid grid-cols-3 gap-4">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4">
             <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">City</p>
             <p className="text-xl font-bold text-gray-900 mt-1">{forecast.city}</p>
           </div>
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4">
             <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">Method</p>
             <p className="text-xl font-bold text-gray-900 mt-1 capitalize">{forecast.method}</p>
           </div>
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4">
             <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">Peak Predicted</p>
             <p className="text-xl font-bold text-gray-900 mt-1">
               {chartData.length > 0 ? Math.max(...chartData.map(d => d.rides)) : '—'} rides/hr
@@ -120,7 +120,7 @@ export default function AnalyticsPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 bg-blue-100/60 rounded-xl p-1 w-fit">
         {tabs.map(t => (
           <button
             key={t.id}
@@ -134,7 +134,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Chart */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+      <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-6">
         {loading ? (
           <div className="h-64 flex items-center justify-center text-gray-400 animate-pulse">
             <RefreshCw size={24} className="animate-spin" />

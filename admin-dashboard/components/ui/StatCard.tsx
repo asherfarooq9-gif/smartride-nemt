@@ -23,7 +23,7 @@ export default function StatCard({ label, value, icon: Icon, color = 'blue', sub
   const cls = ACCENT[color] ?? ACCENT.blue
   return (
     <div
-      className={`bg-white rounded-2xl border p-5 shadow-sm hover:shadow-md transition-shadow ${onClick ? 'cursor-pointer hover:scale-[1.01] transition-transform' : ''}`}
+      className={`bg-white rounded-2xl border border-blue-100 p-5 shadow-sm hover:shadow-md transition-shadow ${onClick ? 'cursor-pointer hover:scale-[1.01] transition-transform' : ''}`}
       onClick={onClick}
     >
       <div className="flex items-start justify-between">

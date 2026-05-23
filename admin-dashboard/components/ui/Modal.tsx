@@ -36,11 +36,11 @@ export default function Modal({ open, onClose, title, children, width = 'lg' }: 
         ref={ref}
         className={`relative w-full ${WIDTHS[width]} bg-white rounded-2xl shadow-2xl max-h-[90vh] flex flex-col`}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-blue-100">
+          <h2 className="text-lg font-semibold text-blue-900">{title}</h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-gray-100 transition text-gray-500 hover:text-gray-900"
+            className="p-1.5 rounded-lg hover:bg-blue-50 transition text-gray-500 hover:text-blue-900"
             aria-label="Close"
           >
             <X size={18} />

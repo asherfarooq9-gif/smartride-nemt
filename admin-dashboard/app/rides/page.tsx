@@ -66,7 +66,7 @@ export default function RidesPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Rides <span className="text-gray-400 font-normal text-lg">({total})</span></h1>
+        <h1 className="text-2xl font-bold text-blue-900">Rides <span className="text-blue-300 font-normal text-lg">({total})</span></h1>
         <button
           onClick={() => downloadCsv(rides)}
           className="flex items-center gap-2 text-sm bg-white border border-gray-200 hover:border-gray-300 px-4 py-2 rounded-xl shadow-sm transition"
@@ -77,7 +77,7 @@ export default function RidesPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+      <div className="flex flex-wrap gap-3 bg-white border border-blue-100 rounded-2xl p-4 shadow-sm">
         <div className="relative flex-1 min-w-[200px]">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
@@ -117,16 +117,16 @@ export default function RidesPage() {
       )}
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-500 text-xs uppercase border-b border-gray-100">
+          <thead className="bg-blue-50 text-blue-600 text-xs uppercase border-b border-blue-100">
             <tr>
               {['ID', 'Type', 'Status', 'Pickup', 'Requested', 'Completed'].map(h => (
                 <th key={h} className="px-4 py-3 text-left font-medium">{h}</th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
+          <tbody className="divide-y divide-blue-50">
             {loading
               ? <LoadingRows cols={6} />
               : rides.length === 0
@@ -163,10 +163,10 @@ export default function RidesPage() {
       {pages > 1 && (
         <div className="flex items-center gap-2">
           <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-            className="px-4 py-2 border border-gray-200 rounded-xl text-sm disabled:opacity-40 hover:border-gray-300 transition">← Prev</button>
-          <span className="px-3 py-2 text-sm text-gray-600">{page} / {pages}</span>
+            className="px-4 py-2 border border-blue-200 rounded-xl text-sm disabled:opacity-40 hover:border-blue-400 transition">← Prev</button>
+          <span className="px-3 py-2 text-sm text-blue-700">{page} / {pages}</span>
           <button onClick={() => setPage(p => Math.min(pages, p + 1))} disabled={page === pages}
-            className="px-4 py-2 border border-gray-200 rounded-xl text-sm disabled:opacity-40 hover:border-gray-300 transition">Next →</button>
+            className="px-4 py-2 border border-blue-200 rounded-xl text-sm disabled:opacity-40 hover:border-blue-400 transition">Next →</button>
         </div>
       )}
 
