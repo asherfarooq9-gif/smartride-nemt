@@ -19,7 +19,7 @@ from app.core.security import (
 )
 from app.core.redis_client import block_token
 from app.models.models import User, Patient, Driver, UserRole
-from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse
+from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse, RefreshResponse
 from fastapi.security import HTTPAuthorizationCredentials
 
 router = APIRouter()
@@ -99,3 +99,28 @@ async def logout(
             await block_token(jti, remaining)
     except JWTError:
         pass
+
+
+@router.post("/refresh", response_model=RefreshResponse)
+async def refresh_token(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    db: AsyncSession = Depends(get_db),
+):
+    """Exchange a valid non-expired token for a fresh one, revoking the old token."""
+    user = await get_current_user(credentials=credentials, db=db)
+    try:
+        payload = jwt.decode(
+            credentials.credentials,
+            settings.SECRET_KEY,
+            algorithms=[settings.JWT_ALGORITHM],
+        )
+        jti = payload.get("jti", "")
+        exp = payload.get("exp", 0)
+        remaining = max(0, int(exp - datetime.now(timezone.utc).timestamp()))
+        if jti and remaining > 0:
+            await block_token(jti, remaining)
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    new_token = create_access_token({"sub": str(user.id), "role": user.role.value})
+    return RefreshResponse(access_token=new_token)
