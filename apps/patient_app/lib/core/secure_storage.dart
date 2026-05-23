@@ -7,7 +7,7 @@ class SecureStorage {
   static const _storage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
     iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
-    wOptions: WebOptions(dbName: 'smartride_patient', publicKey: 'smartride'),
+    webOptions: WebOptions(dbName: 'smartride_patient', publicKey: 'smartride'),
   );
 
   static const _tokenKey = 'auth_token';

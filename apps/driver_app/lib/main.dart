@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'core/api_client.dart';
 import 'core/router.dart';
 import 'core/theme.dart';
+import 'features/auth/auth_notifier.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const ProviderScope(child: SmartRideDriverApp()));
+  final container = ProviderContainer();
+  ApiClient.setUnauthorizedHandler(() {
+    container.read(authNotifierProvider.notifier).logout();
+  });
+  runApp(UncontrolledProviderScope(
+    container: container,
+    child: const SmartRideDriverApp(),
+  ));
 }
 
 class SmartRideDriverApp extends ConsumerWidget {

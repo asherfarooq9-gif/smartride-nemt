@@ -15,6 +15,12 @@ class ApiException implements Exception {
 }
 
 class ApiClient {
+  // Called when any request gets a 401 — triggers logout in auth state
+  static void Function()? _onUnauthorized;
+  static void setUnauthorizedHandler(void Function() handler) {
+    _onUnauthorized = handler;
+  }
+
   // Base URL injected via --dart-define=API_BASE_URL=https://...
   // On web, 10.0.2.2 doesn't resolve — use localhost instead.
   static const _envUrl =
@@ -113,9 +119,9 @@ class _AuthInterceptor extends Interceptor {
   @override
   Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
     if (err.response?.statusCode == 401) {
-      // Token rejected by server — wipe it so auth guard redirects to login
-      // Await deletion so token is gone before handler proceeds
+      // Token rejected — wipe storage and notify auth state to trigger router redirect
       await SecureStorage.deleteToken();
+      ApiClient._onUnauthorized?.call();
     }
     return handler.next(err);
   }

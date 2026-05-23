@@ -14,6 +14,11 @@ class ApiException implements Exception {
 }
 
 class ApiClient {
+  static void Function()? _onUnauthorized;
+  static void setUnauthorizedHandler(void Function() handler) {
+    _onUnauthorized = handler;
+  }
+
   static const _envUrl =
       String.fromEnvironment('API_BASE_URL', defaultValue: '');
   static final String _baseUrl = _envUrl.isNotEmpty
@@ -109,8 +114,8 @@ class _AuthInterceptor extends Interceptor {
   @override
   Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
     if (err.response?.statusCode == 401) {
-      // Await deletion so token is gone before handler proceeds
       await SecureStorage.deleteToken();
+      ApiClient._onUnauthorized?.call();
     }
     return handler.next(err);
   }
