@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { api, type Ride, type RideDetail } from '@/lib/api'
 import StatusBadge from '@/components/ui/StatusBadge'
 import Modal from '@/components/ui/Modal'
-import LoadingRows from '@/components/ui/LoadingRows'
+import DataTable from '@/components/ui/DataTable'
 import { Search, Filter, Download, Car, MapPin, Clock, User, Truck, Building2 } from 'lucide-react'
 import EmptyState from '@/components/ui/EmptyState'
 
@@ -125,64 +125,48 @@ export default function RidesPage() {
       )}
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-blue-50 text-blue-600 text-xs uppercase border-b border-blue-100">
-            <tr>
-              {['ID', 'Type', 'Status', 'Pickup', 'Requested', 'Completed'].map(h => (
-                <th key={h} className="px-4 py-3 text-left font-medium">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-blue-50">
-            {loading ? (
-              <LoadingRows cols={6} />
-            ) : rides.length === 0 ? (
-              <tr>
-                <td colSpan={6}>
-                  <EmptyState
-                    icon={Car}
-                    title="No rides found"
-                    description={search || statusFilter || typeFilter ? 'Try adjusting your filters.' : 'Rides will appear here once patients book.'}
-                  />
-                </td>
-              </tr>
-            ) : (
-              rides.map(r => (
-                <tr
-                  key={r.id}
-                  className="hover:bg-blue-50/40 cursor-pointer transition-colors"
-                  onClick={() => openDetail(r.id)}
-                >
-                  <td className="px-4 py-3 font-mono text-xs text-gray-400">{r.id.slice(0, 8)}…</td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${r.ride_type === 'emergency' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
-                      {r.ride_type}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3"><StatusBadge value={r.status} /></td>
-                  <td className="px-4 py-3 text-gray-600 max-w-[200px] truncate text-xs">
-                    {r.pickup_address ?? `${r.pickup_lat.toFixed(4)}, ${r.pickup_lng.toFixed(4)}`}
-                  </td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">{new Date(r.requested_at).toLocaleString()}</td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">{r.completed_at ? new Date(r.completed_at).toLocaleString() : '—'}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination */}
-      {pages > 1 && (
-        <div className="flex items-center gap-2">
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-            className="px-4 py-2 border border-blue-200 rounded-xl text-sm disabled:opacity-40 hover:border-blue-400 transition">← Prev</button>
-          <span className="px-3 py-2 text-sm text-blue-700">{page} / {pages}</span>
-          <button onClick={() => setPage(p => Math.min(pages, p + 1))} disabled={page === pages}
-            className="px-4 py-2 border border-blue-200 rounded-xl text-sm disabled:opacity-40 hover:border-blue-400 transition">Next →</button>
-        </div>
-      )}
+      <DataTable
+        columns={[
+          {
+            header: 'Type', key: 'ride_type',
+            render: r => (
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${r.ride_type === 'emergency' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
+                {r.ride_type}
+              </span>
+            )
+          },
+          { header: 'Status', key: 'status', render: r => <StatusBadge value={r.status} /> },
+          {
+            header: 'Pickup', key: 'pickup',
+            render: r => <span className="text-gray-600 text-xs">{r.pickup_address ?? `${r.pickup_lat?.toFixed(4)}, ${r.pickup_lng?.toFixed(4)}`}</span>
+          },
+          {
+            header: 'Requested', key: 'requested_at',
+            render: r => <span className="text-gray-400 text-xs">{new Date(r.requested_at).toLocaleString()}</span>
+          },
+          {
+            header: '', key: 'actions',
+            render: r => (
+              <button onClick={() => openDetail(r.id)} className="text-blue-600 hover:underline text-xs">
+                Detail
+              </button>
+            )
+          },
+        ]}
+        rows={rides}
+        keyFn={r => r.id}
+        loading={loading}
+        emptySlot={
+          <EmptyState
+            icon={Car}
+            title="No rides found"
+            description={search || statusFilter || typeFilter ? 'Try adjusting your filters.' : 'Rides will appear here once patients book.'}
+          />
+        }
+        page={page}
+        totalPages={pages}
+        onPageChange={setPage}
+      />
 
       {/* Detail Modal */}
       <Modal open={selected !== null || modalLoading} onClose={() => { setSelected(null); setCancelError('') }} title="Ride Details" width="xl">
