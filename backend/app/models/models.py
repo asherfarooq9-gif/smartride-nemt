@@ -183,8 +183,9 @@ class Ride(Base):
         Index("ix_rides_driver_id", "driver_id"),
     )
 
-    patient:        Mapped["Patient"]              = relationship("Patient", back_populates="rides")
-    driver:         Mapped[Optional["Driver"]]     = relationship("Driver",  back_populates="rides")
+    patient:        Mapped["Patient"]              = relationship("Patient", back_populates="rides", lazy="noload")
+    driver:         Mapped[Optional["Driver"]]     = relationship("Driver",  back_populates="rides", lazy="noload")
+    hospital:       Mapped[Optional["Hospital"]]   = relationship("Hospital", foreign_keys=[hospital_id], lazy="noload")
     triage_events:  Mapped[List["TriageEvent"]]    = relationship("TriageEvent",  back_populates="ride")
     hospital_alerts: Mapped[List["HospitalAlert"]] = relationship("HospitalAlert", back_populates="ride")
     family_notifications: Mapped[List["FamilyNotification"]] = relationship("FamilyNotification", back_populates="ride")
