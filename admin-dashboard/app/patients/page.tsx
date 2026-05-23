@@ -4,6 +4,7 @@ import { api, type Patient } from '@/lib/api'
 import Modal from '@/components/ui/Modal'
 import LoadingRows from '@/components/ui/LoadingRows'
 import { Search, UserCircle, Phone, Calendar, AlertCircle } from 'lucide-react'
+import EmptyState from '@/components/ui/EmptyState'
 
 export default function PatientsPage() {
   const [patients, setPatients] = useState<Patient[]>([])
@@ -75,14 +76,20 @@ export default function PatientsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-blue-50">
-            {loading
-              ? <LoadingRows cols={6} />
-              : patients.length === 0
-                ? <tr><td colSpan={6} className="px-4 py-16 text-center text-gray-400">
-                    <UserCircle size={32} className="mx-auto mb-3 opacity-30" />
-                    <p>No patients found</p>
-                  </td></tr>
-                : patients.map(p => (
+            {loading ? (
+              <LoadingRows cols={6} />
+            ) : patients.length === 0 ? (
+              <tr>
+                <td colSpan={6}>
+                  <EmptyState
+                    icon={UserCircle}
+                    title="No patients found"
+                    description={search ? 'Try a different search term.' : 'Registered patients will appear here.'}
+                  />
+                </td>
+              </tr>
+            ) : (
+              patients.map(p => (
                 <tr key={p.id} className="hover:bg-blue-50/40 cursor-pointer transition-colors" onClick={() => setSelected(p)}>
                   <td className="px-4 py-3 font-medium text-gray-900">{p.full_name}</td>
                   <td className="px-4 py-3 text-gray-500">{p.phone}</td>
@@ -98,7 +105,7 @@ export default function PatientsPage() {
                   <td className="px-4 py-3 text-gray-600 font-medium">{p.total_rides ?? 0}</td>
                 </tr>
               ))
-            }
+            )}
           </tbody>
         </table>
       </div>

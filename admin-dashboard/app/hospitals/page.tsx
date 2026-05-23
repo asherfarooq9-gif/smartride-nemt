@@ -4,6 +4,7 @@ import { api, type Hospital } from '@/lib/api'
 import Modal from '@/components/ui/Modal'
 import LoadingRows from '@/components/ui/LoadingRows'
 import { Building2, Plus, CheckCircle, XCircle, Activity } from 'lucide-react'
+import EmptyState from '@/components/ui/EmptyState'
 
 const ALL_SPECIALTIES = [
   'cardiology', 'neurology', 'orthopedics', 'obstetrics', 'pediatrics',
@@ -46,6 +47,7 @@ export default function HospitalsPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
+    setError('')
     try {
       const d = await api.hospitals()
       setHospitals(d.items)
@@ -200,14 +202,20 @@ export default function HospitalsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-blue-50">
-            {loading
-              ? <LoadingRows cols={6} />
-              : hospitals.length === 0
-                ? <tr><td colSpan={6} className="px-4 py-16 text-center text-gray-400">
-                    <Building2 size={32} className="mx-auto mb-3 opacity-30" />
-                    <p>No hospitals</p>
-                  </td></tr>
-                : hospitals.map(h => (
+            {loading ? (
+              <LoadingRows cols={6} />
+            ) : hospitals.length === 0 ? (
+              <tr>
+                <td colSpan={6}>
+                  <EmptyState
+                    icon={Building2}
+                    title="No hospitals yet"
+                    description="Add a hospital using the button above."
+                  />
+                </td>
+              </tr>
+            ) : (
+              hospitals.map(h => (
                 <tr key={h.id} className="hover:bg-blue-50/40 cursor-pointer transition-colors" onClick={() => openDetail(h)}>
                   <td className="px-4 py-3 font-medium text-gray-900 max-w-[200px]">{h.name}</td>
                   <td className="px-4 py-3 text-gray-500">{h.city}</td>
@@ -234,7 +242,7 @@ export default function HospitalsPage() {
                   </td>
                 </tr>
               ))
-            }
+            )}
           </tbody>
         </table>
       </div>

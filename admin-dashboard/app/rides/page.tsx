@@ -5,6 +5,7 @@ import StatusBadge from '@/components/ui/StatusBadge'
 import Modal from '@/components/ui/Modal'
 import LoadingRows from '@/components/ui/LoadingRows'
 import { Search, Filter, Download, Car, MapPin, Clock, User, Truck, Building2 } from 'lucide-react'
+import EmptyState from '@/components/ui/EmptyState'
 
 const STATUSES = ['', 'pending', 'driver_assigned', 'driver_en_route', 'patient_picked_up', 'arrived_at_hospital', 'completed', 'cancelled']
 const TYPES = ['', 'emergency', 'scheduled']
@@ -134,14 +135,20 @@ export default function RidesPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-blue-50">
-            {loading
-              ? <LoadingRows cols={6} />
-              : rides.length === 0
-                ? <tr><td colSpan={6} className="px-4 py-16 text-center text-gray-400">
-                    <Car size={32} className="mx-auto mb-3 opacity-30" />
-                    <p>No rides found</p>
-                  </td></tr>
-                : rides.map(r => (
+            {loading ? (
+              <LoadingRows cols={6} />
+            ) : rides.length === 0 ? (
+              <tr>
+                <td colSpan={6}>
+                  <EmptyState
+                    icon={Car}
+                    title="No rides found"
+                    description={search || statusFilter || typeFilter ? 'Try adjusting your filters.' : 'Rides will appear here once patients book.'}
+                  />
+                </td>
+              </tr>
+            ) : (
+              rides.map(r => (
                 <tr
                   key={r.id}
                   className="hover:bg-blue-50/40 cursor-pointer transition-colors"
@@ -161,7 +168,7 @@ export default function RidesPage() {
                   <td className="px-4 py-3 text-gray-400 text-xs">{r.completed_at ? new Date(r.completed_at).toLocaleString() : '—'}</td>
                 </tr>
               ))
-            }
+            )}
           </tbody>
         </table>
       </div>
