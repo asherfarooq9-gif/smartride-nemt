@@ -1,29 +1,37 @@
 """
 WebSocket endpoints for real-time GPS tracking.
 
-Auth: JWT passed as ?token= query param (WebSocket handshake can't carry headers
-in most mobile clients, so query-param is the standard workaround).
+Auth: client sends {"token": "<jwt>"} as the very first message after connecting.
+This avoids embedding the token in the URL where it appears in server logs.
 """
+import asyncio
 import json
 from datetime import datetime, timezone
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, status
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 from sqlalchemy import select, update
 from jose import JWTError, jwt
 
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
+from app.core.redis_client import is_token_blocked
 from app.models.models import User, Driver, Ride, RideStatus, DriverStatus
 from app.services.ws_manager import location_manager
 
 router = APIRouter()
 
+_AUTH_TIMEOUT_SECONDS = 5
+
 
 async def _auth_user(token: str) -> User | None:
-    """Decode JWT and return the User, or None on failure."""
+    """Decode JWT, check blocklist, return the User or None."""
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
         user_id = payload.get("sub")
-        if not user_id:
+        jti = payload.get("jti")
+        if not user_id or not jti:
+            return None
+        # #6 Reject revoked tokens
+        if await is_token_blocked(jti):
             return None
     except JWTError:
         return None
@@ -34,20 +42,34 @@ async def _auth_user(token: str) -> User | None:
     return user if (user and user.is_active) else None
 
 
+async def _receive_auth(websocket: WebSocket) -> str | None:
+    """Wait up to _AUTH_TIMEOUT_SECONDS for {"token": "..."} from the client."""
+    try:
+        raw = await asyncio.wait_for(websocket.receive_text(), timeout=_AUTH_TIMEOUT_SECONDS)
+        data = json.loads(raw)
+        return data.get("token") if isinstance(data, dict) else None
+    except (asyncio.TimeoutError, json.JSONDecodeError, Exception):
+        return None
+
+
+def _valid_coords(lat: float, lng: float) -> bool:
+    """#7 Reject out-of-range GPS coordinates."""
+    return -90 <= lat <= 90 and -180 <= lng <= 180
+
+
 # ── Driver → streams GPS ──────────────────────────────────────────────────────
 
 @router.websocket("/driver/{ride_id}")
-async def driver_location_ws(
-    websocket: WebSocket,
-    ride_id: str,
-    token: str = Query(...),
-):
-    user = await _auth_user(token)
+async def driver_location_ws(websocket: WebSocket, ride_id: str):
+    await websocket.accept()
+
+    # #4 Auth via first message, not query param
+    token = await _receive_auth(websocket)
+    user = await _auth_user(token) if token else None
     if not user or user.role.value != "driver":
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
-    # Verify this driver is assigned to the ride
     async with AsyncSessionLocal() as db:
         ride_row = await db.execute(select(Ride).where(Ride.id == ride_id))
         ride = ride_row.scalar_one_or_none()
@@ -58,11 +80,15 @@ async def driver_location_ws(
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
-    await websocket.accept()
     try:
         while True:
             data = await websocket.receive_json()
             lat, lng = float(data["lat"]), float(data["lng"])
+
+            # #7 Validate coordinates before persisting
+            if not _valid_coords(lat, lng):
+                await websocket.send_json({"error": "invalid coordinates"})
+                continue
 
             async with AsyncSessionLocal() as db:
                 await db.execute(
@@ -88,17 +114,16 @@ async def driver_location_ws(
 # ── Patient/family → watches driver location ──────────────────────────────────
 
 @router.websocket("/ride/{ride_id}")
-async def ride_tracking_ws(
-    websocket: WebSocket,
-    ride_id: str,
-    token: str = Query(...),
-):
-    user = await _auth_user(token)
+async def ride_tracking_ws(websocket: WebSocket, ride_id: str):
+    await websocket.accept()
+
+    # #4 Auth via first message, not query param
+    token = await _receive_auth(websocket)
+    user = await _auth_user(token) if token else None
     if not user:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
-    # Patient must own the ride; driver must be assigned; admin sees all
     async with AsyncSessionLocal() as db:
         ride_row = await db.execute(select(Ride).where(Ride.id == ride_id))
         ride = ride_row.scalar_one_or_none()
@@ -123,7 +148,6 @@ async def ride_tracking_ws(
             return
     # admin: no further check
 
-    await websocket.accept()
     pubsub = await location_manager.subscribe(ride_id)
     try:
         async for message in pubsub.listen():

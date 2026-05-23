@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from fastapi import Depends, HTTPException, status
@@ -24,8 +25,11 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     payload = data.copy()
-    expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=settings.JWT_EXPIRE_MINUTES))
+    now = datetime.now(timezone.utc)
+    expire = now + (expires_delta or timedelta(minutes=settings.JWT_EXPIRE_MINUTES))
     payload["exp"] = expire
+    payload["iat"] = now
+    payload["jti"] = str(uuid.uuid4())
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
@@ -34,6 +38,7 @@ async def get_current_user(
     db: AsyncSession = Depends(get_db),
 ):
     from app.models.models import User
+    from app.core.redis_client import is_token_blocked
 
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -47,9 +52,13 @@ async def get_current_user(
             algorithms=[settings.JWT_ALGORITHM],
         )
         user_id: str = payload.get("sub")
-        if user_id is None:
+        jti: str = payload.get("jti")
+        if user_id is None or jti is None:
             raise credentials_exception
     except JWTError:
+        raise credentials_exception
+
+    if await is_token_blocked(jti):
         raise credentials_exception
 
     result = await db.execute(select(User).where(User.id == user_id))
