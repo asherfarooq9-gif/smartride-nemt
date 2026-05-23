@@ -66,6 +66,15 @@ class ApiClient {
     }
   }
 
+  static Future<dynamic> delete(String path) async {
+    try {
+      final res = await _dio.delete(path);
+      return res.data;
+    } on DioException catch (e) {
+      throw _mapError(e);
+    }
+  }
+
   static ApiException _mapError(DioException e) {
     final code = e.response?.statusCode;
     final data = e.response?.data;
@@ -92,10 +101,11 @@ class _AuthInterceptor extends Interceptor {
   }
 
   @override
-  void onError(DioException err, ErrorInterceptorHandler handler) {
+  Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
     if (err.response?.statusCode == 401) {
       // Token rejected by server — wipe it so auth guard redirects to login
-      SecureStorage.deleteToken();
+      // Await deletion so token is gone before handler proceeds
+      await SecureStorage.deleteToken();
     }
     return handler.next(err);
   }
