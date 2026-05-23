@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'secure_storage.dart';
 
 /// Typed error thrown by all ApiClient methods.
@@ -15,19 +16,24 @@ class ApiException implements Exception {
 
 class ApiClient {
   // Base URL injected via --dart-define=API_BASE_URL=https://...
-  // Defaults to Android emulator localhost for debug builds.
-  static const _baseUrl =
-      String.fromEnvironment('API_BASE_URL', defaultValue: 'http://10.0.2.2:8000');
+  // On web, 10.0.2.2 doesn't resolve — use localhost instead.
+  static const _envUrl =
+      String.fromEnvironment('API_BASE_URL', defaultValue: '');
+  static final String _baseUrl = _envUrl.isNotEmpty
+      ? _envUrl
+      : kIsWeb
+          ? 'http://localhost:8000'
+          : 'http://10.0.2.2:8000';
 
   static final Dio _dio = _buildDio();
 
   static Dio _buildDio() {
     // Assert fires in debug; StateError fires in release — both crash fast rather than leak data
-    assert(
-      _baseUrl.startsWith('https://') || _baseUrl.startsWith('http://10.0.2.2'),
-      'API_BASE_URL must use HTTPS in production. Got: $_baseUrl',
-    );
-    if (!_baseUrl.startsWith('https://') && !_baseUrl.startsWith('http://10.0.2.2')) {
+    final isAllowed = _baseUrl.startsWith('https://') ||
+        _baseUrl.startsWith('http://10.0.2.2') ||
+        _baseUrl.startsWith('http://localhost');
+    assert(isAllowed, 'API_BASE_URL must use HTTPS in production. Got: $_baseUrl');
+    if (!isAllowed) {
       throw StateError('API_BASE_URL must use HTTPS in production. Got: $_baseUrl');
     }
     final dio = Dio(
