@@ -1,52 +1,102 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'secure_storage.dart';
 
-const String _tokenKey = 'sr_token';
+/// Typed error thrown by all ApiClient methods.
+/// Callers catch ApiException — never raw DioException.
+class ApiException implements Exception {
+  final String message;
+  final int? statusCode;
 
-String _baseUrl() {
-  const env = String.fromEnvironment('API_URL', defaultValue: '');
-  if (env.isNotEmpty) return env;
-  // Web runs in browser on the same machine — use localhost
-  // Android emulator uses 10.0.2.2 to reach host
-  return kIsWeb ? 'http://localhost:8000' : 'http://10.0.2.2:8000';
+  const ApiException(this.message, {this.statusCode});
+
+  @override
+  String toString() => 'ApiException($statusCode): $message';
 }
 
-Dio createDio() {
-  final dio = Dio(BaseOptions(
-    baseUrl: _baseUrl(),
-    connectTimeout: const Duration(seconds: 10),
-    receiveTimeout: const Duration(seconds: 15),
-  ));
+class ApiClient {
+  // Base URL injected via --dart-define=API_BASE_URL=https://...
+  // Defaults to Android emulator localhost for debug builds.
+  static const _baseUrl =
+      String.fromEnvironment('API_BASE_URL', defaultValue: 'http://10.0.2.2:8000');
 
-  dio.interceptors.add(InterceptorsWrapper(
-    onRequest: (options, handler) async {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString(_tokenKey);
-      if (token != null) {
-        options.headers['Authorization'] = 'Bearer $token';
-      }
-      handler.next(options);
-    },
-    onError: (error, handler) {
-      handler.next(error);
-    },
-  ));
+  static final Dio _dio = _buildDio();
 
-  return dio;
+  static Dio _buildDio() {
+    // Enforce HTTPS in release builds — crash fast rather than leak data
+    assert(
+      _baseUrl.startsWith('https://') || _baseUrl.startsWith('http://10.0.2.2'),
+      'API_BASE_URL must use HTTPS in production. Got: $_baseUrl',
+    );
+    final dio = Dio(
+      BaseOptions(
+        baseUrl: _baseUrl,
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 15),
+        headers: const {'Content-Type': 'application/json'},
+      ),
+    );
+    dio.interceptors.add(_AuthInterceptor());
+    return dio;
+  }
+
+  static Future<dynamic> get(String path, {Map<String, dynamic>? query}) async {
+    try {
+      final res = await _dio.get(path, queryParameters: query);
+      return res.data;
+    } on DioException catch (e) {
+      throw _mapError(e);
+    }
+  }
+
+  static Future<dynamic> post(String path, {Object? body}) async {
+    try {
+      final res = await _dio.post(path, data: body);
+      return res.data;
+    } on DioException catch (e) {
+      throw _mapError(e);
+    }
+  }
+
+  static Future<dynamic> patch(String path, {Object? body}) async {
+    try {
+      final res = await _dio.patch(path, data: body);
+      return res.data;
+    } on DioException catch (e) {
+      throw _mapError(e);
+    }
+  }
+
+  static ApiException _mapError(DioException e) {
+    final code = e.response?.statusCode;
+    final data = e.response?.data;
+    final detail = (data is Map) ? data['detail'] as String? : null;
+    return ApiException(
+      detail ?? e.message ?? 'Network error',
+      statusCode: code,
+    );
+  }
 }
 
-Future<void> saveToken(String token) async {
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.setString(_tokenKey, token);
-}
+class _AuthInterceptor extends Interceptor {
+  @override
+  Future<void> onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
+    // Read token fresh from secure storage on every request — never cache in memory
+    final token = await SecureStorage.readToken();
+    if (token != null) {
+      options.headers['Authorization'] = 'Bearer $token';
+    }
+    return handler.next(options);
+  }
 
-Future<String?> loadToken() async {
-  final prefs = await SharedPreferences.getInstance();
-  return prefs.getString(_tokenKey);
-}
-
-Future<void> clearToken() async {
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.remove(_tokenKey);
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) {
+    if (err.response?.statusCode == 401) {
+      // Token rejected by server — wipe it so auth guard redirects to login
+      SecureStorage.deleteToken();
+    }
+    return handler.next(err);
+  }
 }
