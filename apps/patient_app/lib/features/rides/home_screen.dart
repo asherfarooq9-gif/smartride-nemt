@@ -106,11 +106,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ref.read(ridesNotifierProvider.notifier).refresh();
         context.push('/ride/$rideId');
       }
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message), backgroundColor: Colors.red),
-      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Emergency request failed: $e'),
+            backgroundColor: Colors.red[700],
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: _callEmergency,
+            ),
+            duration: const Duration(seconds: 8),
+          ),
+        );
+      }
+    } finally {
+      // No loading state to reset in this method.
     }
   }
 
