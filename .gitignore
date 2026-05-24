@@ -54,3 +54,6 @@ graphify-out/
 .mcp.json
 install-claude-skills.ps1
 .claude/
+.agents/
+skills-lock.json
+admin-dashboard/tsconfig.tsbuildinfo
