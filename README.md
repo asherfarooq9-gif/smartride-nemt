@@ -64,14 +64,14 @@ Patient/Driver Apps (Flutter)
 | # | Feature | Status |
 |---|---|---|
 | 0 | Scaffold & tooling | ✅ |
-| 1 | Database schema & API contract | pending |
-| 2 | Auth & CRUD endpoints | pending |
-| 3 | Hospital matching engine | pending |
-| 4 | AI triage microservice | pending |
-| 5 | Emergency dispatch pipeline | pending |
-| 6 | Realtime GPS (WebSocket) | pending |
-| 7 | Analytics & demand forecast | pending |
-| 8 | Admin dashboard | pending |
+| 1 | Database schema & API contract | ✅ |
+| 2 | Auth & CRUD endpoints | ✅ |
+| 3 | Hospital matching engine | ✅ |
+| 4 | AI triage microservice | ✅ |
+| 5 | Emergency dispatch pipeline | ✅ |
+| 6 | Realtime GPS (WebSocket) | ✅ |
+| 7 | Analytics & demand forecast | ✅ |
+| 8 | Admin dashboard | ✅ |
 | 9 | Flutter patient & driver apps (Riverpod + Dio, emergency flow, FCM) | ✅ |
 | 10 | CI/CD (GitHub Actions), seed data, localhost docker-compose | ✅ |
 
