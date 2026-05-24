@@ -5,6 +5,7 @@ import '../features/auth/login_screen.dart';
 import '../features/rides/home_screen.dart';
 import '../features/rides/ride_detail_screen.dart';
 import '../features/rides/scheduled_rides_screen.dart';
+import '../features/rides/symptom_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/profile/settings_screen.dart';
 
@@ -35,6 +36,17 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'rides',
             builder: (_, __) => const ScheduledRidesScreen(),
+          ),
+          GoRoute(
+            path: 'symptoms',
+            builder: (_, state) {
+              final extra = state.extra as Map<String, dynamic>;
+              return SymptomScreen(
+                pickupLat: extra['lat'] as double,
+                pickupLng: extra['lng'] as double,
+                pickupAddress: extra['address'] as String?,
+              );
+            },
           ),
           GoRoute(path: 'profile', builder: (_, __) => const ProfileScreen()),
           GoRoute(path: 'settings', builder: (_, __) => const SettingsScreen()),

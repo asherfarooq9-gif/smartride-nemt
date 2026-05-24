@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
-import '../../core/api_client.dart';
 import '../../widgets/ride_card.dart';
 import '../../widgets/loading_overlay.dart';
 import 'rides_notifier.dart';
@@ -57,73 +56,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     }
   }
 
-  Future<void> _callEmergency() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Emergency Ride'),
-        content: const Text(
-            'This will request an emergency vehicle immediately. Continue?'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Call Emergency'),
-          ),
-        ],
-      ),
-    );
-    if (confirm != true || !mounted) return;
-    try {
-      final pos = _currentPosition;
-      if (pos == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Location unavailable — enable GPS and try again'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-      final result = await ApiClient.post('/api/v1/rides/emergency', body: {
-        'pickup_lat': pos.latitude,
-        'pickup_lng': pos.longitude,
-        'symptom_text': 'Emergency ride requested via app',
-      }) as Map<String, dynamic>;
-      if (!mounted) return;
-      final rideId = result['ride_id'] as String?;
+  void _callEmergency() {
+    final pos = _currentPosition;
+    if (pos == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Emergency ride dispatched — a driver will be assigned shortly'),
-          backgroundColor: Colors.green,
+          content: Text('Location unavailable — enable GPS and try again'),
+          backgroundColor: Colors.red,
         ),
       );
-      if (rideId != null) {
-        // Refresh rides list so the new ride appears
-        ref.read(ridesNotifierProvider.notifier).refresh();
-        context.push('/ride/$rideId');
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Emergency request failed: $e'),
-            backgroundColor: Colors.red[700],
-            action: SnackBarAction(
-              label: 'Retry',
-              textColor: Colors.white,
-              onPressed: _callEmergency,
-            ),
-            duration: const Duration(seconds: 8),
-          ),
-        );
-      }
-    } finally {
-      // No loading state to reset in this method.
+      return;
     }
+    context.push('/symptoms', extra: {
+      'lat': pos.latitude,
+      'lng': pos.longitude,
+      'address': _locationLabel,
+    });
   }
 
   @override
