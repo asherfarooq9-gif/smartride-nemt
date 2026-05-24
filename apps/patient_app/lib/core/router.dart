@@ -41,7 +41,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'symptoms',
             builder: (_, state) {
-              final extra = state.extra as Map<String, dynamic>;
+              final extra = state.extra as Map<String, dynamic>?;
+              if (extra == null) return const HomeScreen();
               return SymptomScreen(
                 pickupLat: extra['lat'] as double,
                 pickupLng: extra['lng'] as double,
@@ -52,7 +53,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'tracking/:id',
             builder: (_, state) {
-              final extra = state.extra as Map<String, dynamic>;
+              final extra = state.extra as Map<String, dynamic>?;
+              if (extra == null) return const HomeScreen();
               return LiveTrackingScreen(
                 rideId: state.pathParameters['id']!,
                 pickupLat: extra['lat'] as double,

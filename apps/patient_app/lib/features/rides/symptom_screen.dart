@@ -162,6 +162,7 @@ class _SymptomScreenState extends ConsumerState<SymptomScreen> {
                   TextField(
                     controller: _extraCtrl,
                     maxLines: 3,
+                    maxLength: 500,
                     textCapitalization: TextCapitalization.sentences,
                     decoration: InputDecoration(
                       hintText: 'Describe any other symptoms or relevant info…',

@@ -137,6 +137,7 @@ async def update_ride_status(
         if new_status == RideStatus.cancelled:
             ride.status = RideStatus.cancelled
             ride.cancelled_at = datetime.now(timezone.utc)
+            driver.status = DriverStatus.available
         elif new_status != allowed_next:
             raise HTTPException(400, f"Cannot transition from {ride.status} to {new_status}")
         else:

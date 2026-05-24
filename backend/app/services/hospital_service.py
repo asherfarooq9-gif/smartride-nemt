@@ -27,7 +27,7 @@ async def list_hospitals(
             return [HospitalResponse.model_validate(h).model_dump(mode="json") for h in hospitals]
 
         items_data = await get_cached(HOSPITALS_CACHE_KEY, HOSPITALS_CACHE_TTL, _load)
-        all_hospitals = [HospitalResponse(**item) for item in items_data]
+        all_hospitals = [HospitalResponse.model_validate(item) for item in items_data]
         total = len(all_hospitals)
         start = (page - 1) * page_size
         return all_hospitals[start: start + page_size], total

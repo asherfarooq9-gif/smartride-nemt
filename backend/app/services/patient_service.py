@@ -1,4 +1,5 @@
 from typing import Optional
+from uuid import UUID
 
 from fastapi import HTTPException
 from sqlalchemy import select, func
@@ -16,7 +17,7 @@ async def get_patient_by_user(user: User, db: AsyncSession) -> Patient:
     return patient
 
 
-async def get_patient_total_rides(patient_id: str, db: AsyncSession) -> int:
+async def get_patient_total_rides(patient_id: UUID, db: AsyncSession) -> int:
     return (
         await db.execute(select(func.count()).select_from(Ride).where(Ride.patient_id == patient_id))
     ).scalar() or 0
@@ -35,7 +36,7 @@ async def list_patients(
     page: int,
     page_size: int,
     search: Optional[str] = None,
-) -> tuple[list[tuple[Patient, User]], int]:
+) -> tuple[list[tuple[Patient, User]], int, dict[UUID, int]]:
     base_q = select(Patient, User).join(User, Patient.user_id == User.id)
     if search:
         base_q = base_q.where(
@@ -46,4 +47,16 @@ async def list_patients(
         base_q.order_by(Patient.created_at.desc())
         .offset((page - 1) * page_size).limit(page_size)
     )).all()
-    return list(rows), total
+
+    # Batch ride counts in a single query — avoids N+1
+    patient_ids = [p.id for p, _ in rows]
+    ride_counts: dict[UUID, int] = {}
+    if patient_ids:
+        count_rows = (await db.execute(
+            select(Ride.patient_id, func.count(Ride.id))
+            .where(Ride.patient_id.in_(patient_ids))
+            .group_by(Ride.patient_id)
+        )).all()
+        ride_counts = {pid: cnt for pid, cnt in count_rows}
+
+    return list(rows), total, ride_counts

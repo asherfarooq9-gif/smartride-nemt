@@ -1,6 +1,6 @@
 from typing import Optional, List, Any, Dict
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from app.models.models import RideType, RideStatus
 
 
@@ -8,7 +8,7 @@ class EmergencyRideRequest(BaseModel):
     pickup_lat: float
     pickup_lng: float
     pickup_address: Optional[str] = None
-    symptom_text: str
+    symptom_text: str = Field(min_length=1, max_length=2000)
 
 
 class ScheduledRideRequest(BaseModel):

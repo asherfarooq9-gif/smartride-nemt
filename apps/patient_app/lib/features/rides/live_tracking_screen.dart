@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../../core/secure_storage.dart';
 
@@ -22,13 +23,12 @@ class LiveTrackingScreen extends StatefulWidget {
 }
 
 class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
-  GoogleMapController? _mapCtrl;
+  final MapController _mapCtrl = MapController();
   WebSocketChannel? _channel;
   LatLng? _driverPos;
   bool _rideEnded = false;
   String _endedStatus = '';
 
-  // Derive WS base from same env var as ApiClient
   static const _envUrl =
       String.fromEnvironment('API_BASE_URL', defaultValue: '');
   static final String _wsBase = _envUrl.isNotEmpty
@@ -46,14 +46,26 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
   @override
   void dispose() {
     _channel?.sink.close();
-    _mapCtrl?.dispose();
+    _mapCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _connect() async {
-    final token = await SecureStorage.readToken();
-    if (token == null || !mounted) return;
+    try {
+      final token = await SecureStorage.readToken();
+      if (token == null || !mounted) {
+        if (mounted) setState(() { _rideEnded = true; _endedStatus = 'connection_lost'; });
+        return;
+      }
+      await _openChannel(token);
+    } catch (_) {
+      if (mounted) setState(() { _rideEnded = true; _endedStatus = 'connection_lost'; });
+    }
+  }
 
+  Future<void> _openChannel(String token) async {
+
+    if (!mounted) return;
     final uri = Uri.parse('$_wsBase/api/v1/ws/ride/${widget.rideId}');
     _channel = WebSocketChannel.connect(uri);
 
@@ -63,48 +75,49 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
     _channel!.stream.listen(
       (raw) {
         if (!mounted) return;
-        final data = jsonDecode(raw as String) as Map<String, dynamic>;
-
-        if (data['event'] == 'ride_ended') {
-          setState(() {
-            _rideEnded = true;
-            _endedStatus = data['status'] as String? ?? 'completed';
-          });
-        } else if (data.containsKey('lat') && data.containsKey('lng')) {
-          final pos = LatLng(
-            (data['lat'] as num).toDouble(),
-            (data['lng'] as num).toDouble(),
-          );
-          setState(() => _driverPos = pos);
-          _mapCtrl?.animateCamera(CameraUpdate.newLatLng(pos));
+        try {
+          final data = jsonDecode(raw as String) as Map<String, dynamic>;
+          if (data['event'] == 'ride_ended') {
+            setState(() {
+              _rideEnded = true;
+              _endedStatus = data['status'] as String? ?? 'completed';
+            });
+          } else if (data.containsKey('lat') && data.containsKey('lng')) {
+            final pos = LatLng(
+              (data['lat'] as num).toDouble(),
+              (data['lng'] as num).toDouble(),
+            );
+            setState(() => _driverPos = pos);
+            _mapCtrl.move(pos, _mapCtrl.camera.zoom);
+          }
+        } catch (_) {
+          // Ignore malformed frames
         }
       },
-      onError: (_) {},
-      onDone: () {},
+      onError: (_) {
+        if (mounted) {
+          setState(() {
+            _rideEnded = true;
+            _endedStatus = 'connection_lost';
+          });
+        }
+      },
+      onDone: () {
+        // Server closed connection — mark as ended if not already
+        if (mounted && !_rideEnded) {
+          setState(() {
+            _rideEnded = true;
+            _endedStatus = 'connection_lost';
+          });
+        }
+      },
     );
-  }
-
-  Set<Marker> _buildMarkers() {
-    return {
-      Marker(
-        markerId: const MarkerId('pickup'),
-        position: LatLng(widget.pickupLat, widget.pickupLng),
-        infoWindow: const InfoWindow(title: 'Your Pickup'),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-      ),
-      if (_driverPos != null)
-        Marker(
-          markerId: const MarkerId('driver'),
-          position: _driverPos!,
-          infoWindow: const InfoWindow(title: 'Driver'),
-          icon:
-              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-        ),
-    };
   }
 
   @override
   Widget build(BuildContext context) {
+    final pickup = LatLng(widget.pickupLat, widget.pickupLng);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Live Tracking'),
@@ -113,16 +126,50 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
       ),
       body: Stack(
         children: [
-          GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: LatLng(widget.pickupLat, widget.pickupLng),
-              zoom: 15,
+          FlutterMap(
+            mapController: _mapCtrl,
+            options: MapOptions(
+              initialCenter: pickup,
+              initialZoom: 15,
             ),
-            markers: _buildMarkers(),
-            myLocationEnabled: true,
-            myLocationButtonEnabled: false,
-            zoomControlsEnabled: true,
-            onMapCreated: (ctrl) => _mapCtrl = ctrl,
+            children: [
+              TileLayer(
+                urlTemplate:
+                    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.smartride.patient_app',
+              ),
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: pickup,
+                    width: 48,
+                    height: 48,
+                    child: const Tooltip(
+                      message: 'Your pickup',
+                      child: Icon(
+                        Icons.location_pin,
+                        color: Color(0xFF1565C0),
+                        size: 40,
+                      ),
+                    ),
+                  ),
+                  if (_driverPos != null)
+                    Marker(
+                      point: _driverPos!,
+                      width: 48,
+                      height: 48,
+                      child: const Tooltip(
+                        message: 'Driver',
+                        child: Icon(
+                          Icons.directions_car,
+                          color: Color(0xFF2E7D32),
+                          size: 36,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
           ),
           Positioned(
             left: 0,
@@ -158,11 +205,12 @@ class _StatusCard extends StatelessWidget {
   Widget build(BuildContext context) {
     if (rideEnded) {
       final completed = endedStatus == 'completed';
+      final lost = endedStatus == 'connection_lost';
       return Container(
         margin: const EdgeInsets.all(16),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: completed ? Colors.green[700] : Colors.grey[700],
+          color: completed ? Colors.green[700] : lost ? Colors.orange[700] : Colors.grey[700],
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -175,7 +223,7 @@ class _StatusCard extends StatelessWidget {
         child: Row(
           children: [
             Icon(
-              completed ? Icons.check_circle_outline : Icons.cancel_outlined,
+              lost ? Icons.wifi_off : completed ? Icons.check_circle_outline : Icons.cancel_outlined,
               color: Colors.white,
               size: 28,
             ),
@@ -186,7 +234,7 @@ class _StatusCard extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    completed ? 'Ride Completed' : 'Ride Cancelled',
+                    lost ? 'Connection Lost' : completed ? 'Ride Completed' : 'Ride Cancelled',
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
