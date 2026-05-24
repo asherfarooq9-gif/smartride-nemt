@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../core/api_client.dart';
 
@@ -28,7 +29,15 @@ class RideDetailScreen extends ConsumerWidget {
           final hospital = ride['hospital'] as Map<String, dynamic>?;
           final triage = ride['triage'] as Map<String, dynamic>?;
           final status = ride['status'] as String;
+          final pickupLat = (ride['pickup_lat'] as num?)?.toDouble();
+          final pickupLng = (ride['pickup_lng'] as num?)?.toDouble();
           final requestedAt = ride['requested_at'] as String;
+
+          const trackableStatuses = {
+            'driver_assigned',
+            'driver_en_route',
+            'patient_picked_up',
+          };
           final dt = DateTime.tryParse(requestedAt)?.toLocal();
           final formatted = dt != null
               ? DateFormat('dd MMM yyyy, h:mm a').format(dt)
@@ -39,6 +48,29 @@ class RideDetailScreen extends ConsumerWidget {
             child: Column(
               children: [
                 _StatusBadge(status: status),
+                if (trackableStatuses.contains(status) &&
+                    pickupLat != null &&
+                    pickupLng != null) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () => context.push(
+                        '/tracking/$rideId',
+                        extra: {'lat': pickupLat, 'lng': pickupLng},
+                      ),
+                      icon: const Icon(Icons.map_outlined),
+                      label: const Text('Track Live'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF1565C0),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 _Section(title: 'Trip Info', children: [
                   _Row('Type', ride['ride_type'] as String),

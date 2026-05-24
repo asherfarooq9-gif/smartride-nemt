@@ -6,6 +6,7 @@ import '../features/rides/home_screen.dart';
 import '../features/rides/ride_detail_screen.dart';
 import '../features/rides/scheduled_rides_screen.dart';
 import '../features/rides/symptom_screen.dart';
+import '../features/rides/live_tracking_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/profile/settings_screen.dart';
 
@@ -45,6 +46,17 @@ final routerProvider = Provider<GoRouter>((ref) {
                 pickupLat: extra['lat'] as double,
                 pickupLng: extra['lng'] as double,
                 pickupAddress: extra['address'] as String?,
+              );
+            },
+          ),
+          GoRoute(
+            path: 'tracking/:id',
+            builder: (_, state) {
+              final extra = state.extra as Map<String, dynamic>;
+              return LiveTrackingScreen(
+                rideId: state.pathParameters['id']!,
+                pickupLat: extra['lat'] as double,
+                pickupLng: extra['lng'] as double,
               );
             },
           ),
