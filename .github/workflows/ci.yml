@@ -76,17 +76,44 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Patient app analyze
+      - name: Set up Java 17 (required for Android build)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Core package pub get
+        run: |
+          cd packages/smartride_core
+          flutter pub get
+
+      - name: Patient app analyze + build APK
         run: |
           cd apps/patient_app
           flutter pub get
           flutter analyze
+          flutter build apk --debug --no-pub
 
-      - name: Driver app analyze
+      - name: Driver app analyze + build APK
         run: |
           cd apps/driver_app
           flutter pub get
           flutter analyze
+          flutter build apk --debug --no-pub
+
+      - name: Upload patient APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: patient-app-debug
+          path: apps/patient_app/build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 7
+
+      - name: Upload driver APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: driver-app-debug
+          path: apps/driver_app/build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 7
 
   docker-compose-validate:
     name: docker-compose config
@@ -95,3 +122,20 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate compose file
         run: docker compose config --quiet
+
+  deploy:
+    name: Deploy to Render
+    runs-on: ubuntu-latest
+    needs: [backend-tests, flutter-analyze, docker-compose-validate]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Trigger Render deploy
+        if: ${{ secrets.RENDER_DEPLOY_HOOK != '' }}
+        run: |
+          curl -s "${{ secrets.RENDER_DEPLOY_HOOK }}" \
+            -X POST \
+            -d "" \
+            --fail-with-body
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
