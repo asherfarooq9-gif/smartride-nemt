@@ -1,0 +1,35 @@
+databases:
+  - name: smartride-db
+    databaseName: smartride
+    user: smartride
+    plan: free
+
+services:
+  - type: web
+    name: smartride-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: smartride-db
+          property: connectionString
+      - key: REDIS_URL
+        sync: false          # set manually in Render dashboard (Upstash)
+      - key: SECRET_KEY
+        generateValue: true
+      - key: TRIAGE_SERVICE_URL
+        value: ""            # triage AI not deployed — graceful fallback
+      - key: DEBUG
+        value: "false"
+      - key: GOOGLE_MAPS_API_KEY
+        value: ""
+      - key: TWILIO_ACCOUNT_SID
+        value: ""
+      - key: TWILIO_AUTH_TOKEN
+        value: ""
+      - key: TWILIO_PHONE_NUMBER
+        value: ""
