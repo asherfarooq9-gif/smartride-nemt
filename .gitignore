@@ -52,14 +52,3 @@ apps/*/.flutter-plugins-dependencies
 # Backups / temp
 _archive/
 _flutter_tmp/
-claude-obsidian/
-
-# Tools / generated
-.superpowers/
-graphify-out/
-.mcp.json
-install-claude-skills.ps1
-.claude/
-.agents/
-skills-lock.json
-admin-dashboard/tsconfig.tsbuildinfo
