@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
-import '../../core/api_client.dart';
+import 'package:smartride_core/smartride_core.dart' as core;
 
-final _rideDetailProvider =
-    FutureProvider.family<Map<String, dynamic>, String>((ref, id) async {
-  return await ApiClient.get('/api/v1/rides/$id/detail') as Map<String, dynamic>;
-});
+final _rideDetailProvider = FutureProvider.autoDispose
+    .family<core.RideDetailResponse, String>(
+  (ref, id) => core.getRideDetail(id),
+);
 
 class RideDetailScreen extends ConsumerWidget {
-  final String rideId;
   const RideDetailScreen({super.key, required this.rideId});
+
+  final String rideId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -20,192 +20,121 @@ class RideDetailScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Ride Details')),
       body: rideAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-            child: Text('Error: $e', style: const TextStyle(color: Colors.red))),
-        data: (ride) {
-          final patient = ride['patient'] as Map<String, dynamic>?;
-          final driver = ride['driver'] as Map<String, dynamic>?;
-          final hospital = ride['hospital'] as Map<String, dynamic>?;
-          final triage = ride['triage'] as Map<String, dynamic>?;
-          final status = ride['status'] as String;
-          final pickupLat = (ride['pickup_lat'] as num?)?.toDouble();
-          final pickupLng = (ride['pickup_lng'] as num?)?.toDouble();
-          final requestedAt = ride['requested_at'] as String;
-
-          const trackableStatuses = {
-            'driver_assigned',
-            'driver_en_route',
-            'patient_picked_up',
-          };
-          final dt = DateTime.tryParse(requestedAt)?.toLocal();
-          final formatted = dt != null
-              ? DateFormat('dd MMM yyyy, h:mm a').format(dt)
-              : requestedAt;
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                _StatusBadge(status: status),
-                if (trackableStatuses.contains(status) &&
-                    pickupLat != null &&
-                    pickupLng != null) ...[
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: () => context.push(
-                        '/tracking/$rideId',
-                        extra: {'lat': pickupLat, 'lng': pickupLng},
-                      ),
-                      icon: const Icon(Icons.map_outlined),
-                      label: const Text('Track Live'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF1565C0),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
+        loading: () => const core.LoadingState(),
+        error: (e, _) => core.ErrorState(
+          message: e is core.AppError ? e.message : 'Failed to load ride',
+          onRetry: () => ref.refresh(_rideDetailProvider(rideId)),
+        ),
+        data: (ride) => SingleChildScrollView(
+          padding: const EdgeInsets.all(core.kSpaceLG),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _StatusBadge(ride.status),
+              const SizedBox(height: core.kSpaceLG),
+              _InfoCard(
+                title: 'Pickup',
+                value: ride.pickupAddress,
+                icon: Icons.location_on,
+              ),
+              if (ride.symptomText != null)
+                _InfoCard(
+                  title: 'Symptoms',
+                  value: ride.symptomText!,
+                  icon: Icons.medical_information,
+                ),
+              if (ride.createdAt != null)
+                _InfoCard(
+                  title: 'Requested',
+                  value: ride.createdAt!,
+                  icon: Icons.access_time,
+                ),
+              if (ride.driver != null) ...[
+                const SizedBox(height: core.kSpaceSM),
+                Text(
+                  'Driver',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                Card(
+                  child: ListTile(
+                    leading: const CircleAvatar(child: Icon(Icons.person)),
+                    title: Text(
+                      (ride.driver!['full_name'] as String?) ?? 'Driver',
+                    ),
+                    subtitle: Text(
+                      (ride.driver!['vehicle_plate'] as String?) ?? '',
                     ),
                   ),
-                ],
-                const SizedBox(height: 16),
-                _Section(title: 'Trip Info', children: [
-                  _Row('Type', ride['ride_type'] as String),
-                  _Row('Requested', formatted),
-                  _Row('Pickup',
-                      (ride['pickup_address'] as String?) ?? 'N/A'),
-                  if (ride['estimated_fare_pkr'] != null)
-                    _Row('Est. Fare', 'PKR ${ride['estimated_fare_pkr']}'),
-                  if (ride['final_fare_pkr'] != null)
-                    _Row('Final Fare', 'PKR ${ride['final_fare_pkr']}'),
-                ]),
-                if (patient != null) ...[
-                  const SizedBox(height: 12),
-                  _Section(title: 'Patient', children: [
-                    _Row('Name', patient['full_name'] as String? ?? 'N/A'),
-                    _Row('Phone', patient['phone'] as String? ?? 'N/A'),
-                    if ((patient['mobility_needs'] as String?) != null)
-                      _Row('Mobility Needs', patient['mobility_needs'] as String),
-                  ]),
-                ],
-                if (driver != null) ...[
-                  const SizedBox(height: 12),
-                  _Section(title: 'Driver', children: [
-                    _Row('Name', driver['full_name'] as String? ?? 'N/A'),
-                    _Row('Phone', driver['phone'] as String? ?? 'N/A'),
-                    _Row('Vehicle',
-                        '${driver['vehicle_type'] ?? 'N/A'} — ${driver['vehicle_plate'] ?? 'N/A'}'),
-                  ]),
-                ],
-                if (hospital != null) ...[
-                  const SizedBox(height: 12),
-                  _Section(title: 'Hospital', children: [
-                    _Row('Name', hospital['name'] as String? ?? 'N/A'),
-                    _Row('Address', hospital['address'] as String? ?? 'N/A'),
-                    _Row('City', hospital['city'] as String? ?? 'N/A'),
-                  ]),
-                ],
-                if (triage != null) ...[
-                  const SizedBox(height: 12),
-                  _Section(title: 'Triage', children: [
-                    _Row('Symptoms', triage['symptom_text'] as String? ?? 'N/A'),
-                    _Row('Specialty',
-                        triage['predicted_specialty'] as String? ?? 'N/A'),
-                    _Row('Severity', triage['severity_level'] as String? ?? 'N/A'),
-                  ]),
-                ],
+                ),
               ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  final String status;
-  const _StatusBadge({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = switch (status) {
-      'completed' => Colors.green,
-      'cancelled' => Colors.red,
-      _ => Theme.of(context).colorScheme.primary,
-    };
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Text(
-        status.replaceAll('_', ' ').toUpperCase(),
-        textAlign: TextAlign.center,
-        style: TextStyle(
-            color: color, fontWeight: FontWeight.w700, fontSize: 16),
-      ),
-    );
-  }
-}
-
-class _Section extends StatelessWidget {
-  final String title;
-  final List<Widget> children;
-  const _Section({required this.title, required this.children});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                    color: Color(0xFF1565C0))),
-            const Divider(height: 16),
-            ...children,
-          ],
+              const SizedBox(height: core.kSpaceXL),
+              if (ride.isTrackable)
+                core.PrimaryButton(
+                  label: 'Track Live',
+                  onPressed: () => context.push('/tracking/$rideId'),
+                  color: core.kPatientPrimary,
+                ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _Row extends StatelessWidget {
-  final String label;
-  final String value;
-  const _Row(this.label, this.value);
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge(this.status);
+
+  final core.RideStatus status;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: core.kSpaceLG,
+        vertical: core.kSpaceSM,
+      ),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(core.kRadiusXL),
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-              width: 90,
-              child: Text(label,
-                  style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey,
-                      fontWeight: FontWeight.w500))),
-          Expanded(
-              child: Text(value,
-                  style: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w500))),
+          const Icon(Icons.info_outline, size: 20),
+          const SizedBox(width: core.kSpaceSM),
+          Text(
+            status.displayLabel,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _InfoCard extends StatelessWidget {
+  const _InfoCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+  });
+
+  final String title;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: core.kSpaceSM),
+      child: ListTile(
+        leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
+        title: Text(title, style: const TextStyle(fontSize: core.kFontSM)),
+        subtitle: Text(value),
       ),
     );
   }

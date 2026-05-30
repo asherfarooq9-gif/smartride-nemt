@@ -1,218 +1,161 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/api_client.dart';
-import '../../core/theme.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:smartride_core/smartride_core.dart' as core;
+import '../../core/providers.dart';
 
 final _rideDetailProvider =
-    FutureProvider.family<Map<String, dynamic>, String>((ref, id) async {
-  return await ApiClient.get('/api/v1/rides/$id/detail')
-      as Map<String, dynamic>;
-});
-
-// Maps current status → next status on button press
-const _nextStatus = {
-  'pending': 'driver_assigned',
-  'driver_assigned': 'driver_en_route',
-  'driver_en_route': 'patient_picked_up',
-  'patient_picked_up': 'arrived_at_hospital',
-  'arrived_at_hospital': 'completed',
-};
-
-const _nextLabel = {
-  'pending': 'Accept Ride',
-  'driver_assigned': 'Start Driving',
-  'driver_en_route': 'Arrived at Patient',
-  'patient_picked_up': 'Arrived at Hospital',
-  'arrived_at_hospital': 'Complete Ride',
-};
+    FutureProvider.autoDispose.family<core.RideDetailResponse, String>(
+  (ref, id) => core.getRideDetail(id),
+);
 
 class ActiveRideScreen extends ConsumerStatefulWidget {
-  final String rideId;
   const ActiveRideScreen({super.key, required this.rideId});
+
+  final String rideId;
 
   @override
   ConsumerState<ActiveRideScreen> createState() => _ActiveRideScreenState();
 }
 
 class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
-  bool _submitting = false;
+  final MapController _mapController = MapController();
+  LatLng? _myPos;
+  bool _cancelling = false;
 
-  Future<void> _advanceStatus(String nextStatus) async {
-    if (_submitting) return;
-    setState(() => _submitting = true);
+  @override
+  void dispose() {
+    _mapController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _advance(core.RideStatus next) async {
     try {
-      await ApiClient.patch(
-        '/api/v1/rides/${widget.rideId}/status',
-        body: {'status': nextStatus},
-      );
+      await core.updateRideStatus(widget.rideId, next);
       ref.invalidate(_rideDetailProvider(widget.rideId));
-      if (nextStatus == 'completed' && mounted) {
-        context.pop();
+      if (next == core.RideStatus.completed ||
+          next == core.RideStatus.cancelled) {
+        await ref.read(gpsStreamProvider.notifier).stopStreaming();
+        if (mounted) context.go('/');
       }
-    } on ApiException catch (e) {
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.message),
-            backgroundColor: statusError,
+            content: Text(e is core.AppError ? e.message : 'Update failed'),
+            backgroundColor: core.kError,
           ),
         );
       }
-    } finally {
-      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  Future<void> _cancel() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Cancel Ride'),
+        content: const Text('Are you sure you want to cancel this ride?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: core.kError),
+            child: const Text('Yes, Cancel'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      setState(() => _cancelling = true);
+      await _advance(core.RideStatus.cancelled);
+      if (mounted) setState(() => _cancelling = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final rideAsync = ref.watch(_rideDetailProvider(widget.rideId));
+    final isStreaming = ref.watch(gpsStreamProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Active Ride')),
-      body: rideAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-            child: Text('Error: $e',
-                style: const TextStyle(color: Colors.red))),
-        data: (ride) {
-          final status = ride['status'] as String;
-          final patient = ride['patient'] as Map<String, dynamic>?;
-          final nextS = _nextStatus[status];
-          final nextL = _nextLabel[status];
-
-          return Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Status banner
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF00695C).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                        color: const Color(0xFF00695C).withValues(alpha: 0.3)),
-                  ),
-                  child: Text(
-                    status.replaceAll('_', ' ').toUpperCase(),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                        color: Color(0xFF00695C)),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // Pickup info
-                _InfoRow('Pickup',
-                    (ride['pickup_address'] as String?) ?? 'N/A'),
-                const SizedBox(height: 12),
-                // Patient info
-                if (patient != null)
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Patient',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 14,
-                                  color: Color(0xFF00695C))),
-                          const Divider(height: 16),
-                          _InfoRow('Name', patient['full_name'] as String? ?? 'N/A'),
-                          _InfoRow('Phone', patient['phone'] as String? ?? 'N/A'),
-                          if ((patient['mobility_needs'] as String?) != null)
-                            _InfoRow('Mobility Needs',
-                                patient['mobility_needs'] as String),
-                        ],
-                      ),
-                    ),
-                  ),
-                const Spacer(),
-                // Primary action button
-                if (nextS != null)
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: Semantics(
-                      label: nextL,
-                      button: true,
-                      child: ElevatedButton(
-                        onPressed: _submitting ? null : () => _advanceStatus(nextS),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF00695C),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                        ),
-                        child: _submitting
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: Colors.white),
-                              )
-                            : Text(nextL ?? '',
-                                style: const TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.w600)),
-                      ),
-                    ),
-                  ),
-                if (status == 'driver_assigned' || status == 'driver_en_route') ...[
-                  const SizedBox(height: 10),
-                  OutlinedButton(
-                    onPressed: () async {
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('Cancel Ride'),
-                          content: const Text(
-                              'Are you sure you want to cancel this ride?'),
-                          actions: [
-                            TextButton(
-                                onPressed: () =>
-                                    Navigator.of(ctx).pop(false),
-                                child: const Text('No')),
-                            TextButton(
-                              onPressed: () =>
-                                  Navigator.of(ctx).pop(true),
-                              child: const Text('Yes, Cancel',
-                                  style: TextStyle(color: Colors.red)),
-                            ),
-                          ],
-                        ),
-                      );
-                      if (confirm == true) {
-                        try {
-                          await ApiClient.patch(
-                              '/api/v1/rides/${widget.rideId}/status',
-                              body: {'status': 'cancelled'});
-                          if (context.mounted) context.pop();
-                        } on ApiException catch (e) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(e.message)),
-                            );
-                          }
-                        }
-                      }
-                    },
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 48),
-                      side: const BorderSide(color: Colors.red),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('Cancel Ride',
-                        style: TextStyle(color: Colors.red)),
-                  ),
-                ],
-              ],
+      appBar: AppBar(
+        title: rideAsync.whenOrNull(
+              data: (r) => Text(r.status.displayLabel),
+            ) ??
+            const Text('Active Ride'),
+        actions: [
+          if (isStreaming)
+            const Padding(
+              padding: EdgeInsets.only(right: core.kSpaceLG),
+              child: Tooltip(
+                message: 'GPS streaming',
+                child: Icon(Icons.gps_fixed, color: core.kOnlineGreen),
+              ),
             ),
+        ],
+      ),
+      body: rideAsync.when(
+        loading: () => const core.LoadingState(),
+        error: (e, _) => core.ErrorState(
+          message: e is core.AppError ? e.message : 'Failed to load ride',
+          onRetry: () => ref.invalidate(_rideDetailProvider(widget.rideId)),
+        ),
+        data: (ride) {
+          final pickupPos = (ride.pickupLat != null && ride.pickupLng != null)
+              ? LatLng(ride.pickupLat!, ride.pickupLng!)
+              : null;
+
+          return Column(
+            children: [
+              _StatusBanner(ride.status),
+              Expanded(
+                child: FlutterMap(
+                  mapController: _mapController,
+                  options: MapOptions(
+                    initialCenter:
+                        pickupPos ?? _myPos ?? const LatLng(0, 0),
+                    initialZoom: 14,
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate:
+                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'com.smartride.driver',
+                    ),
+                    MarkerLayer(
+                      markers: [
+                        if (pickupPos != null)
+                          Marker(
+                            point: pickupPos,
+                            width: 40,
+                            height: 40,
+                            child: const Tooltip(
+                              message: 'Patient pickup',
+                              child: Icon(
+                                Icons.location_on,
+                                color: core.kEmergencyRed,
+                                size: 40,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              _ActionPanel(
+                ride: ride,
+                cancelling: _cancelling,
+                onAdvance: _advance,
+                onCancel: _cancel,
+              ),
+            ],
           );
         },
       ),
@@ -220,27 +163,126 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
   }
 }
 
-class _InfoRow extends StatelessWidget {
-  final String label;
-  final String value;
-  const _InfoRow(this.label, this.value);
+class _StatusBanner extends StatelessWidget {
+  const _StatusBanner(this.status);
+
+  final core.RideStatus status;
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: core.kSpaceLG,
+        vertical: core.kSpaceSM,
+      ),
+      color: Theme.of(context).colorScheme.primaryContainer,
+      child: Text(
+        status.displayLabel,
+        textAlign: TextAlign.center,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+}
+
+class _ActionPanel extends StatelessWidget {
+  const _ActionPanel({
+    required this.ride,
+    required this.cancelling,
+    required this.onAdvance,
+    required this.onCancel,
+  });
+
+  final core.RideDetailResponse ride;
+  final bool cancelling;
+  final Future<void> Function(core.RideStatus) onAdvance;
+  final Future<void> Function() onCancel;
+
+  core.RideStatus? get _nextStatus {
+    switch (ride.status) {
+      case core.RideStatus.driverAssigned:
+        return core.RideStatus.driverEnRoute;
+      case core.RideStatus.driverEnRoute:
+        return core.RideStatus.patientPickedUp;
+      case core.RideStatus.patientPickedUp:
+        return core.RideStatus.arrivedAtHospital;
+      case core.RideStatus.arrivedAtHospital:
+        return core.RideStatus.completed;
+      default:
+        return null;
+    }
+  }
+
+  String get _nextLabel {
+    switch (ride.status) {
+      case core.RideStatus.driverAssigned:
+        return 'Start Driving';
+      case core.RideStatus.driverEnRoute:
+        return 'Patient Picked Up';
+      case core.RideStatus.patientPickedUp:
+        return 'Arrived at Hospital';
+      case core.RideStatus.arrivedAtHospital:
+        return 'Complete Ride';
+      default:
+        return 'Next';
+    }
+  }
+
+  bool get _canCancel =>
+      ride.status == core.RideStatus.driverAssigned ||
+      ride.status == core.RideStatus.driverEnRoute;
+
+  @override
+  Widget build(BuildContext context) {
+    final next = _nextStatus;
+    return Container(
+      padding: const EdgeInsets.all(core.kSpaceLG),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 8,
+            offset: Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (next != null)
+            core.PrimaryButton(
+              label: _nextLabel,
+              onPressed: () => onAdvance(next),
+              height: core.kMinTapTarget,
+            ),
+          if (_canCancel) ...[
+            const SizedBox(height: core.kSpaceSM),
             SizedBox(
-                width: 100,
-                child: Text(label,
-                    style: const TextStyle(
-                        color: Colors.grey, fontSize: 13))),
-            Expanded(
-                child: Text(value,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w500, fontSize: 13))),
+              width: double.infinity,
+              height: core.kMinTapTarget,
+              child: OutlinedButton(
+                onPressed: cancelling ? null : onCancel,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: core.kError,
+                  side: const BorderSide(color: core.kError),
+                ),
+                child: cancelling
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: core.kError,
+                        ),
+                      )
+                    : const Text('Cancel Ride'),
+              ),
+            ),
           ],
-        ),
-      );
+        ],
+      ),
+    );
+  }
 }

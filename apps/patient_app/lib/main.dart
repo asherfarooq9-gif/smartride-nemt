@@ -1,32 +1,38 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'core/api_client.dart';
 import 'core/router.dart';
-import 'core/theme.dart';
-import 'features/auth/auth_notifier.dart';
+import 'core/notifications.dart';
+import 'package:smartride_core/smartride_core.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final container = ProviderContainer();
-  // Wire 401 responses → logout so the router redirects to /login
-  ApiClient.setUnauthorizedHandler(() {
-    container.read(authNotifierProvider.notifier).logout();
-  });
-  runApp(UncontrolledProviderScope(
-    container: container,
-    child: const SmartRidePatientApp(),
-  ));
+  await dotenv.load();
+  runApp(const ProviderScope(child: PatientApp()));
 }
 
-class SmartRidePatientApp extends ConsumerWidget {
-  const SmartRidePatientApp({super.key});
+class PatientApp extends ConsumerStatefulWidget {
+  const PatientApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PatientApp> createState() => _PatientAppState();
+}
+
+class _PatientAppState extends ConsumerState<PatientApp> {
+  @override
+  void initState() {
+    super.initState();
+    final router = ref.read(routerProvider);
+    initNotifications(router: router);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
     return MaterialApp.router(
-      title: 'SmartRide Patient',
-      theme: appTheme,
+      title: 'SmartRide',
+      theme: AppTheme.patient(),
+      darkTheme: AppTheme.patient(dark: true),
       routerConfig: router,
       debugShowCheckedModeBanner: false,
     );

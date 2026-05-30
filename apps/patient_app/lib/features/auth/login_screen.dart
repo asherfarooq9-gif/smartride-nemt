@@ -1,9 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../widgets/app_button.dart';
-import '../../widgets/app_text_field.dart';
-import '../../core/api_client.dart';
-import 'auth_notifier.dart';
+import 'package:smartride_core/smartride_core.dart';
+import '../../core/providers.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -16,7 +14,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _phoneCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
-  bool _obscurePass = true;
+  bool _obscure = true;
 
   @override
   void dispose() {
@@ -28,129 +26,101 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     await ref
-        .read(authNotifierProvider.notifier)
-        .login(_phoneCtrl.text, _passCtrl.text);
+        .read(authProvider.notifier)
+        .signIn(_phoneCtrl.text.trim(), _passCtrl.text);
+    if (!mounted) return;
+    final auth = ref.read(authProvider);
+    if (auth.hasError) {
+      final err = auth.error;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(err is AppError ? err.message : 'Login failed'),
+          backgroundColor: kError,
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authNotifierProvider);
-    final isLoading = authState.isLoading;
-
-    ref.listen(authNotifierProvider, (_, next) {
-      if (next.hasError) {
-        final err = next.error;
-        final message = err is ApiException ? err.message : 'An unexpected error occurred';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(message),
-            backgroundColor: Colors.red[700],
-          ),
-        );
-      }
-    });
+    final isLoading = ref.watch(authProvider) is AsyncLoading;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF1565C0),
       body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 48),
-            const Icon(Icons.local_taxi, size: 56, color: Colors.white),
-            const SizedBox(height: 12),
-            const Text(
-              'SmartRide',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-                letterSpacing: 0.5,
-              ),
-            ),
-            const Text(
-              'Patient Portal',
-              style: TextStyle(fontSize: 14, color: Colors.white70),
-            ),
-            const SizedBox(height: 40),
-            Expanded(
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF0F4FF),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(kSpaceLG),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: kSpaceXXXL),
+                Icon(
+                  Icons.local_hospital,
+                  size: 72,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
-                padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Sign in',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0D1B3E),
-                        ),
+                const SizedBox(height: kSpaceXL),
+                Text(
+                  'SmartRide',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Enter your registered phone number',
-                        style: TextStyle(color: Colors.grey, fontSize: 13),
-                      ),
-                      const SizedBox(height: 28),
-                      AppTextField(
-                        label: 'Phone Number',
-                        hint: '+92300000000',
-                        controller: _phoneCtrl,
-                        keyboardType: TextInputType.phone,
-                        prefixIcon: Icons.phone_outlined,
-                        textInputAction: TextInputAction.next,
-                        validator: (v) {
-                          final trimmed = v?.trim() ?? '';
-                          if (trimmed.isEmpty) return 'Phone number is required';
-                          if (!RegExp(r'^\+?[0-9]{10,15}$').hasMatch(trimmed)) {
-                            return 'Enter a valid phone number';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      AppTextField(
-                        label: 'Password',
-                        controller: _passCtrl,
-                        obscureText: _obscurePass,
-                        prefixIcon: Icons.lock_outline,
-                        textInputAction: TextInputAction.done,
-                        onSubmitted: (_) => _submit(),
-                        suffix: GestureDetector(
-                          onTap: () => setState(() => _obscurePass = !_obscurePass),
-                          child: Icon(
-                            _obscurePass
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                            size: 20,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        validator: (v) {
-                          if (v == null || v.isEmpty) return 'Password is required';
-                          if (v.length < 6) return 'Password must be at least 6 characters';
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 28),
-                      AppButton(
-                        label: 'Sign In',
-                        onPressed: _submit,
-                        loading: isLoading,
-                        icon: Icons.login,
-                      ),
-                    ],
+                ),
+                Text(
+                  'Medical Transport',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(color: kTextSecondary),
+                ),
+                const SizedBox(height: kSpaceXXXL),
+                Semantics(
+                  label: 'Phone number',
+                  child: TextFormField(
+                    controller: _phoneCtrl,
+                    keyboardType: TextInputType.phone,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: 'Phone number',
+                      prefixIcon: Icon(Icons.phone),
+                    ),
+                    validator: Validators.phone,
                   ),
                 ),
-              ),
+                const SizedBox(height: kSpaceLG),
+                Semantics(
+                  label: 'Password',
+                  child: TextFormField(
+                    controller: _passCtrl,
+                    obscureText: _obscure,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) => _submit(),
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      prefixIcon: const Icon(Icons.lock),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                            _obscure ? Icons.visibility : Icons.visibility_off),
+                        onPressed: () => setState(() => _obscure = !_obscure),
+                        tooltip: _obscure ? 'Show password' : 'Hide password',
+                      ),
+                    ),
+                    validator: Validators.password,
+                  ),
+                ),
+                const SizedBox(height: kSpaceXXL),
+                PrimaryButton(
+                  label: 'Sign In',
+                  onPressed: isLoading ? null : _submit,
+                  isLoading: isLoading,
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

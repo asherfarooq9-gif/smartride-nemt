@@ -1,93 +1,240 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'profile_notifier.dart';
+import 'package:smartride_core/smartride_core.dart' as core;
 
-class ProfileScreen extends ConsumerWidget {
+final _profileProvider = FutureProvider.autoDispose<core.PatientResponse>(
+  (_) => core.getPatientMe(),
+);
+
+final _updateProvider =
+    StateNotifierProvider.autoDispose<_UpdateNotifier, AsyncValue<void>>(
+  (_) => _UpdateNotifier(),
+);
+
+class _UpdateNotifier extends StateNotifier<AsyncValue<void>> {
+  _UpdateNotifier() : super(const AsyncValue.data(null));
+
+  Future<bool> update(core.PatientUpdate upd) async {
+    state = const AsyncValue.loading();
+    try {
+      await core.updatePatientMe(upd);
+      state = const AsyncValue.data(null);
+      return true;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return false;
+    }
+  }
+}
+
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final profileAsync = ref.watch(profileNotifierProvider);
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameCtrl = TextEditingController();
+  final _dobCtrl = TextEditingController();
+  final _mobilityCtrl = TextEditingController();
+  final _ecNameCtrl = TextEditingController();
+  final _ecPhoneCtrl = TextEditingController();
+  bool _editing = false;
+
+  void _populate(core.PatientResponse p) {
+    _nameCtrl.text = p.fullName ?? '';
+    _dobCtrl.text = p.dateOfBirth ?? '';
+    _mobilityCtrl.text = p.mobilityNeeds ?? '';
+    _ecNameCtrl.text = p.emergencyContactName ?? '';
+    _ecPhoneCtrl.text = p.emergencyContactPhone ?? '';
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _dobCtrl.dispose();
+    _mobilityCtrl.dispose();
+    _ecNameCtrl.dispose();
+    _ecPhoneCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profileAsync = ref.watch(_profileProvider);
+    final isUpdating = ref.watch(_updateProvider) is AsyncLoading;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
-      body: profileAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-            child: Text('Error: $e', style: const TextStyle(color: Colors.red))),
-        data: (profile) {
-          if (profile == null) {
-            return const Center(child: Text('Profile not found'));
-          }
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                CircleAvatar(
-                  radius: 40,
-                  backgroundColor: const Color(0xFF1565C0),
-                  child: Text(
-                    profile.fullName.isNotEmpty
-                        ? profile.fullName[0].toUpperCase()
-                        : '?',
-                    style: const TextStyle(
-                        fontSize: 32,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(profile.fullName,
-                    style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.w700)),
-                Text(profile.phone,
-                    style: const TextStyle(color: Colors.grey)),
-                const SizedBox(height: 24),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Personal Info',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
-                                color: Color(0xFF1565C0))),
-                        const Divider(height: 16),
-                        _InfoRow('Date of Birth',
-                            profile.dateOfBirth ?? 'Not set'),
-                        _InfoRow('Mobility Needs',
-                            profile.mobilityNeeds ?? 'None'),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Emergency Contact',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
-                                color: Color(0xFF1565C0))),
-                        const Divider(height: 16),
-                        _InfoRow('Name',
-                            profile.emergencyContactName ?? 'Not set'),
-                        _InfoRow('Phone',
-                            profile.emergencyContactPhone ?? 'Not set'),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+      appBar: AppBar(
+        title: const Text('My Profile'),
+        actions: [
+          if (!_editing)
+            TextButton(
+              onPressed: () {
+                final p = ref.read(_profileProvider).value;
+                if (p != null) _populate(p);
+                setState(() => _editing = true);
+              },
+              child: const Text('Edit'),
+            )
+          else
+            TextButton(
+              onPressed: () => setState(() => _editing = false),
+              child: const Text('Cancel'),
             ),
-          );
-        },
+        ],
+      ),
+      body: profileAsync.when(
+        loading: () => const core.LoadingState(),
+        error: (e, _) => core.ErrorState(
+          message: e is core.AppError ? e.message : 'Failed to load profile',
+          onRetry: () => ref.refresh(_profileProvider),
+        ),
+        data: (profile) => SingleChildScrollView(
+          padding: const EdgeInsets.all(core.kSpaceLG),
+          child: _editing
+              ? _EditForm(
+                  formKey: _formKey,
+                  nameCtrl: _nameCtrl,
+                  dobCtrl: _dobCtrl,
+                  mobilityCtrl: _mobilityCtrl,
+                  ecNameCtrl: _ecNameCtrl,
+                  ecPhoneCtrl: _ecPhoneCtrl,
+                  isUpdating: isUpdating,
+                  onSave: () => _save(),
+                  onCancel: () => setState(() => _editing = false),
+                )
+              : _ViewMode(profile: profile),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    final ok = await ref.read(_updateProvider.notifier).update(
+          core.PatientUpdate(
+            fullName:
+                _nameCtrl.text.trim().isEmpty ? null : _nameCtrl.text.trim(),
+            dateOfBirth:
+                _dobCtrl.text.trim().isEmpty ? null : _dobCtrl.text.trim(),
+            mobilityNeeds: _mobilityCtrl.text.trim().isEmpty
+                ? null
+                : _mobilityCtrl.text.trim(),
+            emergencyContactName: _ecNameCtrl.text.trim().isEmpty
+                ? null
+                : _ecNameCtrl.text.trim(),
+            emergencyContactPhone: _ecPhoneCtrl.text.trim().isEmpty
+                ? null
+                : _ecPhoneCtrl.text.trim(),
+          ),
+        );
+    if (!mounted) return;
+    if (ok) {
+      setState(() => _editing = false);
+      ref.invalidate(_profileProvider);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Profile updated')));
+    } else {
+      final err = ref.read(_updateProvider).error;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(err is core.AppError ? err.message : 'Update failed'),
+        backgroundColor: core.kError,
+      ));
+    }
+  }
+}
+
+// ── View mode ─────────────────────────────────────────────────────────────────
+
+class _ViewMode extends StatelessWidget {
+  final core.PatientResponse profile;
+  const _ViewMode({required this.profile});
+
+  @override
+  Widget build(BuildContext context) {
+    final initial =
+        (profile.fullName?.isNotEmpty == true ? profile.fullName! : 'U')[0]
+            .toUpperCase();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Center(
+          child: CircleAvatar(
+            radius: 40,
+            backgroundColor: core.kPatientPrimary.withValues(alpha: 0.12),
+            child: Text(
+              initial,
+              style: const TextStyle(
+                color: core.kPatientPrimary,
+                fontWeight: FontWeight.bold,
+                fontSize: 32,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: core.kSpaceXS),
+        Text(
+          profile.phone,
+          textAlign: TextAlign.center,
+          style: Theme.of(context)
+              .textTheme
+              .bodyMedium
+              ?.copyWith(color: core.kTextSecondary),
+        ),
+        const SizedBox(height: core.kSpaceXL),
+        _InfoCard(title: 'Personal Information', rows: [
+          _InfoRow(label: 'Full Name', value: profile.fullName ?? '—'),
+          _InfoRow(label: 'Phone', value: profile.phone),
+          if (profile.dateOfBirth != null)
+            _InfoRow(label: 'Date of Birth', value: profile.dateOfBirth!),
+          if (profile.mobilityNeeds != null)
+            _InfoRow(label: 'Mobility Needs', value: profile.mobilityNeeds!),
+        ]),
+        const SizedBox(height: core.kSpaceLG),
+        _InfoCard(title: 'Emergency Contact', rows: [
+          _InfoRow(
+              label: 'Name', value: profile.emergencyContactName ?? '—'),
+          _InfoRow(
+              label: 'Phone', value: profile.emergencyContactPhone ?? '—'),
+        ]),
+      ],
+    );
+  }
+}
+
+class _InfoCard extends StatelessWidget {
+  final String title;
+  final List<Widget> rows;
+  const _InfoCard({required this.title, required this.rows});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Theme.of(context).dividerColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            child: Text(
+              title,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: core.kTextSecondary,
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+          ),
+          const Divider(height: 1),
+          ...rows,
+        ],
       ),
     );
   }
@@ -96,22 +243,127 @@ class ProfileScreen extends ConsumerWidget {
 class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
-  const _InfoRow(this.label, this.value);
+  const _InfoRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
           SizedBox(
-              width: 120,
-              child: Text(label,
-                  style: const TextStyle(color: Colors.grey, fontSize: 13))),
+            width: 130,
+            child: Text(
+              label,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: core.kTextSecondary),
+            ),
+          ),
           Expanded(
-              child: Text(value,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w500, fontSize: 13))),
+            child: Text(
+              value,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Edit form ─────────────────────────────────────────────────────────────────
+
+class _EditForm extends StatelessWidget {
+  final GlobalKey<FormState> formKey;
+  final TextEditingController nameCtrl, dobCtrl, mobilityCtrl, ecNameCtrl,
+      ecPhoneCtrl;
+  final bool isUpdating;
+  final VoidCallback onSave;
+  final VoidCallback onCancel;
+
+  const _EditForm({
+    required this.formKey,
+    required this.nameCtrl,
+    required this.dobCtrl,
+    required this.mobilityCtrl,
+    required this.ecNameCtrl,
+    required this.ecPhoneCtrl,
+    required this.isUpdating,
+    required this.onSave,
+    required this.onCancel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Form(
+      key: formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextFormField(
+            controller: nameCtrl,
+            decoration: const InputDecoration(
+                labelText: 'Full Name', prefixIcon: Icon(Icons.person)),
+            validator: (v) => core.Validators.required(v, field: 'Full name'),
+          ),
+          const SizedBox(height: core.kSpaceLG),
+          TextFormField(
+            controller: dobCtrl,
+            decoration: const InputDecoration(
+                labelText: 'Date of Birth (YYYY-MM-DD)',
+                prefixIcon: Icon(Icons.cake)),
+          ),
+          const SizedBox(height: core.kSpaceLG),
+          TextFormField(
+            controller: mobilityCtrl,
+            maxLines: 2,
+            decoration: const InputDecoration(
+                labelText: 'Mobility Needs (optional)',
+                prefixIcon: Icon(Icons.accessible),
+                alignLabelWithHint: true),
+          ),
+          const SizedBox(height: core.kSpaceXL),
+          Text('Emergency Contact',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleSmall
+                  ?.copyWith(color: core.kTextSecondary)),
+          const SizedBox(height: core.kSpaceSM),
+          TextFormField(
+            controller: ecNameCtrl,
+            decoration: const InputDecoration(
+                labelText: 'Contact Name', prefixIcon: Icon(Icons.contacts)),
+          ),
+          const SizedBox(height: core.kSpaceLG),
+          TextFormField(
+            controller: ecPhoneCtrl,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(
+                labelText: 'Contact Phone', prefixIcon: Icon(Icons.phone)),
+          ),
+          const SizedBox(height: core.kSpaceXXL),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                    onPressed: onCancel, child: const Text('Cancel')),
+              ),
+              const SizedBox(width: core.kSpaceLG),
+              Expanded(
+                child: core.PrimaryButton(
+                  label: 'Save Changes',
+                  onPressed: isUpdating ? null : onSave,
+                  isLoading: isUpdating,
+                  height: core.kMinTapTarget,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

@@ -1,309 +1,200 @@
-import 'dart:async';
-import 'dart:convert';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
-import '../../core/secure_storage.dart';
+import 'package:smartride_core/smartride_core.dart' as core;
 
-class LiveTrackingScreen extends StatefulWidget {
+class LiveTrackingScreen extends ConsumerStatefulWidget {
+  const LiveTrackingScreen({super.key, required this.rideId});
+
   final String rideId;
-  final double pickupLat;
-  final double pickupLng;
-
-  const LiveTrackingScreen({
-    super.key,
-    required this.rideId,
-    required this.pickupLat,
-    required this.pickupLng,
-  });
 
   @override
-  State<LiveTrackingScreen> createState() => _LiveTrackingScreenState();
+  ConsumerState<LiveTrackingScreen> createState() => _LiveTrackingScreenState();
 }
 
-class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
-  final MapController _mapCtrl = MapController();
-  WebSocketChannel? _channel;
+class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
+  core.WsClient? _ws;
+  final MapController _mapController = MapController();
   LatLng? _driverPos;
-  bool _rideEnded = false;
-  String _endedStatus = '';
-
-  static const _envUrl =
-      String.fromEnvironment('API_BASE_URL', defaultValue: '');
-  static final String _wsBase = _envUrl.isNotEmpty
-      ? _envUrl
-          .replaceFirst('https://', 'wss://')
-          .replaceFirst('http://', 'ws://')
-      : 'ws://10.0.2.2:8000';
+  LatLng? _pickupPos;
+  core.RideDetailResponse? _ride;
+  bool _loaded = false;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _connect();
+    _init();
+  }
+
+  Future<void> _init() async {
+    try {
+      final ride = await core.getRideDetail(widget.rideId);
+      if (ride.pickupLat != null && ride.pickupLng != null) {
+        _pickupPos = LatLng(ride.pickupLat!, ride.pickupLng!);
+      }
+      if (mounted) setState(() => _ride = ride);
+      await _connectWs();
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    }
+  }
+
+  Future<void> _connectWs() async {
+    final token = await core.SecureStorage.instance.readToken();
+    if (token == null || !mounted) return;
+
+    final baseWs = core.ApiClient.instance.wsBaseUrl;
+    final uri = Uri.parse('$baseWs/ws/ride/${widget.rideId}');
+
+    _ws = core.WsClient(
+      onMessage: _handleWsMessage,
+      onDone: () {
+        if (mounted && !_loaded) setState(() => _loaded = true);
+      },
+    );
+    await _ws!.connect(uri, token);
+    if (mounted) setState(() => _loaded = true);
+  }
+
+  void _handleWsMessage(Map<String, dynamic> msg) {
+    if (!mounted) return;
+
+    if (msg.containsKey('lat') && msg.containsKey('lng')) {
+      final lat = (msg['lat'] as num).toDouble();
+      final lng = (msg['lng'] as num).toDouble();
+      setState(() => _driverPos = LatLng(lat, lng));
+      try {
+        _mapController.move(LatLng(lat, lng), 15);
+      } catch (_) {}
+      return;
+    }
+
+    if (msg['event'] == 'ride_ended') {
+      _ws?.disconnect();
+      if (mounted) _showCompletionDialog(msg['status'] as String? ?? 'completed');
+    }
+  }
+
+  void _showCompletionDialog(String status) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        title: Text(
+          status == 'completed' ? 'Ride Completed' : 'Ride Ended',
+        ),
+        content: Text(
+          status == 'completed'
+              ? 'You have arrived at your destination.'
+              : 'Your ride has ended.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.go('/');
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   void dispose() {
-    _channel?.sink.close();
-    _mapCtrl.dispose();
+    _ws?.disconnect();
+    _mapController.dispose();
     super.dispose();
   }
 
-  Future<void> _connect() async {
-    try {
-      final token = await SecureStorage.readToken();
-      if (token == null || !mounted) {
-        if (mounted) setState(() { _rideEnded = true; _endedStatus = 'connection_lost'; });
-        return;
-      }
-      await _openChannel(token);
-    } catch (_) {
-      if (mounted) setState(() { _rideEnded = true; _endedStatus = 'connection_lost'; });
-    }
-  }
-
-  Future<void> _openChannel(String token) async {
-
-    if (!mounted) return;
-    final uri = Uri.parse('$_wsBase/api/v1/ws/ride/${widget.rideId}');
-    _channel = WebSocketChannel.connect(uri);
-
-    // Backend requires token as first message (not query param)
-    _channel!.sink.add(jsonEncode({'token': token}));
-
-    _channel!.stream.listen(
-      (raw) {
-        if (!mounted) return;
-        try {
-          final data = jsonDecode(raw as String) as Map<String, dynamic>;
-          if (data['event'] == 'ride_ended') {
-            setState(() {
-              _rideEnded = true;
-              _endedStatus = data['status'] as String? ?? 'completed';
-            });
-          } else if (data.containsKey('lat') && data.containsKey('lng')) {
-            final pos = LatLng(
-              (data['lat'] as num).toDouble(),
-              (data['lng'] as num).toDouble(),
-            );
-            setState(() => _driverPos = pos);
-            _mapCtrl.move(pos, _mapCtrl.camera.zoom);
-          }
-        } catch (_) {
-          // Ignore malformed frames
-        }
-      },
-      onError: (_) {
-        if (mounted) {
-          setState(() {
-            _rideEnded = true;
-            _endedStatus = 'connection_lost';
-          });
-        }
-      },
-      onDone: () {
-        // Server closed connection — mark as ended if not already
-        if (mounted && !_rideEnded) {
-          setState(() {
-            _rideEnded = true;
-            _endedStatus = 'connection_lost';
-          });
-        }
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final pickup = LatLng(widget.pickupLat, widget.pickupLng);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Live Tracking'),
-        backgroundColor: const Color(0xFF1565C0),
-        foregroundColor: Colors.white,
-      ),
-      body: Stack(
-        children: [
-          FlutterMap(
-            mapController: _mapCtrl,
-            options: MapOptions(
-              initialCenter: pickup,
-              initialZoom: 15,
-            ),
-            children: [
-              TileLayer(
-                urlTemplate:
-                    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.smartride.patient_app',
-              ),
-              MarkerLayer(
-                markers: [
-                  Marker(
-                    point: pickup,
-                    width: 48,
-                    height: 48,
-                    child: const Tooltip(
-                      message: 'Your pickup',
-                      child: Icon(
-                        Icons.location_pin,
-                        color: Color(0xFF1565C0),
-                        size: 40,
-                      ),
-                    ),
-                  ),
-                  if (_driverPos != null)
-                    Marker(
-                      point: _driverPos!,
-                      width: 48,
-                      height: 48,
-                      child: const Tooltip(
-                        message: 'Driver',
-                        child: Icon(
-                          Icons.directions_car,
-                          color: Color(0xFF2E7D32),
-                          size: 36,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ],
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _StatusCard(
-              driverPos: _driverPos,
-              rideEnded: _rideEnded,
-              endedStatus: _endedStatus,
-              onDone: () => Navigator.of(context).pop(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatusCard extends StatelessWidget {
-  final LatLng? driverPos;
-  final bool rideEnded;
-  final String endedStatus;
-  final VoidCallback onDone;
-
-  const _StatusCard({
-    required this.driverPos,
-    required this.rideEnded,
-    required this.endedStatus,
-    required this.onDone,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (rideEnded) {
-      final completed = endedStatus == 'completed';
-      final lost = endedStatus == 'connection_lost';
-      return Container(
-        margin: const EdgeInsets.all(16),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: completed ? Colors.green[700] : lost ? Colors.orange[700] : Colors.grey[700],
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 12,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Icon(
-              lost ? Icons.wifi_off : completed ? Icons.check_circle_outline : Icons.cancel_outlined,
-              color: Colors.white,
-              size: 28,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    lost ? 'Connection Lost' : completed ? 'Ride Completed' : 'Ride Cancelled',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const Text(
-                    'Thank you for using SmartRide',
-                    style: TextStyle(color: Colors.white70, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-            TextButton(
-              onPressed: onDone,
-              child: const Text(
-                'Done',
-                style: TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
+    if (_error != null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Live Tracking')),
+        body: core.ErrorState(
+          message: _error!,
+          onRetry: () {
+            setState(() => _error = null);
+            _init();
+          },
         ),
       );
     }
 
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 12,
-            offset: const Offset(0, -4),
-          ),
+    if (!_loaded) {
+      return const Scaffold(
+        body: core.LoadingState(message: 'Connecting...'),
+      );
+    }
+
+    final center = _driverPos ?? _pickupPos ?? const LatLng(0, 0);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_ride != null
+            ? _ride!.status.displayLabel
+            : 'Live Tracking'),
+        actions: [
+          if (_ride != null)
+            Padding(
+              padding: const EdgeInsets.only(right: core.kSpaceLG),
+              child: Chip(
+                label: Text(_ride!.status.displayLabel),
+                backgroundColor:
+                    Theme.of(context).colorScheme.primaryContainer,
+              ),
+            ),
         ],
       ),
-      child: Row(
+      body: FlutterMap(
+        mapController: _mapController,
+        options: MapOptions(
+          initialCenter: center,
+          initialZoom: 14,
+        ),
         children: [
-          const SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
+          TileLayer(
+            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            userAgentPackageName: 'com.smartride.patient',
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Driver en route',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w700, fontSize: 15),
+          MarkerLayer(
+            markers: [
+              if (_pickupPos != null)
+                Marker(
+                  point: _pickupPos!,
+                  width: 40,
+                  height: 40,
+                  child: Semantics(
+                    label: 'Pickup location',
+                    child: const Icon(
+                      Icons.location_on,
+                      color: core.kEmergencyRed,
+                      size: 40,
+                    ),
+                  ),
                 ),
-                Text(
-                  driverPos == null
-                      ? 'Waiting for driver location…'
-                      : 'Driver nearby — updating live',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              if (_driverPos != null)
+                Marker(
+                  point: _driverPos!,
+                  width: 40,
+                  height: 40,
+                  child: Semantics(
+                    label: 'Driver location',
+                    child: const Icon(
+                      Icons.local_taxi,
+                      color: core.kPatientPrimary,
+                      size: 40,
+                    ),
+                  ),
                 ),
-              ],
-            ),
+            ],
           ),
-          const Icon(Icons.directions_car,
-              color: Color(0xFF1565C0), size: 28),
         ],
       ),
     );

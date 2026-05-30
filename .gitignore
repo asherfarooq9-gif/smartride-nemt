@@ -43,10 +43,16 @@ mnt/
 Thumbs.db
 
 # Flutter
+apps/*/android/app/google-services.json
 apps/*/build/
 apps/*/.dart_tool/
 apps/*/.flutter-plugins
 apps/*/.flutter-plugins-dependencies
+
+# Backups / temp
+_archive/
+_flutter_tmp/
+claude-obsidian/
 
 # Tools / generated
 .superpowers/

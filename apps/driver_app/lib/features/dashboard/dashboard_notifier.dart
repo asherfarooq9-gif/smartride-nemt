@@ -1,81 +1,93 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/api_client.dart';
-
-class PendingRide {
-  final String id;
-  final String pickupAddress;
-  final String rideType;
-  final String requestedAt;
-
-  const PendingRide({
-    required this.id,
-    required this.pickupAddress,
-    required this.rideType,
-    required this.requestedAt,
-  });
-
-  factory PendingRide.fromJson(Map<String, dynamic> j) => PendingRide(
-    id: j['id'] as String,
-    pickupAddress: (j['pickup_address'] as String?) ?? 'Unknown location',
-    rideType: j['ride_type'] as String,
-    requestedAt: j['requested_at'] as String,
-  );
-}
+import 'package:smartride_core/smartride_core.dart' as core;
+import '../../core/providers.dart';
 
 class DashboardState {
-  final bool isOnline;
-  final List<PendingRide> pendingRides;
-
   const DashboardState({
-    this.isOnline = false,
+    this.driver,
     this.pendingRides = const [],
+    this.isLoading = false,
+    this.error,
   });
 
-  DashboardState copyWith({bool? isOnline, List<PendingRide>? pendingRides}) =>
+  final core.DriverResponse? driver;
+  final List<core.RideResponse> pendingRides;
+  final bool isLoading;
+  final String? error;
+
+  bool get isOnline => driver?.isOnline ?? false;
+
+  DashboardState copyWith({
+    core.DriverResponse? driver,
+    List<core.RideResponse>? pendingRides,
+    bool? isLoading,
+    String? error,
+  }) =>
       DashboardState(
-        isOnline: isOnline ?? this.isOnline,
+        driver: driver ?? this.driver,
         pendingRides: pendingRides ?? this.pendingRides,
+        isLoading: isLoading ?? this.isLoading,
+        error: error,
       );
 }
 
-class DashboardNotifier extends AsyncNotifier<DashboardState> {
-  @override
-  Future<DashboardState> build() => _fetch();
+final dashboardProvider =
+    StateNotifierProvider<DashboardNotifier, DashboardState>(
+  (ref) => DashboardNotifier(ref),
+);
 
-  Future<DashboardState> _fetch() async {
-    final results = await Future.wait([
-      ApiClient.get('/api/v1/drivers/me'),
-      ApiClient.get('/api/v1/rides/mine',
-          query: {'status': 'pending', 'page_size': 20}),
-    ]);
-    final driverData = results[0] as Map<String, dynamic>;
-    final ridesData = results[1] as Map<String, dynamic>;
-    final isOnline = (driverData['status'] as String?) != 'offline';
-    final rides = (ridesData['items'] as List)
-        .map((e) => PendingRide.fromJson(e as Map<String, dynamic>))
-        .toList();
-    return DashboardState(isOnline: isOnline, pendingRides: rides);
+class DashboardNotifier extends StateNotifier<DashboardState> {
+  DashboardNotifier(this._ref) : super(const DashboardState()) {
+    refresh();
   }
 
-  Future<void> toggleOnline() async {
-    final current = state.valueOrNull;
-    if (current == null) return;
-    final newStatus = !current.isOnline;
+  final Ref _ref;
+
+  Future<void> refresh() async {
+    state = state.copyWith(isLoading: true, error: null);
     try {
-      await ApiClient.patch('/api/v1/drivers/status',
-          body: {'status': newStatus ? 'available' : 'offline'});
-      state = AsyncData(current.copyWith(isOnline: newStatus));
-    } on ApiException catch (e) {
-      state = AsyncError(e, StackTrace.current);
+      final results = await Future.wait([
+        core.getDriverMe(),
+        core.getDriverPendingRides(),
+      ]);
+      state = DashboardState(
+        driver: results[0] as core.DriverResponse,
+        pendingRides: results[1] as List<core.RideResponse>,
+        isLoading: false,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e is core.AppError ? e.message : 'Failed to load',
+      );
     }
   }
 
-  Future<void> refresh() async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(_fetch);
+  Future<void> toggleOnline() async {
+    final current = state.driver?.status ?? core.DriverStatus.offline;
+    final next = current == core.DriverStatus.offline
+        ? core.DriverStatus.available
+        : core.DriverStatus.offline;
+    try {
+      await core.updateDriverStatus(next);
+      await refresh();
+    } catch (e) {
+      state = state.copyWith(
+        error: e is core.AppError ? e.message : 'Status update failed',
+      );
+    }
+  }
+
+  Future<bool> acceptRide(String rideId) async {
+    try {
+      await core.acceptRide(rideId);
+      await _ref.read(gpsStreamProvider.notifier).startStreaming(rideId);
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        error: e is core.AppError ? e.message : 'Failed to accept ride',
+      );
+      return false;
+    }
   }
 }
-
-final dashboardNotifierProvider =
-    AsyncNotifierProvider<DashboardNotifier, DashboardState>(
-        DashboardNotifier.new);

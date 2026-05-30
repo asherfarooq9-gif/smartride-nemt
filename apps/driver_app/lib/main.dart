@@ -1,31 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'core/api_client.dart';
 import 'core/router.dart';
-import 'core/theme.dart';
-import 'features/auth/auth_notifier.dart';
+import 'core/notifications.dart';
+import 'package:smartride_core/smartride_core.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final container = ProviderContainer();
-  ApiClient.setUnauthorizedHandler(() {
-    container.read(authNotifierProvider.notifier).logout();
-  });
-  runApp(UncontrolledProviderScope(
-    container: container,
-    child: const SmartRideDriverApp(),
-  ));
+  await dotenv.load();
+  runApp(const ProviderScope(child: DriverApp()));
 }
 
-class SmartRideDriverApp extends ConsumerWidget {
-  const SmartRideDriverApp({super.key});
+class DriverApp extends ConsumerStatefulWidget {
+  const DriverApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DriverApp> createState() => _DriverAppState();
+}
+
+class _DriverAppState extends ConsumerState<DriverApp> {
+  @override
+  void initState() {
+    super.initState();
+    final router = ref.read(routerProvider);
+    initNotifications(router: router);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
     return MaterialApp.router(
       title: 'SmartRide Driver',
-      theme: appTheme,
+      theme: AppTheme.driver(),
+      darkTheme: AppTheme.driver(dark: true),
       routerConfig: router,
       debugShowCheckedModeBanner: false,
     );

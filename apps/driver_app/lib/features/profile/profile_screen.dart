@@ -1,175 +1,169 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/api_client.dart';
-import '../auth/auth_notifier.dart';
+import 'package:smartride_core/smartride_core.dart' as core;
 
-final _driverProfileProvider =
-    FutureProvider<Map<String, dynamic>>((ref) async {
-  return await ApiClient.get('/api/v1/drivers/me') as Map<String, dynamic>;
-});
+final _profileProvider = FutureProvider.autoDispose<core.DriverResponse>(
+  (_) => core.getDriverMe(),
+);
 
-class ProfileScreen extends ConsumerWidget {
+final _updateProvider =
+    StateNotifierProvider.autoDispose<_UpdateNotifier, AsyncValue<void>>(
+  (_) => _UpdateNotifier(),
+);
+
+class _UpdateNotifier extends StateNotifier<AsyncValue<void>> {
+  _UpdateNotifier() : super(const AsyncValue.data(null));
+
+  Future<bool> update(core.DriverUpdate upd) async {
+    state = const AsyncValue.loading();
+    try {
+      await core.updateDriverMe(upd);
+      state = const AsyncValue.data(null);
+      return true;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return false;
+    }
+  }
+}
+
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final profileAsync = ref.watch(_driverProfileProvider);
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameCtrl = TextEditingController();
+  final _licenseCtrl = TextEditingController();
+  final _vehicleModelCtrl = TextEditingController();
+  final _vehiclePlateCtrl = TextEditingController();
+  bool _editing = false;
+
+  void _populate(core.DriverResponse d) {
+    _nameCtrl.text = d.fullName ?? '';
+    _licenseCtrl.text = d.licenseNumber ?? '';
+    _vehicleModelCtrl.text = d.vehicleModel ?? '';
+    _vehiclePlateCtrl.text = d.vehiclePlate ?? '';
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _licenseCtrl.dispose();
+    _vehicleModelCtrl.dispose();
+    _vehiclePlateCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profileAsync = ref.watch(_profileProvider);
+    final isUpdating = ref.watch(_updateProvider) is AsyncLoading;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('My Profile')),
+      appBar: AppBar(
+        title: const Text('Profile'),
+        actions: [
+          if (!_editing)
+            IconButton(
+              icon: const Icon(Icons.edit),
+              tooltip: 'Edit profile',
+              onPressed: () {
+                final p = ref.read(_profileProvider).value;
+                if (p != null) _populate(p);
+                setState(() => _editing = true);
+              },
+            ),
+        ],
+      ),
       body: profileAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-            child: Text('Error: $e',
-                style: const TextStyle(color: Colors.red))),
-        data: (profile) => SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              CircleAvatar(
-                radius: 40,
-                backgroundColor: const Color(0xFF00695C),
-                child: Text(
-                  ((profile['full_name'] as String?) ?? '').isNotEmpty
-                      ? (profile['full_name'] as String)[0].toUpperCase()
-                      : '?',
-                  style: const TextStyle(
-                      fontSize: 32,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold),
+        loading: () => const core.LoadingState(),
+        error: (e, _) => core.ErrorState(
+          message: e is core.AppError ? e.message : 'Failed to load profile',
+          onRetry: () => ref.refresh(_profileProvider),
+        ),
+        data: (driver) => SingleChildScrollView(
+          padding: const EdgeInsets.all(core.kSpaceLG),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const CircleAvatar(
+                  radius: 40,
+                  child: Icon(Icons.person, size: 48),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                profile['full_name'] as String? ?? '',
-                style: const TextStyle(
-                    fontSize: 20, fontWeight: FontWeight.w700),
-              ),
-              Text(
-                profile['phone'] as String? ?? '',
-                style: const TextStyle(color: Colors.grey),
-              ),
-              const SizedBox(height: 8),
-              // Verification badge
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: (profile['is_verified'] as bool? ?? false)
-                      ? Colors.green.withValues(alpha: 0.1)
-                      : Colors.orange.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  (profile['is_verified'] as bool? ?? false)
-                      ? 'Verified Driver'
-                      : 'Pending Verification',
-                  style: TextStyle(
-                    color: (profile['is_verified'] as bool? ?? false)
-                        ? Colors.green[700]
-                        : Colors.orange[700],
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              // Vehicle info card
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(height: core.kSpaceSM),
+                Text(driver.phone, textAlign: TextAlign.center),
+                const SizedBox(height: core.kSpaceXL),
+                _field(_nameCtrl, 'Full name', Icons.person),
+                const SizedBox(height: core.kSpaceLG),
+                _field(_licenseCtrl, 'License number', Icons.badge),
+                const SizedBox(height: core.kSpaceLG),
+                _field(_vehicleModelCtrl, 'Vehicle model', Icons.directions_car),
+                const SizedBox(height: core.kSpaceLG),
+                _field(_vehiclePlateCtrl, 'Vehicle plate', Icons.confirmation_number),
+                if (_editing) ...[
+                  const SizedBox(height: core.kSpaceXXL),
+                  Row(
                     children: [
-                      const Text(
-                        'Vehicle Info',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14,
-                            color: Color(0xFF00695C)),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => setState(() => _editing = false),
+                          child: const Text('Cancel'),
+                        ),
                       ),
-                      const Divider(height: 16),
-                      _InfoRow(
-                          'License', profile['license_no'] as String? ?? 'N/A'),
-                      _InfoRow(
-                          'Plate',
-                          profile['vehicle_plate'] as String? ?? 'N/A'),
-                      _InfoRow(
-                          'Vehicle',
-                          profile['vehicle_type'] as String? ?? 'N/A'),
-                      _InfoRow(
-                          'Status',
-                          profile['status'] as String? ?? 'N/A'),
+                      const SizedBox(width: core.kSpaceLG),
+                      Expanded(
+                        child: core.PrimaryButton(
+                          label: 'Save',
+                          onPressed: isUpdating ? null : _save,
+                          isLoading: isUpdating,
+                          height: core.kMinTapTarget,
+                        ),
+                      ),
                     ],
                   ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              // Sign out button
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final confirm = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('Sign Out'),
-                      content:
-                          const Text('Are you sure you want to sign out?'),
-                      actions: [
-                        TextButton(
-                            onPressed: () => Navigator.of(ctx).pop(false),
-                            child: const Text('Cancel')),
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(true),
-                          child: const Text('Sign Out',
-                              style: TextStyle(color: Colors.red)),
-                        ),
-                      ],
-                    ),
-                  );
-                  if (confirm == true) {
-                    await ref
-                        .read(authNotifierProvider.notifier)
-                        .logout();
-                  }
-                },
-                icon: const Icon(Icons.logout, color: Colors.red),
-                label:
-                    const Text('Sign Out', style: TextStyle(color: Colors.red)),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 48),
-                  side: const BorderSide(color: Colors.red),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ],
+                ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
-}
 
-class _InfoRow extends StatelessWidget {
-  final String label;
-  final String value;
-  const _InfoRow(this.label, this.value);
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          children: [
-            SizedBox(
-                width: 80,
-                child: Text(label,
-                    style: const TextStyle(
-                        color: Colors.grey, fontSize: 13))),
-            Expanded(
-                child: Text(value,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w500, fontSize: 13))),
-          ],
-        ),
+  Widget _field(TextEditingController ctrl, String label, IconData icon) =>
+      TextFormField(
+        controller: ctrl,
+        enabled: _editing,
+        decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon)),
       );
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    final ok = await ref.read(_updateProvider.notifier).update(
+          core.DriverUpdate(
+            fullName: _nameCtrl.text.trim().isEmpty ? null : _nameCtrl.text.trim(),
+            licenseNumber:
+                _licenseCtrl.text.trim().isEmpty ? null : _licenseCtrl.text.trim(),
+            vehicleModel: _vehicleModelCtrl.text.trim().isEmpty
+                ? null
+                : _vehicleModelCtrl.text.trim(),
+            vehiclePlate: _vehiclePlateCtrl.text.trim().isEmpty
+                ? null
+                : _vehiclePlateCtrl.text.trim(),
+          ),
+        );
+    if (!mounted) return;
+    if (ok) {
+      setState(() => _editing = false);
+      ref.invalidate(_profileProvider);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Profile updated')));
+    }
+  }
 }

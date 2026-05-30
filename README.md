@@ -75,20 +75,67 @@ Patient/Driver Apps (Flutter)
 | 9 | Flutter patient & driver apps (Riverpod + Dio, emergency flow, FCM) | ✅ |
 | 10 | CI/CD (GitHub Actions), seed data, localhost docker-compose | ✅ |
 
-## Milestone 9 — Flutter apps scope
+## Flutter apps
 
-**Patient app** (`apps/patient_app`): Riverpod + Dio (auth interceptor). Screens: splash → login/register → home (large red Emergency button + Book Ride) → symptom input (WCAG-AA quick-select + free text) → live tracking map (google_maps_flutter) → ride history. Emergency flow: capture GPS (geolocator) → POST /rides/emergency → poll GET /rides/{id} until driver assigned → open live map.
+### Shared package — `packages/smartride_core`
 
-**Driver app** (`apps/driver_app`): Login → availability toggle (PATCH /drivers/status) → stream GPS to WebSocket → incoming ride card (accept/decline 30 s timer) → turn-by-turn navigation → status buttons (picked up / arrived / completed via PATCH /rides/{id}/status).
+Typed models, Dio API client (auth interceptor + 401→logout), WebSocket client (exponential backoff reconnect), `flutter_secure_storage` token storage, shared design tokens, validators, and reusable widgets. Both apps depend on this package via path.
 
-Both apps: FCM push notifications for ride status / new requests.
+### Patient app — `apps/patient_app`
 
-Done when: both apps compile (`flutter build apk --debug`) and the emergency flow works against the local backend.
+| Screen | Description |
+|--------|-------------|
+| Login | Phone + password, JWT saved to secure storage |
+| Home | Large Emergency button (72 dp, red), active ride banner, recent rides list |
+| Symptoms | Quick-select chips + free text (max 2 000 chars) → POST /rides/emergency |
+| Live Tracking | flutter_map (OpenStreetMap) — driver marker updated via WebSocket `/ws/ride/{id}` |
+| Ride Detail | Status badge, timeline, "Track Live" for active rides |
+| Ride History | Paginated list |
+| Profile | Card view + edit form (name, DOB, mobility needs, emergency contact) |
+| Settings | Account, Support, About, Sign Out |
 
-Prerequisites (check before writing app code):
-1. `flutter --version` — SDK must be present; if not, install from https://docs.flutter.dev/get-started/install
-2. `flutter doctor -v` — Flutter SDK + Android toolchain + accepted licences must be green
-3. Run target: connected device with USB debugging **or** a launched emulator
+### Driver app — `apps/driver_app`
+
+| Screen | Description |
+|--------|-------------|
+| Login | Phone + password; rejects non-driver JWT |
+| Dashboard | Online/offline toggle, pending ride cards with 30 s countdown (red ≤ 10 s), auto-refresh |
+| Active Ride | Status progression buttons, flutter_map showing patient pin, cancel flow |
+| Profile | Driver info + edit |
+| Settings | Notification toggles (persisted), Sign Out |
+
+GPS streaming (`GpsStreamNotifier`): on accept, connects WebSocket `/ws/driver/{id}`, sends `{"token": jwt}` first, then streams `{"lat", "lng"}` from `geolocator` every 10 m. REST fallback `PATCH /drivers/location` throttled to 1/5 s.
+
+### FCM setup
+
+Each app requires a `google-services.json` in `android/app/`. Register both package names in Firebase console:
+- Patient: `com.smartride.patient_app`
+- Driver: `com.smartride.driver_app`
+
+### Run the apps
+
+```bash
+# Copy env template (Android emulator default — points to host backend)
+cp apps/patient_app/.env.example apps/patient_app/.env
+cp apps/driver_app/.env.example apps/driver_app/.env
+
+# Install dependencies
+cd apps/patient_app && flutter pub get
+cd ../driver_app && flutter pub get
+
+# Run (with emulator or USB device connected)
+cd apps/patient_app && flutter run
+cd ../driver_app && flutter run
+```
+
+### Build release APK
+
+```bash
+flutter build apk --debug    # debug (no signing needed)
+flutter build apk --release  # release (requires signing config)
+```
+
+Output: `build/app/outputs/flutter-apk/app-debug.apk`
 
 ## Env variables
 
@@ -96,7 +143,8 @@ See `.env.example` for all required variables.
 
 Real secrets needed for full functionality:
 - `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_FROM_NUMBER` — SMS
-- `GOOGLE_MAPS_API_KEY` — routing & maps
-- `FIREBASE_PROJECT_ID` — push notifications
+- `FIREBASE_PROJECT_ID` — push notifications (Flutter apps use `google-services.json`, not an env var)
+
+Maps use OpenStreetMap via `flutter_map` — no API key required.
 
 All external dependencies have graceful fallbacks so the core dispatch pipeline works without any API keys.
