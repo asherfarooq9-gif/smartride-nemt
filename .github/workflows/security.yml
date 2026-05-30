@@ -1,0 +1,80 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1"  # every Monday 06:00 UTC
+
+jobs:
+  python-audit:
+    name: Python Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Audit Python dependencies
+        run: |
+          cd backend
+          pip-audit -r requirements.txt --format=json -o /tmp/pip-audit.json || true
+          pip-audit -r requirements.txt
+
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pip-audit-report
+          path: /tmp/pip-audit.json
+          retention-days: 30
+
+  flutter-outdated:
+    name: Flutter Outdated Packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.4"
+          channel: stable
+          cache: true
+
+      - name: Check outdated - core
+        run: |
+          cd packages/smartride_core
+          flutter pub get
+          flutter pub outdated || true
+
+      - name: Check outdated - patient app
+        run: |
+          cd apps/patient_app
+          flutter pub get
+          flutter pub outdated || true
+
+      - name: Check outdated - driver app
+        run: |
+          cd apps/driver_app
+          flutter pub get
+          flutter pub outdated || true
+
+  secret-scan:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan for secrets with Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

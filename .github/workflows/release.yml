@@ -1,0 +1,89 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build-release-apks:
+    name: Build Release APKs
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.4"
+          channel: stable
+          cache: true
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > /tmp/release.keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+
+      - name: Core package pub get
+        run: |
+          cd packages/smartride_core
+          flutter pub get
+
+      - name: Build patient app release APK
+        run: |
+          cd apps/patient_app
+          flutter pub get
+          flutter build apk --release --no-pub \
+            --dart-define=API_BASE_URL=${{ secrets.API_BASE_URL }} \
+            --build-name=${{ github.ref_name }} \
+            --build-number=${{ github.run_number }}
+        env:
+          KEYSTORE_PATH: /tmp/release.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Build driver app release APK
+        run: |
+          cd apps/driver_app
+          flutter pub get
+          flutter build apk --release --no-pub \
+            --dart-define=API_BASE_URL=${{ secrets.API_BASE_URL }} \
+            --build-name=${{ github.ref_name }} \
+            --build-number=${{ github.run_number }}
+        env:
+          KEYSTORE_PATH: /tmp/release.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: SmartRide ${{ github.ref_name }}
+          body: |
+            ## SmartRide NEMT ${{ github.ref_name }}
+
+            ### Download
+            - **Patient App** — install on patient's phone
+            - **Driver App** — install on driver's phone
+
+            ### Install
+            1. Download the APK for your role
+            2. On your Android phone: Settings → Security → allow Unknown Sources
+            3. Open the downloaded APK to install
+
+            > Requires Android 6.0+
+          files: |
+            apps/patient_app/build/app/outputs/flutter-apk/app-release.apk
+            apps/driver_app/build/app/outputs/flutter-apk/app-release.apk
+          draft: false
+          prerelease: false
