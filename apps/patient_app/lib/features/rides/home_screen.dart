@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart';
 import 'rides_notifier.dart';
+import '../../shared/role_switcher.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -13,6 +14,7 @@ class HomeScreen extends ConsumerWidget {
     final activeRide = ref.watch(activeRideProvider);
 
     return Scaffold(
+      drawer: const PortalDrawer(),
       appBar: AppBar(
         title: const Text('SmartRide'),
         actions: [

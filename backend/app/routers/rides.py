@@ -162,6 +162,31 @@ async def get_ride(
 
 # ── Driver endpoints ──────────────────────────────────────────────────────────
 
+@router.get("/pending", response_model=RideListResponse)
+async def pending_rides(
+    current_user: User = Depends(require_driver),
+    db: AsyncSession = Depends(get_db),
+):
+    driver = await ride_service.get_driver_by_user(current_user, db)
+    if not driver.is_verified:
+        raise HTTPException(403, "Driver not verified")
+    rides = await ride_service.get_pending_rides(driver, db)
+    return RideListResponse(items=[_to_response(r) for r in rides], total=len(rides))
+
+
+@router.post("/{ride_id}/accept", response_model=RideResponse)
+async def accept_ride(
+    ride_id: str,
+    current_user: User = Depends(require_driver),
+    db: AsyncSession = Depends(get_db),
+):
+    driver = await ride_service.get_driver_by_user(current_user, db)
+    if not driver.is_verified:
+        raise HTTPException(403, "Driver not verified")
+    ride = await ride_service.accept_ride(ride_id, driver, db)
+    return _to_response(ride)
+
+
 @router.patch("/{ride_id}/status", response_model=RideResponse)
 async def update_ride_status(
     ride_id: str,
@@ -174,6 +199,9 @@ async def update_ride_status(
 
     patient = await ride_service.get_patient_by_user(current_user, db) if role == "patient" else None
     driver = await ride_service.get_driver_by_user(current_user, db) if role == "driver" else None
+
+    if driver and not driver.is_verified:
+        raise HTTPException(403, "Driver not verified")
 
     ride = await ride_service.update_ride_status(ride, body, role, db, patient=patient, driver=driver)
     return _to_response(ride)

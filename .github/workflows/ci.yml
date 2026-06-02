@@ -130,7 +130,7 @@ jobs:
           cd packages/smartride_core
           flutter test --reporter=compact || true
 
-      - name: Patient app analyze + test + build APK
+      - name: SmartRide app analyze + test + build APK
         run: |
           cd apps/patient_app
           flutter pub get
@@ -138,26 +138,11 @@ jobs:
           flutter test --reporter=compact || true
           flutter build apk --debug --no-pub
 
-      - name: Driver app analyze + test + build APK
-        run: |
-          cd apps/driver_app
-          flutter pub get
-          flutter analyze
-          flutter test --reporter=compact || true
-          flutter build apk --debug --no-pub
-
-      - name: Upload patient APK
+      - name: Upload SmartRide APK
         uses: actions/upload-artifact@v4
         with:
-          name: patient-app-debug
+          name: smartride-debug
           path: apps/patient_app/build/app/outputs/flutter-apk/app-debug.apk
-          retention-days: 7
-
-      - name: Upload driver APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: driver-app-debug
-          path: apps/driver_app/build/app/outputs/flutter-apk/app-debug.apk
           retention-days: 7
 
   docker-compose-validate:

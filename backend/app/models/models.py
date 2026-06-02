@@ -74,6 +74,8 @@ class User(Base):
     id:            Mapped[uuid.UUID]  = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     phone:         Mapped[str]        = mapped_column(String(20), unique=True, nullable=False)
     password_hash: Mapped[str]        = mapped_column(Text, nullable=False)
+    # `role` is the user's *active* role (the portal they're currently in).
+    # The full set of roles the account holds lives in `user_roles`.
     role:          Mapped[UserRole]   = mapped_column(SAEnum(UserRole, name="user_role", create_type=False), nullable=False)
     is_active:     Mapped[bool]       = mapped_column(Boolean, default=True)
     created_at:    Mapped[datetime]   = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -81,6 +83,31 @@ class User(Base):
 
     patient: Mapped[Optional["Patient"]] = relationship("Patient", back_populates="user", uselist=False)
     driver:  Mapped[Optional["Driver"]]  = relationship("Driver",  back_populates="user", uselist=False)
+    roles:   Mapped[List["UserRoleLink"]] = relationship(
+        "UserRoleLink", back_populates="user", lazy="selectin", cascade="all, delete-orphan"
+    )
+
+    @property
+    def held_roles(self) -> set[str]:
+        """All roles this account possesses (membership), not just the active one."""
+        return {link.role.value for link in self.roles}
+
+
+# ─── USER ROLE LINK (multi-role: one account can be patient AND driver) ──────────
+
+class UserRoleLink(Base):
+    __tablename__ = "user_roles"
+
+    id:      Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    role:    Mapped[UserRole]  = mapped_column(SAEnum(UserRole, name="user_role", create_type=False), nullable=False)
+
+    __table_args__ = (
+        Index("ix_user_roles_user_id", "user_id"),
+        Index("uq_user_roles_user_role", "user_id", "role", unique=True),
+    )
+
+    user: Mapped["User"] = relationship("User", back_populates="roles")
 
 
 # ─── PATIENT ──────────────────────────────────────────────────────────────────

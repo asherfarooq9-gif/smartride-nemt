@@ -32,6 +32,9 @@ class Settings(BaseSettings):
 
     # App
     DEBUG: bool = False
+    # In production set ALLOWED_ORIGINS to explicit origins, e.g.:
+    #   ALLOWED_ORIGINS=["https://your-admin.example.com"]
+    # The wildcard is only acceptable for local development (DEBUG=True).
     ALLOWED_ORIGINS: List[str] = ["*"]
     EMERGENCY_PIPELINE_TARGET_SECONDS: float = 60.0
     LOG_LEVEL: str = "INFO"

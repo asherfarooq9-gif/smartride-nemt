@@ -1,5 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart';
 import '../../core/providers.dart';
 
@@ -117,6 +118,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   label: 'Sign In',
                   onPressed: isLoading ? null : _submit,
                   isLoading: isLoading,
+                ),
+                const SizedBox(height: kSpaceLG),
+                TextButton(
+                  onPressed: () => context.go('/signup'),
+                  child: const Text("Don't have an account? Sign Up"),
                 ),
               ],
             ),

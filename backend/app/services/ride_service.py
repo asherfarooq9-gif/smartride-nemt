@@ -1,8 +1,9 @@
 from datetime import datetime, timezone
+from math import radians, sin, cos, sqrt, atan2
 from typing import Optional
 
 from fastapi import HTTPException
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -11,6 +12,14 @@ from app.models.models import (
     RideType, RideStatus, DriverStatus,
 )
 from app.schemas.rides import EmergencyRideRequest, ScheduledRideRequest, RideStatusUpdate
+
+
+def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    R = 6371.0
+    dlat = radians(lat2 - lat1)
+    dlng = radians(lng2 - lng1)
+    a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlng / 2) ** 2
+    return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
 DRIVER_TRANSITIONS = {
     RideStatus.driver_assigned: RideStatus.driver_en_route,
@@ -174,6 +183,54 @@ async def update_ride_status(
 
     await db.commit()
     await db.refresh(ride)
+    return ride
+
+
+async def get_pending_rides(driver: Driver, db: AsyncSession) -> list[Ride]:
+    """Unassigned pending rides, sorted by distance to driver (nearest first)."""
+    rows = (await db.execute(
+        select(Ride)
+        .where(and_(Ride.status == RideStatus.pending, Ride.driver_id.is_(None)))
+        .order_by(Ride.requested_at.asc())
+    )).scalars().all()
+
+    if driver.current_lat is not None and driver.current_lng is not None:
+        rows = sorted(
+            rows,
+            key=lambda r: _haversine_km(driver.current_lat, driver.current_lng, r.pickup_lat, r.pickup_lng),
+        )
+    return list(rows)
+
+
+async def accept_ride(ride_id: str, driver: Driver, db: AsyncSession) -> Ride:
+    """Atomically assign a driver to a ride; raises 409 if already taken."""
+    result = await db.execute(
+        update(Ride)
+        .where(and_(
+            Ride.id == ride_id,
+            Ride.status == RideStatus.pending,
+            Ride.driver_id.is_(None),
+        ))
+        .values(
+            driver_id=driver.id,
+            status=RideStatus.driver_assigned,
+            driver_assigned_at=datetime.now(timezone.utc),
+        )
+        .returning(Ride.id)
+    )
+    assigned_id = result.scalar_one_or_none()
+
+    if assigned_id is None:
+        # Either ride doesn't exist or was already taken
+        check = (await db.execute(select(Ride).where(Ride.id == ride_id))).scalar_one_or_none()
+        if check is None:
+            raise HTTPException(404, "Ride not found")
+        raise HTTPException(409, "Ride already taken by another driver")
+
+    driver.status = DriverStatus.busy
+    await db.commit()
+
+    ride = (await db.execute(select(Ride).where(Ride.id == ride_id))).scalar_one()
     return ride
 
 

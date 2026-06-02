@@ -3,18 +3,9 @@ import pytest
 from httpx import AsyncClient
 
 
-async def _admin_token(client: AsyncClient, phone: str) -> str:
-    r = await client.post("/api/v1/auth/register", json={
-        "phone": phone, "password": "pass1234", "role": "admin", "full_name": "Admin",
-    })
-    assert r.status_code == 201, r.text
-    return r.json()["access_token"]
-
-
 @pytest.mark.asyncio
-async def test_summary_returns_expected_keys(client: AsyncClient):
-    token = await _admin_token(client, "+92300AN0001")
-    r = await client.get("/api/v1/analytics/summary", headers={"Authorization": f"Bearer {token}"})
+async def test_summary_returns_expected_keys(client: AsyncClient, admin_token: str):
+    r = await client.get("/api/v1/analytics/summary", headers={"Authorization": f"Bearer {admin_token}"})
     assert r.status_code == 200
     data = r.json()
     for key in ("total_rides", "emergency_rides_24h", "active_rides",
@@ -33,11 +24,10 @@ async def test_non_admin_cannot_access_summary(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_write_snapshot_creates_record(client: AsyncClient):
-    token = await _admin_token(client, "+92300AN0003")
+async def test_write_snapshot_creates_record(client: AsyncClient, admin_token: str):
     r = await client.post(
         "/api/v1/analytics/snapshot?city=Islamabad",
-        headers={"Authorization": f"Bearer {token}"},
+        headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert r.status_code == 201
     data = r.json()
@@ -47,11 +37,10 @@ async def test_write_snapshot_creates_record(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_forecast_returns_correct_count(client: AsyncClient):
-    token = await _admin_token(client, "+92300AN0004")
+async def test_forecast_returns_correct_count(client: AsyncClient, admin_token: str):
     r = await client.get(
         "/api/v1/analytics/forecast?city=Islamabad&hours_ahead=6",
-        headers={"Authorization": f"Bearer {token}"},
+        headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert r.status_code == 200
     data = r.json()
@@ -61,16 +50,14 @@ async def test_forecast_returns_correct_count(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_history_returns_snapshots(client: AsyncClient):
-    token = await _admin_token(client, "+92300AN0005")
-    # Write a snapshot first so there's something to return
+async def test_history_returns_snapshots(client: AsyncClient, admin_token: str):
     await client.post(
         "/api/v1/analytics/snapshot?city=Rawalpindi",
-        headers={"Authorization": f"Bearer {token}"},
+        headers={"Authorization": f"Bearer {admin_token}"},
     )
     r = await client.get(
         "/api/v1/analytics/history?city=Rawalpindi&days=1",
-        headers={"Authorization": f"Bearer {token}"},
+        headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert r.status_code == 200
     data = r.json()

@@ -74,65 +74,84 @@ Patient/Driver Apps (Flutter)
 | 8 | Admin dashboard | ✅ |
 | 9 | Flutter patient & driver apps (Riverpod + Dio, emergency flow, FCM) | ✅ |
 | 10 | CI/CD (GitHub Actions), seed data, localhost docker-compose | ✅ |
+| 11 | Multi-role auth (patient+driver in one account), unified SmartRide app | ✅ |
+| 12 | Driver dispatch endpoints, verification gating, security hardening | ✅ |
 
-## Flutter apps
+## Flutter app
+
+One unified app (`apps/patient_app`) — patients and drivers in the same install. Sign up as **Patient**, **Driver**, or **Both**. Switch portals any time from the drawer.
 
 ### Shared package — `packages/smartride_core`
 
-Typed models, Dio API client (auth interceptor + 401→logout), WebSocket client (exponential backoff reconnect), `flutter_secure_storage` token storage, shared design tokens, validators, and reusable widgets. Both apps depend on this package via path.
+Typed models, Dio API client (auth interceptor + 401→logout), WebSocket client (exponential backoff reconnect), `flutter_secure_storage` token storage, shared design tokens, validators, and reusable widgets.
 
-### Patient app — `apps/patient_app`
+### Unified SmartRide app — `apps/patient_app`
 
+#### Auth flow
 | Screen | Description |
 |--------|-------------|
-| Login | Phone + password, JWT saved to secure storage |
-| Home | Large Emergency button (72 dp, red), active ride banner, recent rides list |
-| Symptoms | Quick-select chips + free text (max 2 000 chars) → POST /rides/emergency |
-| Live Tracking | flutter_map (OpenStreetMap) — driver marker updated via WebSocket `/ws/ride/{id}` |
-| Ride Detail | Status badge, timeline, "Track Live" for active rides |
+| Welcome | Entry point — Log In or Sign Up |
+| Sign Up | Choose role: Patient / Driver / Both. Driver fields shown conditionally |
+| Log In | Phone + password; multi-role JWT stored securely |
+| Become a Driver/Patient | Add a second role to an existing account |
+
+#### Patient portal (blue theme)
+| Screen | Description |
+|--------|-------------|
+| Home | Large Emergency button, active ride banner, recent rides |
+| Symptoms | Quick-select chips + free text → `POST /rides/emergency` |
+| Live Tracking | `flutter_map` (OpenStreetMap) — driver pin via WebSocket |
+| Ride Detail | Status badge, timeline, "Track Live" |
 | Ride History | Paginated list |
-| Profile | Card view + edit form (name, DOB, mobility needs, emergency contact) |
-| Settings | Account, Support, About, Sign Out |
+| Profile / Settings | Edit profile, sign out |
 
-### Driver app — `apps/driver_app`
-
+#### Driver portal (teal theme, accessible via drawer)
 | Screen | Description |
 |--------|-------------|
-| Login | Phone + password; rejects non-driver JWT |
-| Dashboard | Online/offline toggle, pending ride cards with 30 s countdown (red ≤ 10 s), auto-refresh |
-| Active Ride | Status progression buttons, flutter_map showing patient pin, cancel flow |
-| Profile | Driver info + edit |
-| Settings | Notification toggles (persisted), Sign Out |
+| Dashboard | Online/offline toggle (disabled until verified), pending ride cards with 30 s countdown, verification banner shown until admin approves |
+| Active Ride | Status progression, flutter_map, cancel flow |
+| Profile / Settings | Driver info + edit, sign out |
 
-GPS streaming (`GpsStreamNotifier`): on accept, connects WebSocket `/ws/driver/{id}`, sends `{"token": jwt}` first, then streams `{"lat", "lng"}` from `geolocator` every 10 m. REST fallback `PATCH /drivers/location` throttled to 1/5 s.
+#### Role switching
+Open the drawer → **Switch to Patient/Driver** or **Become a Driver/Patient** (add-role flow). An active-ride warning is shown before switching away from the driver portal.
+
+#### GPS streaming
+On accept, `GpsStreamNotifier` connects `/ws/driver/{id}`, streams `{"lat","lng"}` from `geolocator` every 10 m. REST fallback `PATCH /drivers/location` throttled to 1/5 s.
+
+### Multi-role auth API
+
+| Endpoint | Description |
+|---|---|
+| `POST /api/v1/auth/register` | `roles: ["patient","driver","both"]` — creates all profiles in one call |
+| `POST /api/v1/auth/login` | Returns `roles[]`, `active_role`, `role` (legacy compat) |
+| `POST /api/v1/auth/add-role` | Add driver or patient role to existing account |
+| `POST /api/v1/auth/switch-role` | Switch active portal (updates `user.role`) |
+| `GET  /api/v1/auth/me` | Returns all profiles + `driver_verified` flag |
+| `GET  /api/v1/rides/pending` | Driver: unassigned rides sorted by distance (requires verified) |
+| `POST /api/v1/rides/{id}/accept` | Atomic assignment — 409 if race-lost (requires verified) |
 
 ### FCM setup
 
-Each app requires a `google-services.json` in `android/app/`. Register both package names in Firebase console:
-- Patient: `com.smartride.patient_app`
-- Driver: `com.smartride.driver_app`
+Place `google-services.json` in `apps/patient_app/android/app/`. Register package `com.smartride.patient_app` in Firebase console.
 
-### Run the apps
+### Run the app
 
 ```bash
-# Copy env template (Android emulator default — points to host backend)
+# Copy env template (points to backend — use your machine's LAN IP for physical device)
 cp apps/patient_app/.env.example apps/patient_app/.env
-cp apps/driver_app/.env.example apps/driver_app/.env
+# Edit API_BASE_URL=http://<your-ip>:8000
 
-# Install dependencies
-cd apps/patient_app && flutter pub get
-cd ../driver_app && flutter pub get
-
-# Run (with emulator or USB device connected)
-cd apps/patient_app && flutter run
-cd ../driver_app && flutter run
+cd apps/patient_app
+flutter pub get
+flutter run
 ```
 
 ### Build release APK
 
 ```bash
+cd apps/patient_app
 flutter build apk --debug    # debug (no signing needed)
-flutter build apk --release  # release (requires signing config)
+flutter build apk --release  # release (requires keystore secrets in GitHub)
 ```
 
 Output: `build/app/outputs/flutter-apk/app-debug.apk`

@@ -37,23 +37,9 @@ jobs:
           cd packages/smartride_core
           flutter pub get
 
-      - name: Build patient app release APK
+      - name: Build SmartRide release APK
         run: |
           cd apps/patient_app
-          flutter pub get
-          flutter build apk --release --no-pub \
-            --dart-define=API_BASE_URL=${{ secrets.API_BASE_URL }} \
-            --build-name=${{ github.ref_name }} \
-            --build-number=${{ github.run_number }}
-        env:
-          KEYSTORE_PATH: /tmp/release.keystore
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-
-      - name: Build driver app release APK
-        run: |
-          cd apps/driver_app
           flutter pub get
           flutter build apk --release --no-pub \
             --dart-define=API_BASE_URL=${{ secrets.API_BASE_URL }} \
@@ -72,18 +58,17 @@ jobs:
           body: |
             ## SmartRide NEMT ${{ github.ref_name }}
 
-            ### Download
-            - **Patient App** — install on patient's phone
-            - **Driver App** — install on driver's phone
+            ### One unified app — patients and drivers in the same install
+
+            Sign up as **Patient**, **Driver**, or **Both**. Switch portals from the drawer menu at any time.
 
             ### Install
-            1. Download the APK for your role
+            1. Download `smartride-release.apk`
             2. On your Android phone: Settings → Security → allow Unknown Sources
             3. Open the downloaded APK to install
 
             > Requires Android 6.0+
           files: |
             apps/patient_app/build/app/outputs/flutter-apk/app-release.apk
-            apps/driver_app/build/app/outputs/flutter-apk/app-release.apk
           draft: false
           prerelease: false

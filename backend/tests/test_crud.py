@@ -121,8 +121,7 @@ async def test_get_hospital_not_found(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_admin_create_hospital(client: AsyncClient):
-    admin_token = await _register_and_token(client, "+92-311-9000001", "admin")
+async def test_admin_create_hospital(client: AsyncClient, admin_token: str):
     payload = {
         "name": "Test Hospital",
         "address": "123 Main St",

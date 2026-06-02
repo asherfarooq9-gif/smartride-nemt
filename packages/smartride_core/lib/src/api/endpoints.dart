@@ -6,16 +6,38 @@ import 'api_client.dart';
 
 final _c = ApiClient.instance;
 
-Future<TokenResponse> login(String phone, String password) async {
+Future<TokenResponse> login(String phone, String password, {String? activeRole}) async {
   final data = await _c.post(
     '/api/v1/auth/login',
-    {'phone': phone, 'password': password},
+    {
+      'phone': phone,
+      'password': password,
+      if (activeRole != null) 'active_role': activeRole,
+    },
   );
   return TokenResponse.fromJson(data);
 }
 
 Future<TokenResponse> register(RegisterRequest req) async {
   final data = await _c.post('/api/v1/auth/register', req.toJson());
+  return TokenResponse.fromJson(data);
+}
+
+/// GET /auth/me — which roles + profiles this account holds.
+Future<MeResponse> getMe() async {
+  final data = await _c.get('/api/v1/auth/me');
+  return MeResponse.fromJson(data);
+}
+
+/// POST /auth/switch-role — flip the active portal; returns a fresh token.
+Future<TokenResponse> switchRole(String activeRole) async {
+  final data = await _c.post('/api/v1/auth/switch-role', {'active_role': activeRole});
+  return TokenResponse.fromJson(data);
+}
+
+/// POST /auth/add-role — "Become a driver/patient"; returns a fresh token.
+Future<TokenResponse> addRole(AddRoleRequest req) async {
+  final data = await _c.post('/api/v1/auth/add-role', req.toJson());
   return TokenResponse.fromJson(data);
 }
 

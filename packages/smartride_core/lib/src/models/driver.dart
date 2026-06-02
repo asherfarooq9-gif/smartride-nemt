@@ -37,6 +37,7 @@ class DriverResponse {
     this.currentLng,
     this.totalRides = 0,
     this.rating,
+    this.isVerified = false,
   });
 
   final String id;
@@ -50,6 +51,7 @@ class DriverResponse {
   final double? currentLng;
   final int totalRides;
   final double? rating;
+  final bool isVerified;
 
   bool get isOnline => status != DriverStatus.offline;
 
@@ -65,6 +67,7 @@ class DriverResponse {
         currentLng: (json['current_lng'] as num?)?.toDouble(),
         totalRides: (json['total_rides'] as num?)?.toInt() ?? 0,
         rating: (json['rating'] as num?)?.toDouble(),
+        isVerified: json['is_verified'] as bool? ?? false,
       );
 }
 

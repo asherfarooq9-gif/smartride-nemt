@@ -1,13 +1,19 @@
 ﻿import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../storage/secure_storage.dart';
 import 'api_error.dart';
 
 class ApiClient {
   ApiClient._() {
+    final baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://10.0.2.2:8000';
+    assert(
+      !kReleaseMode || baseUrl.startsWith('https://') || baseUrl.startsWith('http://127.') || baseUrl.startsWith('http://10.0.2.2'),
+      'API_BASE_URL must use HTTPS in release builds. Got: $baseUrl',
+    );
     _dio = Dio(
       BaseOptions(
-        baseUrl: dotenv.env['API_BASE_URL'] ?? 'http://10.0.2.2:8000',
+        baseUrl: baseUrl,
         connectTimeout: const Duration(seconds: 15),
         receiveTimeout: const Duration(seconds: 30),
         headers: {'Content-Type': 'application/json'},

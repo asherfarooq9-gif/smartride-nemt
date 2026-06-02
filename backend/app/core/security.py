@@ -70,7 +70,9 @@ async def get_current_user(
 
 def require_role(*roles: str):
     async def checker(current_user=Depends(get_current_user)):
-        if current_user.role.value not in roles:
+        # Membership check: a multi-role account passes if it HOLDS any required
+        # role, regardless of which portal is currently active.
+        if not (set(roles) & current_user.held_roles):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
         return current_user
     return checker
