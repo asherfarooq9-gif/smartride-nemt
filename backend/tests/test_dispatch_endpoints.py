@@ -33,9 +33,10 @@ async def _create_emergency(client: AsyncClient, token: str) -> str:
 
 @pytest_asyncio.fixture
 async def verified_driver_token(client: AsyncClient, db: AsyncSession) -> str:
+    uid = uuid.uuid4().hex[:8]
     token = await _register(
-        client, "+92300DV0001", "driver",
-        license_no="DV-LIC-001", vehicle_plate="DV-001", vehicle_type="sedan"
+        client, f"+92300{uid}", "driver",
+        license_no=f"DV-{uid}", vehicle_plate=f"DV-{uid[:6]}", vehicle_type="sedan"
     )
     result = await db.execute(select(Driver).order_by(Driver.created_at.desc()).limit(1))
     driver = result.scalar_one()

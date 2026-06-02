@@ -139,28 +139,9 @@ async def get_ride_detail(
     )
 
 
-@router.get("/{ride_id}", response_model=RideResponse)
-async def get_ride(
-    ride_id: str,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    ride = await ride_service.get_ride_by_id(ride_id, db)
-
-    role = current_user.role.value
-    if role == "patient":
-        patient = await ride_service.get_patient_by_user(current_user, db)
-        if ride.patient_id != patient.id:
-            raise HTTPException(403, "Forbidden")
-    elif role == "driver":
-        driver = await ride_service.get_driver_by_user(current_user, db)
-        if ride.driver_id != driver.id:
-            raise HTTPException(403, "Forbidden")
-
-    return _to_response(ride)
-
-
 # ── Driver endpoints ──────────────────────────────────────────────────────────
+# IMPORTANT: /pending must be registered BEFORE /{ride_id} so FastAPI does not
+# treat the literal string "pending" as a ride_id parameter.
 
 @router.get("/pending", response_model=RideListResponse)
 async def pending_rides(
@@ -204,6 +185,25 @@ async def update_ride_status(
         raise HTTPException(403, "Driver not verified")
 
     ride = await ride_service.update_ride_status(ride, body, role, db, patient=patient, driver=driver)
+    return _to_response(ride)
+
+
+@router.get("/{ride_id}", response_model=RideResponse)
+async def get_ride(
+    ride_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    ride = await ride_service.get_ride_by_id(ride_id, db)
+    role = current_user.role.value
+    if role == "patient":
+        patient = await ride_service.get_patient_by_user(current_user, db)
+        if ride.patient_id != patient.id:
+            raise HTTPException(403, "Forbidden")
+    elif role == "driver":
+        driver = await ride_service.get_driver_by_user(current_user, db)
+        if ride.driver_id != driver.id:
+            raise HTTPException(403, "Forbidden")
     return _to_response(ride)
 
 
