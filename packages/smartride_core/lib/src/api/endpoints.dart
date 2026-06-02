@@ -1,6 +1,7 @@
 ﻿import '../models/user.dart';
 import '../models/patient.dart';
 import '../models/driver.dart';
+import '../models/hospital.dart';
 import '../models/ride.dart';
 import 'api_client.dart';
 
@@ -114,4 +115,15 @@ Future<void> updateRideStatus(
 
 Future<void> acceptRide(String rideId) async {
   await _c.post('/api/v1/rides/$rideId/accept', {});
+}
+
+Future<RideResponse> createScheduledRide(ScheduledRideRequest req) async {
+  final data = await _c.post('/api/v1/rides/scheduled', req.toJson());
+  return RideResponse.fromJson(data);
+}
+
+Future<List<HospitalResponse>> getHospitals() async {
+  final data = await _c.get('/api/v1/hospitals');
+  final items = data['items'] as List<dynamic>? ?? [];
+  return items.map((e) => HospitalResponse.fromJson(e as Map<String, dynamic>)).toList();
 }

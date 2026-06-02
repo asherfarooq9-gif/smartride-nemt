@@ -212,6 +212,29 @@ class RideListResponse {
   }
 }
 
+class ScheduledRideRequest {
+  const ScheduledRideRequest({
+    required this.pickupAddress,
+    required this.scheduledFor,
+    this.pickupLat,
+    this.pickupLng,
+    this.hospitalId,
+  });
+
+  final String pickupAddress;
+  final DateTime scheduledFor;
+  final double? pickupLat;
+  final double? pickupLng;
+  final String? hospitalId;
+
+  Map<String, dynamic> toJson() => {
+        'pickup_address': pickupAddress,
+        'scheduled_for': scheduledFor.toUtc().toIso8601String(),
+        if (pickupLat != null) 'pickup_lat': pickupLat,
+        if (pickupLng != null) 'pickup_lng': pickupLng,
+      };
+}
+
 class EmergencyRideRequest {
   const EmergencyRideRequest({
     required this.pickupAddress,

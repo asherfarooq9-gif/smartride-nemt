@@ -1,17 +1,15 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 
-const _quickSymptoms = [
-  'Chest pain',
-  'Difficulty breathing',
-  'Severe abdominal pain',
-  'Head injury',
-  'Loss of consciousness',
-  'Stroke symptoms',
-  'Allergic reaction',
-  'Severe bleeding',
+const _symptoms = [
+  'Chest Pain',
+  'Breathing Trouble',
+  'Pregnancy',
+  'Injury / Accident',
+  'Child Sick',
+  'Other / Not Sure',
 ];
 
 final _submitProvider =
@@ -57,45 +55,38 @@ class SymptomScreen extends ConsumerStatefulWidget {
 class _SymptomScreenState extends ConsumerState<SymptomScreen> {
   final _formKey = GlobalKey<FormState>();
   final _addressCtrl = TextEditingController();
-  final _symptomCtrl = TextEditingController();
+  final _detailsCtrl = TextEditingController();
   final Set<String> _selected = {};
 
   @override
   void dispose() {
     _addressCtrl.dispose();
-    _symptomCtrl.dispose();
+    _detailsCtrl.dispose();
     super.dispose();
   }
 
-  void _toggleChip(String s) {
-    setState(() {
-      if (_selected.contains(s)) {
-        _selected.remove(s);
-      } else {
-        _selected.add(s);
-      }
-      _symptomCtrl.text = _selected.join(', ');
-    });
-  }
+  void _toggle(String s) =>
+      setState(() => _selected.contains(s) ? _selected.remove(s) : _selected.add(s));
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    final symptomText = _selected.isEmpty
+        ? _detailsCtrl.text.trim()
+        : [_selected.join(', '), if (_detailsCtrl.text.trim().isNotEmpty) _detailsCtrl.text.trim()].join('. ');
+
     final rideId = await ref.read(_submitProvider.notifier).submit(
-          address: _addressCtrl.text.trim(),
-          symptoms: _symptomCtrl.text.trim(),
+          address: _addressCtrl.text.trim().isEmpty ? 'Current location' : _addressCtrl.text.trim(),
+          symptoms: symptomText,
         );
     if (!mounted) return;
     if (rideId != null) {
-      context.go('/tracking/$rideId');
+      context.go('/dispatching/$rideId');
     } else {
       final err = ref.read(_submitProvider).error;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              err is core.AppError ? err.message : 'Failed to request ride'),
-          backgroundColor: core.kError,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(err is core.AppError ? err.message : 'Failed to request ride'),
+        backgroundColor: core.kError,
+      ));
     }
   }
 
@@ -104,69 +95,227 @@ class _SymptomScreenState extends ConsumerState<SymptomScreen> {
     final isLoading = ref.watch(_submitProvider) is AsyncLoading;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Emergency Ride')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(core.kSpaceLG),
+      backgroundColor: core.kEmergencyDarkBg,
+      body: SafeArea(
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                'Select symptoms',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w600),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    core.kSpaceLG, core.kSpaceMD, core.kSpaceLG, 0),
+                child: Row(
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => context.pop(),
+                      icon: const Icon(Icons.close,
+                          size: 18, color: Colors.white54),
+                      label: const Text('Cancel',
+                          style: TextStyle(color: Colors.white54)),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: core.kSpaceSM),
-              Wrap(
-                spacing: core.kSpaceSM,
-                runSpacing: core.kSpaceXS,
-                children: _quickSymptoms
-                    .map(
-                      (s) => FilterChip(
-                        label: Text(s),
-                        selected: _selected.contains(s),
-                        onSelected: (_) => _toggleChip(s),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(core.kSpaceLG),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'Get Help Now',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
-                    )
-                    .toList(),
-              ),
-              const SizedBox(height: core.kSpaceLG),
-              TextFormField(
-                controller: _symptomCtrl,
-                maxLines: 3,
-                maxLength: 2000,
-                textInputAction: TextInputAction.newline,
-                decoration: const InputDecoration(
-                  labelText: 'Describe symptoms',
-                  alignLabelWithHint: true,
-                  hintText: 'Additional details...',
+                      const SizedBox(height: core.kSpaceXS),
+                      const Text(
+                        'Help is being arranged. Tell us what\'s happening so we can send the right support.',
+                        style: TextStyle(
+                            fontSize: core.kFontSM,
+                            color: Colors.white54,
+                            height: 1.4),
+                      ),
+                      const SizedBox(height: core.kSpaceXL),
+                      const Text(
+                        "WHAT'S HAPPENING?",
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white38,
+                          letterSpacing: 1.1,
+                        ),
+                      ),
+                      const SizedBox(height: core.kSpaceMD),
+                      Wrap(
+                        spacing: core.kSpaceSM,
+                        runSpacing: core.kSpaceSM,
+                        children: _symptoms
+                            .map((s) => _SymptomChip(
+                                  label: s,
+                                  selected: _selected.contains(s),
+                                  onTap: () => _toggle(s),
+                                ))
+                            .toList(),
+                      ),
+                      const SizedBox(height: core.kSpaceXL),
+                      const Text(
+                        'ANY OTHER DETAILS? (OPTIONAL)',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white38,
+                          letterSpacing: 1.1,
+                        ),
+                      ),
+                      const SizedBox(height: core.kSpaceMD),
+                      TextFormField(
+                        controller: _detailsCtrl,
+                        maxLines: 3,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          hintText:
+                              'e.g. patient is conscious, address details...',
+                          hintStyle: const TextStyle(color: Colors.white24),
+                          filled: true,
+                          fillColor: const Color(0xFF2D1010),
+                          border: OutlineInputBorder(
+                            borderRadius:
+                                BorderRadius.circular(core.kRadiusMD),
+                            borderSide: const BorderSide(
+                                color: Color(0xFF5A2020)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius:
+                                BorderRadius.circular(core.kRadiusMD),
+                            borderSide: const BorderSide(
+                                color: Color(0xFF5A2020)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius:
+                                BorderRadius.circular(core.kRadiusMD),
+                            borderSide: BorderSide(
+                                color: core.kEmergencyRed, width: 1.5),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: core.kSpaceLG),
+                      // Pickup address (hidden field — auto-uses current location)
+                      TextFormField(
+                        controller: _addressCtrl,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          hintText: 'Pickup address (leave blank for current location)',
+                          hintStyle: const TextStyle(color: Colors.white24),
+                          prefixIcon: const Icon(Icons.location_on, color: Colors.white38),
+                          filled: true,
+                          fillColor: const Color(0xFF2D1010),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(core.kRadiusMD),
+                            borderSide: const BorderSide(color: Color(0xFF5A2020)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(core.kRadiusMD),
+                            borderSide: const BorderSide(color: Color(0xFF5A2020)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(core.kRadiusMD),
+                            borderSide: BorderSide(color: core.kEmergencyRed, width: 1.5),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                validator: core.Validators.symptomText,
               ),
-              const SizedBox(height: core.kSpaceLG),
-              TextFormField(
-                controller: _addressCtrl,
-                textInputAction: TextInputAction.done,
-                decoration: const InputDecoration(
-                  labelText: 'Pickup address',
-                  prefixIcon: Icon(Icons.location_on),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    core.kSpaceLG, 0, core.kSpaceLG, core.kSpaceLG),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(
+                      height: core.kMinTapTarget + 8,
+                      child: ElevatedButton(
+                        onPressed: isLoading ? null : _submit,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: core.kEmergencyRed,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(core.kRadiusLG),
+                          ),
+                        ),
+                        child: isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Text(
+                                'Send for Help',
+                                style: TextStyle(
+                                  fontSize: core.kFontMD,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                      ),
+                    ),
+                    const SizedBox(height: core.kSpaceMD),
+                    const Text(
+                      'Or call directly: 1122',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          color: Colors.white54, fontSize: core.kFontSM),
+                    ),
+                  ],
                 ),
-                validator: (v) =>
-                    core.Validators.required(v, field: 'Pickup address'),
-              ),
-              const SizedBox(height: core.kSpaceXXL),
-              core.PrimaryButton(
-                label: 'Request Emergency Ride',
-                onPressed: isLoading ? null : _submit,
-                isLoading: isLoading,
-                color: core.kEmergencyRed,
-                height: core.kEmergencyButtonHeight,
-                semanticLabel: 'Request emergency ride with entered symptoms',
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SymptomChip extends StatelessWidget {
+  const _SymptomChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(
+            horizontal: core.kSpaceLG, vertical: core.kSpaceMD),
+        decoration: BoxDecoration(
+          color: selected ? core.kEmergencyRed : const Color(0xFF2D1010),
+          borderRadius: BorderRadius.circular(core.kRadiusLG),
+          border: Border.all(
+            color: selected ? core.kEmergencyRed : const Color(0xFF5A2020),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : Colors.white70,
+            fontWeight:
+                selected ? FontWeight.w600 : FontWeight.normal,
+            fontSize: core.kFontSM,
           ),
         ),
       ),

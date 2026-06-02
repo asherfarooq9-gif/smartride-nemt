@@ -10,9 +10,12 @@ import '../features/auth/add_role_screen.dart';
 // Patient portal
 import '../features/rides/home_screen.dart';
 import '../features/rides/symptom_screen.dart';
+import '../features/rides/dispatching_screen.dart';
 import '../features/rides/ride_detail_screen.dart';
 import '../features/rides/live_tracking_screen.dart';
 import '../features/rides/scheduled_rides_screen.dart';
+import '../features/rides/schedule_trip_screen.dart';
+import '../features/rides/booking_confirmed_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/settings/settings_screen.dart';
 // Driver portal
@@ -37,7 +40,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (!isLoggedIn) {
         return _authPages.contains(loc) ? null : '/welcome';
       }
-      // Logged in but sitting on an auth page → drop into the active portal.
       if (_authPages.contains(loc)) {
         return ref.read(activeRoleProvider) == 'driver' ? '/driver' : '/';
       }
@@ -45,10 +47,10 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     refreshListenable: _AuthListenable(ref),
     routes: [
-      // ── Auth ──────────────────────────────────────────────────────────
+      // ── Auth ──────────────────────────────────────────────────────────────
       GoRoute(path: '/welcome', builder: (_, __) => const WelcomeScreen()),
-      GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
-      GoRoute(path: '/signup', builder: (_, __) => const SignupScreen()),
+      GoRoute(path: '/login',   builder: (_, __) => const LoginScreen()),
+      GoRoute(path: '/signup',  builder: (_, __) => const SignupScreen()),
       GoRoute(
         path: '/become-driver',
         builder: (_, __) => const AddRoleScreen(role: 'driver'),
@@ -58,9 +60,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const AddRoleScreen(role: 'patient'),
       ),
 
-      // ── Patient portal ────────────────────────────────────────────────
+      // ── Patient portal ────────────────────────────────────────────────────
       GoRoute(path: '/', builder: (_, __) => const HomeScreen()),
       GoRoute(path: '/symptoms', builder: (_, __) => const SymptomScreen()),
+      GoRoute(
+        path: '/dispatching/:id',
+        builder: (_, s) => DispatchingScreen(rideId: s.pathParameters['id']!),
+      ),
       GoRoute(path: '/rides', builder: (_, __) => const ScheduledRidesScreen()),
       GoRoute(
         path: '/ride/:id',
@@ -70,10 +76,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/tracking/:id',
         builder: (_, s) => LiveTrackingScreen(rideId: s.pathParameters['id']!),
       ),
-      GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
+      GoRoute(path: '/book-ride', builder: (_, __) => const ScheduleTripScreen()),
+      GoRoute(
+        path: '/booking-confirmed/:id',
+        builder: (_, s) =>
+            BookingConfirmedScreen(rideId: s.pathParameters['id']!),
+      ),
+      GoRoute(path: '/profile',  builder: (_, __) => const ProfileScreen()),
       GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
 
-      // ── Driver portal ─────────────────────────────────────────────────
+      // ── Driver portal ─────────────────────────────────────────────────────
       GoRoute(path: '/driver', builder: (_, __) => const DashboardScreen()),
       GoRoute(
         path: '/driver/ride/:id',

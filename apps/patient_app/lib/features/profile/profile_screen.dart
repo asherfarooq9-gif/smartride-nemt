@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 
 final _profileProvider = FutureProvider.autoDispose<core.PatientResponse>(
@@ -67,6 +68,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final isUpdating = ref.watch(_updateProvider) is AsyncLoading;
 
     return Scaffold(
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: 2,
+        onDestinationSelected: (i) {
+          if (i == 0) context.go('/');
+          if (i == 1) context.go('/rides');
+        },
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
+          NavigationDestination(icon: Icon(Icons.history_outlined), selectedIcon: Icon(Icons.history), label: 'My Rides'),
+          NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
+        ],
+      ),
       appBar: AppBar(
         title: const Text('My Profile'),
         actions: [

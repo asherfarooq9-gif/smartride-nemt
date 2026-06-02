@@ -1,5 +1,16 @@
 ﻿import 'package:flutter/material.dart';
 
+// ── Auth dark theme ───────────────────────────────────────────────────────────
+const Color kAuthDarkBg    = Color(0xFF0A1628);
+const Color kAuthTeal      = Color(0xFF00C4B4);
+const Color kAuthTealDark  = Color(0xFF00897B);
+const Color kWelcomeGradStart = Color(0xFF00695C);
+const Color kWelcomeGradEnd   = Color(0xFF0A1628);
+const Color kDarkFieldBg   = Color(0xFF172136);
+const Color kDarkFieldBorder = Color(0xFF2A3F5F);
+const Color kEmergencyDarkBg = Color(0xFF1A0808);
+
+// ── Patient portal ────────────────────────────────────────────────────────────
 const Color kPatientPrimary = Color(0xFF1565C0);
 const Color kPatientPrimaryLight = Color(0xFF1E88E5);
 const Color kPatientPrimaryDark = Color(0xFF0D47A1);

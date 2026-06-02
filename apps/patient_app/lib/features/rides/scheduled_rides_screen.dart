@@ -12,7 +12,19 @@ class ScheduledRidesScreen extends ConsumerWidget {
     final ridesAsync = ref.watch(ridesProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Ride History')),
+      appBar: AppBar(title: const Text('My Rides')),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: 1,
+        onDestinationSelected: (i) {
+          if (i == 0) context.go('/');
+          if (i == 2) context.go('/profile');
+        },
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
+          NavigationDestination(icon: Icon(Icons.history_outlined), selectedIcon: Icon(Icons.history), label: 'My Rides'),
+          NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
+        ],
+      ),
       body: ridesAsync.when(
         loading: () => const core.LoadingState(message: 'Loading rides...'),
         error: (e, _) => core.ErrorState(
