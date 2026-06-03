@@ -114,12 +114,12 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
+            const Padding(
+              padding: EdgeInsets.fromLTRB(
                   core.kSpaceXL, core.kSpaceMD, core.kSpaceXL, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text('Book a Ride',
                       style: TextStyle(
                           fontSize: 28,
@@ -139,7 +139,7 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Location
-                    _SectionLabel('LOCATIONS'),
+                    const _SectionLabel('LOCATIONS'),
                     const SizedBox(height: core.kSpaceSM),
                     _LocationTile(
                       icon: Icons.my_location,
@@ -159,7 +159,7 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                     const SizedBox(height: core.kSpaceXL),
 
                     // Hospital
-                    _SectionLabel('DESTINATION'),
+                    const _SectionLabel('DESTINATION'),
                     const SizedBox(height: core.kSpaceSM),
                     hospitalsAsync.when(
                       loading: () => const LinearProgressIndicator(),
@@ -174,7 +174,7 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                     const SizedBox(height: core.kSpaceXL),
 
                     // Specialty
-                    _SectionLabel('SPECIALTY / DEPARTMENT (OPTIONAL)'),
+                    const _SectionLabel('SPECIALTY / DEPARTMENT (OPTIONAL)'),
                     const SizedBox(height: core.kSpaceSM),
                     Wrap(
                       spacing: core.kSpaceSM,
@@ -220,7 +220,7 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                     const SizedBox(height: core.kSpaceXL),
 
                     // When
-                    _SectionLabel('WHEN'),
+                    const _SectionLabel('WHEN'),
                     const SizedBox(height: core.kSpaceSM),
                     GestureDetector(
                       onTap: _pickDateTime,
@@ -234,7 +234,7 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.calendar_today,
+                            const Icon(Icons.calendar_today,
                                 color: core.kPatientPrimary, size: 20),
                             const SizedBox(width: core.kSpaceMD),
                             Text(
@@ -357,7 +357,7 @@ class _HospitalPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<core.HospitalResponse>(
-      value: selected,
+      initialValue: selected,
       hint: const Text('Select destination hospital'),
       decoration: const InputDecoration(
         prefixIcon: Icon(Icons.local_hospital_outlined),

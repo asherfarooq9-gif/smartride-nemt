@@ -183,7 +183,7 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
                   ),
                   const SizedBox(height: core.kSpaceSM),
                   Row(children: [
-                    _StatusChip(label: 'ETA: ~8 min', icon: Icons.access_time),
+                    const _StatusChip(label: 'ETA: ~8 min', icon: Icons.access_time),
                     const SizedBox(width: core.kSpaceSM),
                     if (ride?.hospitalId != null)
                       const _StatusChip(label: 'PIMS Hospital', icon: Icons.local_hospital_outlined),
@@ -241,7 +241,7 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
                       ),
                       Container(
                         width: 44, height: 44,
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           color: core.kDriverPrimary,
                           shape: BoxShape.circle,
                         ),

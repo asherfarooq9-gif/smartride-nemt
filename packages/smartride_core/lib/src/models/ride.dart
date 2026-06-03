@@ -127,8 +127,8 @@ class RideResponse {
         hospitalId: json['hospital_id']?.toString(),
         pickupLat: (json['pickup_lat'] as num?)?.toDouble(),
         pickupLng: (json['pickup_lng'] as num?)?.toDouble(),
-        scheduledAt: json['scheduled_at'] as String?,
-        createdAt: json['created_at'] as String?,
+        scheduledAt: (json['scheduled_for'] ?? json['scheduled_at']) as String?,
+        createdAt: (json['requested_at'] ?? json['created_at']) as String?,
         cancelReason: json['cancel_reason'] as String?,
         symptomText: json['symptom_text'] as String?,
       );

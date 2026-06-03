@@ -217,7 +217,7 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
       ),
-      bottomNavigationBar: _PatientBottomNav(currentIndex: 0),
+      bottomNavigationBar: const _PatientBottomNav(currentIndex: 0),
     );
   }
 

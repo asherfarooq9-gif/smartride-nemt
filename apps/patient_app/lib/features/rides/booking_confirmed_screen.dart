@@ -70,10 +70,10 @@ class BookingConfirmedScreen extends StatelessWidget {
                         value:
                             '#SR-${rideId.substring(0, 6).toUpperCase()}'),
                     const Divider(height: core.kSpaceXL),
-                    _DetailRow(
+                    const _DetailRow(
                         label: 'Pickup', value: 'Current location'),
                     const Divider(height: core.kSpaceXL),
-                    _DetailRow(label: 'Ride type', value: 'Standard'),
+                    const _DetailRow(label: 'Ride type', value: 'Standard'),
                   ],
                 ),
               ),

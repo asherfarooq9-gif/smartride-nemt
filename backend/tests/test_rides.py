@@ -105,8 +105,7 @@ async def test_driver_cannot_create_emergency_ride(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_admin_can_list_all_rides(client: AsyncClient):
-    admin_token = await _token(client, "+92300ER0007", "admin")
+async def test_admin_can_list_all_rides(client: AsyncClient, admin_token: str):
     r = await client.get("/api/v1/rides", headers={"Authorization": f"Bearer {admin_token}"})
     assert r.status_code == 200
     assert "items" in r.json()

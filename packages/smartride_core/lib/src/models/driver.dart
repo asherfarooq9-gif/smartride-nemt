@@ -60,8 +60,8 @@ class DriverResponse {
         phone: json['phone'] as String,
         status: DriverStatusX.fromString(json['status'] as String? ?? ''),
         fullName: json['full_name'] as String?,
-        licenseNumber: json['license_number'] as String?,
-        vehicleModel: json['vehicle_model'] as String?,
+        licenseNumber: (json['license_no'] ?? json['license_number']) as String?,
+        vehicleModel: (json['vehicle_type'] ?? json['vehicle_model']) as String?,
         vehiclePlate: json['vehicle_plate'] as String?,
         currentLat: (json['current_lat'] as num?)?.toDouble(),
         currentLng: (json['current_lng'] as num?)?.toDouble(),
@@ -85,10 +85,9 @@ class DriverUpdate {
   final String? vehiclePlate;
 
   Map<String, dynamic> toJson() => {
+        // Backend DriverUpdate accepts only full_name and vehicle_type.
         if (fullName != null) 'full_name': fullName,
-        if (licenseNumber != null) 'license_number': licenseNumber,
-        if (vehicleModel != null) 'vehicle_model': vehicleModel,
-        if (vehiclePlate != null) 'vehicle_plate': vehiclePlate,
+        if (vehicleModel != null) 'vehicle_type': vehicleModel,
       };
 }
 

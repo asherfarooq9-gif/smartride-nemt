@@ -68,7 +68,8 @@ Future<void> updateDriverStatus(DriverStatus status) async {
 }
 
 Future<void> updateDriverLocation(double lat, double lng) async {
-  await _c.patch('/api/v1/drivers/location', {'lat': lat, 'lng': lng});
+  // Backend defines POST /drivers/location (not PATCH).
+  await _c.post('/api/v1/drivers/location', {'lat': lat, 'lng': lng});
 }
 
 Future<DriverResponse> updateDriverMe(DriverUpdate update) async {
@@ -98,7 +99,8 @@ Future<List<RideResponse>> getDriverPendingRides() async {
 }
 
 Future<RideDetailResponse> getRideDetail(String rideId) async {
-  final data = await _c.get('/api/v1/rides/$rideId');
+  // /detail returns nested patient/driver/hospital/triage objects.
+  final data = await _c.get('/api/v1/rides/$rideId/detail');
   return RideDetailResponse.fromJson(data);
 }
 

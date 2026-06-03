@@ -197,7 +197,7 @@ class _SymptomScreenState extends ConsumerState<SymptomScreen> {
                           focusedBorder: OutlineInputBorder(
                             borderRadius:
                                 BorderRadius.circular(core.kRadiusMD),
-                            borderSide: BorderSide(
+                            borderSide: const BorderSide(
                                 color: core.kEmergencyRed, width: 1.5),
                           ),
                         ),
@@ -223,7 +223,7 @@ class _SymptomScreenState extends ConsumerState<SymptomScreen> {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(core.kRadiusMD),
-                            borderSide: BorderSide(color: core.kEmergencyRed, width: 1.5),
+                            borderSide: const BorderSide(color: core.kEmergencyRed, width: 1.5),
                           ),
                         ),
                       ),

@@ -120,13 +120,18 @@ async def health():
 async def ready():
     db_ok = False
     redis_ok = False
-    async with engine.connect() as conn:
-        try:
+    # Wrap the whole connection attempt: a pool/connection failure should report
+    # "degraded" (503), never crash the endpoint with a 500.
+    try:
+        async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
             db_ok = True
-        except Exception:
-            pass
-    redis_ok = await ping_redis()
+    except Exception:
+        db_ok = False
+    try:
+        redis_ok = await ping_redis()
+    except Exception:
+        redis_ok = False
     status_code = 200 if (db_ok and redis_ok) else 503
     return JSONResponse(
         status_code=status_code,
