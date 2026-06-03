@@ -68,12 +68,63 @@ class ApiClient {
   }
 
   AppError _mapError(DioException e) {
-    if (e.response?.statusCode == 401) return const AuthExpiredError();
+    if (e.response?.statusCode == 401) {
+      // Read the backend detail first — login failures return "Invalid credentials"
+      // which should NOT be shown as "Session expired".
+      final detail = (e.response?.data is Map)
+          ? (e.response!.data as Map)['detail']?.toString()
+          : null;
+      if (detail != null &&
+          !detail.toLowerCase().contains('expired') &&
+          !detail.toLowerCase().contains('invalid or expired')) {
+        return AppError(detail, statusCode: 401);
+      }
+      return const AuthExpiredError();
+    }
+
+    switch (e.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+        return const AppError(
+          'Could not reach the server. Please check your internet connection and try again.',
+          statusCode: null,
+        );
+      case DioExceptionType.connectionError:
+        return const AppError(
+          'Unable to connect to server. Make sure the backend is running.',
+          statusCode: null,
+        );
+      case DioExceptionType.badCertificate:
+        return const AppError(
+          'Secure connection failed. Please contact support.',
+          statusCode: null,
+        );
+      default:
+        break;
+    }
+
+    if (e.response?.statusCode == 409) {
+      final detail = (e.response?.data is Map)
+          ? (e.response!.data as Map)['detail']?.toString()
+          : null;
+      return AppError(detail ?? 'Conflict — this action could not be completed.',
+          statusCode: 409);
+    }
+
+    if (e.response?.statusCode == 403) {
+      final detail = (e.response?.data is Map)
+          ? (e.response!.data as Map)['detail']?.toString()
+          : null;
+      return AppError(detail ?? 'You do not have permission to do this.',
+          statusCode: 403);
+    }
+
     final msg = (e.response?.data is Map)
         ? (e.response!.data as Map)['detail']?.toString() ??
             e.message ??
-            'Unknown error'
-        : e.message ?? 'Unknown error';
+            'Something went wrong. Please try again.'
+        : e.message ?? 'Something went wrong. Please try again.';
     return AppError(msg, statusCode: e.response?.statusCode);
   }
 }
