@@ -15,4 +15,5 @@ geoalchemy2==0.15.1
 slowapi==0.1.9
 pytest==8.2.0
 pytest-asyncio==0.23.6
+pytest-cov==5.0.0
 prometheus-fastapi-instrumentator==6.1.0

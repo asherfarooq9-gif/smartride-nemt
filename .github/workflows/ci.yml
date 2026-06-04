@@ -130,6 +130,9 @@ jobs:
           cd packages/smartride_core
           flutter test --reporter=compact || true
 
+      - name: Create stub .env for CI build
+        run: touch apps/patient_app/.env
+
       - name: Create stub google-services.json for CI build
         run: |
           cat > apps/patient_app/android/app/google-services.json << 'EOF'
