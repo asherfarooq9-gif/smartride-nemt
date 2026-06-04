@@ -17,7 +17,9 @@ async def get_driver_by_user(user: User, db: AsyncSession) -> Driver:
     return driver
 
 
-async def update_driver_profile(driver: Driver, body: DriverUpdate, db: AsyncSession) -> Driver:
+async def update_driver_profile(
+    driver: Driver, body: DriverUpdate, db: AsyncSession
+) -> Driver:
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(driver, field, value)
     await db.commit()
@@ -25,14 +27,18 @@ async def update_driver_profile(driver: Driver, body: DriverUpdate, db: AsyncSes
     return driver
 
 
-async def update_driver_status(driver: Driver, body: DriverStatusUpdate, db: AsyncSession) -> Driver:
+async def update_driver_status(
+    driver: Driver, body: DriverStatusUpdate, db: AsyncSession
+) -> Driver:
     driver.status = body.status
     await db.commit()
     await db.refresh(driver)
     return driver
 
 
-async def update_driver_location(driver: Driver, body: LocationUpdate, db: AsyncSession) -> Driver:
+async def update_driver_location(
+    driver: Driver, body: LocationUpdate, db: AsyncSession
+) -> Driver:
     driver.current_lat = body.lat
     driver.current_lng = body.lng
     driver.last_seen_at = datetime.now(timezone.utc)
@@ -69,11 +75,16 @@ async def list_drivers(
     if conditions:
         base_q = base_q.where(and_(*conditions))
 
-    total = (await db.execute(select(func.count()).select_from(base_q.subquery()))).scalar()
-    rows = (await db.execute(
-        base_q.order_by(Driver.created_at.desc())
-        .offset((page - 1) * page_size).limit(page_size)
-    )).all()
+    total = (
+        await db.execute(select(func.count()).select_from(base_q.subquery()))
+    ).scalar()
+    rows = (
+        await db.execute(
+            base_q.order_by(Driver.created_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+    ).all()
     return list(rows), total
 
 
@@ -89,7 +100,9 @@ async def get_driver_by_id(driver_id: str, db: AsyncSession) -> tuple[Driver, Us
     return row
 
 
-async def set_driver_verified(driver_id: str, is_verified: bool, db: AsyncSession) -> tuple[Driver, User]:
+async def set_driver_verified(
+    driver_id: str, is_verified: bool, db: AsyncSession
+) -> tuple[Driver, User]:
     driver, user = await get_driver_by_id(driver_id, db)
     driver.is_verified = is_verified
     await db.commit()

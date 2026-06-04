@@ -57,7 +57,9 @@ async def test_register_driver_missing_fields(client: AsyncClient):
 async def test_login_success(client: AsyncClient):
     phone = "+92-300-3333333"
     await client.post("/api/v1/auth/register", json={**PATIENT_PAYLOAD, "phone": phone})
-    resp = await client.post("/api/v1/auth/login", json={"phone": phone, "password": "secret123"})
+    resp = await client.post(
+        "/api/v1/auth/login", json={"phone": phone, "password": "secret123"}
+    )
     assert resp.status_code == 200
     assert resp.json()["role"] == "patient"
 
@@ -66,13 +68,17 @@ async def test_login_success(client: AsyncClient):
 async def test_login_wrong_password(client: AsyncClient):
     phone = "+92-300-4444444"
     await client.post("/api/v1/auth/register", json={**PATIENT_PAYLOAD, "phone": phone})
-    resp = await client.post("/api/v1/auth/login", json={"phone": phone, "password": "wrongpass"})
+    resp = await client.post(
+        "/api/v1/auth/login", json={"phone": phone, "password": "wrongpass"}
+    )
     assert resp.status_code == 401
 
 
 @pytest.mark.asyncio
 async def test_login_unknown_phone(client: AsyncClient):
-    resp = await client.post("/api/v1/auth/login", json={"phone": "+92-000-0000000", "password": "x"})
+    resp = await client.post(
+        "/api/v1/auth/login", json={"phone": "+92-000-0000000", "password": "x"}
+    )
     assert resp.status_code == 401
 
 
@@ -86,7 +92,9 @@ async def test_short_password_rejected(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_login_wrong_password_returns_standard_error_shape(client: AsyncClient):
     phone = "+92-000-0000000"
-    resp = await client.post("/api/v1/auth/login", json={"phone": phone, "password": "wrong"})
+    resp = await client.post(
+        "/api/v1/auth/login", json={"phone": phone, "password": "wrong"}
+    )
     assert resp.status_code == 401
     body = resp.json()
     assert "detail" in body
@@ -95,12 +103,15 @@ async def test_login_wrong_password_returns_standard_error_shape(client: AsyncCl
 
 @pytest.mark.asyncio
 async def test_refresh_returns_new_token(client):
-    resp = await client.post("/api/v1/auth/register", json={
-        "phone": "+92300000099",
-        "password": "Passw0rd!",
-        "role": "patient",
-        "full_name": "Refresh User",
-    })
+    resp = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "phone": "+92300000099",
+            "password": "Passw0rd!",
+            "role": "patient",
+            "full_name": "Refresh User",
+        },
+    )
     assert resp.status_code == 201
     old_token = resp.json()["access_token"]
 

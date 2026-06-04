@@ -3,6 +3,7 @@ WebSocket location manager.
 Uses Redis pub/sub so multiple backend instances can forward driver GPS to
 all connected patients watching the same ride.
 """
+
 import json
 from typing import Optional
 import redis.asyncio as aioredis

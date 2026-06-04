@@ -8,18 +8,32 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.models import (
-    Ride, Patient, Driver, User, TriageEvent,
-    RideType, RideStatus, DriverStatus,
+    Ride,
+    Patient,
+    Driver,
+    User,
+    TriageEvent,
+    RideType,
+    RideStatus,
+    DriverStatus,
 )
-from app.schemas.rides import EmergencyRideRequest, ScheduledRideRequest, RideStatusUpdate
+from app.schemas.rides import (
+    EmergencyRideRequest,
+    ScheduledRideRequest,
+    RideStatusUpdate,
+)
 
 
 def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     R = 6371.0
     dlat = radians(lat2 - lat1)
     dlng = radians(lng2 - lng1)
-    a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlng / 2) ** 2
+    a = (
+        sin(dlat / 2) ** 2
+        + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlng / 2) ** 2
+    )
     return R * 2 * atan2(sqrt(a), sqrt(1 - a))
+
 
 DRIVER_TRANSITIONS = {
     RideStatus.driver_assigned: RideStatus.driver_en_route,
@@ -45,7 +59,9 @@ async def get_driver_by_user(user: User, db: AsyncSession) -> Driver:
     return driver
 
 
-async def create_emergency_ride(patient: Patient, body: EmergencyRideRequest, db: AsyncSession) -> Ride:
+async def create_emergency_ride(
+    patient: Patient, body: EmergencyRideRequest, db: AsyncSession
+) -> Ride:
     ride = Ride(
         patient_id=patient.id,
         ride_type=RideType.emergency,
@@ -60,7 +76,9 @@ async def create_emergency_ride(patient: Patient, body: EmergencyRideRequest, db
     return ride
 
 
-async def create_scheduled_ride(patient: Patient, body: ScheduledRideRequest, db: AsyncSession) -> Ride:
+async def create_scheduled_ride(
+    patient: Patient, body: ScheduledRideRequest, db: AsyncSession
+) -> Ride:
     ride = Ride(
         patient_id=patient.id,
         ride_type=RideType.scheduled,
@@ -110,12 +128,22 @@ async def get_my_rides(
         driver = await get_driver_by_user(user, db)
         condition = Ride.driver_id == driver.id
 
-    total = (await db.execute(select(func.count()).select_from(Ride).where(condition))).scalar()
-    rows = (await db.execute(
-        select(Ride).where(condition)
-        .order_by(Ride.requested_at.desc())
-        .offset((page - 1) * page_size).limit(page_size)
-    )).scalars().all()
+    total = (
+        await db.execute(select(func.count()).select_from(Ride).where(condition))
+    ).scalar()
+    rows = (
+        (
+            await db.execute(
+                select(Ride)
+                .where(condition)
+                .order_by(Ride.requested_at.desc())
+                .offset((page - 1) * page_size)
+                .limit(page_size)
+            )
+        )
+        .scalars()
+        .all()
+    )
     return list(rows), total
 
 
@@ -148,7 +176,9 @@ async def update_ride_status(
             ride.cancelled_at = datetime.now(timezone.utc)
             driver.status = DriverStatus.available
         elif new_status != allowed_next:
-            raise HTTPException(400, f"Cannot transition from {ride.status} to {new_status}")
+            raise HTTPException(
+                400, f"Cannot transition from {ride.status} to {new_status}"
+            )
         else:
             ride.status = new_status
             now = datetime.now(timezone.utc)
@@ -188,16 +218,26 @@ async def update_ride_status(
 
 async def get_pending_rides(driver: Driver, db: AsyncSession) -> list[Ride]:
     """Unassigned pending rides, sorted by distance to driver (nearest first)."""
-    rows = (await db.execute(
-        select(Ride)
-        .where(and_(Ride.status == RideStatus.pending, Ride.driver_id.is_(None)))
-        .order_by(Ride.requested_at.asc())
-    )).scalars().all()
+    rows = (
+        (
+            await db.execute(
+                select(Ride)
+                .where(
+                    and_(Ride.status == RideStatus.pending, Ride.driver_id.is_(None))
+                )
+                .order_by(Ride.requested_at.asc())
+            )
+        )
+        .scalars()
+        .all()
+    )
 
     if driver.current_lat is not None and driver.current_lng is not None:
         rows = sorted(
             rows,
-            key=lambda r: _haversine_km(driver.current_lat, driver.current_lng, r.pickup_lat, r.pickup_lng),
+            key=lambda r: _haversine_km(
+                driver.current_lat, driver.current_lng, r.pickup_lat, r.pickup_lng
+            ),
         )
     return list(rows)
 
@@ -206,11 +246,13 @@ async def accept_ride(ride_id: str, driver: Driver, db: AsyncSession) -> Ride:
     """Atomically assign a driver to a ride; raises 409 if already taken."""
     result = await db.execute(
         update(Ride)
-        .where(and_(
-            Ride.id == ride_id,
-            Ride.status == RideStatus.pending,
-            Ride.driver_id.is_(None),
-        ))
+        .where(
+            and_(
+                Ride.id == ride_id,
+                Ride.status == RideStatus.pending,
+                Ride.driver_id.is_(None),
+            )
+        )
         .values(
             driver_id=driver.id,
             status=RideStatus.driver_assigned,
@@ -222,7 +264,9 @@ async def accept_ride(ride_id: str, driver: Driver, db: AsyncSession) -> Ride:
 
     if assigned_id is None:
         # Either ride doesn't exist or was already taken
-        check = (await db.execute(select(Ride).where(Ride.id == ride_id))).scalar_one_or_none()
+        check = (
+            await db.execute(select(Ride).where(Ride.id == ride_id))
+        ).scalar_one_or_none()
         if check is None:
             raise HTTPException(404, "Ride not found")
         raise HTTPException(409, "Ride already taken by another driver")
@@ -260,9 +304,18 @@ async def list_rides_admin(
     if conditions:
         base_q = base_q.where(and_(*conditions))
 
-    total = (await db.execute(select(func.count()).select_from(base_q.subquery()))).scalar()
-    rows = (await db.execute(
-        base_q.order_by(Ride.requested_at.desc())
-        .offset((page - 1) * page_size).limit(page_size)
-    )).scalars().all()
+    total = (
+        await db.execute(select(func.count()).select_from(base_q.subquery()))
+    ).scalar()
+    rows = (
+        (
+            await db.execute(
+                base_q.order_by(Ride.requested_at.desc())
+                .offset((page - 1) * page_size)
+                .limit(page_size)
+            )
+        )
+        .scalars()
+        .all()
+    )
     return list(rows), total

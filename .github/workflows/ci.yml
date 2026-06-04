@@ -130,6 +130,40 @@ jobs:
           cd packages/smartride_core
           flutter test --reporter=compact || true
 
+      - name: Create stub google-services.json for CI build
+        run: |
+          cat > apps/patient_app/android/app/google-services.json << 'EOF'
+          {
+            "project_info": {
+              "project_number": "000000000000",
+              "project_id": "smartride-nemt-ci",
+              "storage_bucket": "smartride-nemt-ci.appspot.com"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:000000000000:android:0000000000000000",
+                  "android_client_info": {
+                    "package_name": "com.smartride.patient_app"
+                  }
+                },
+                "oauth_client": [],
+                "api_key": [
+                  {
+                    "current_key": "PLACEHOLDER_CI_ONLY"
+                  }
+                ],
+                "services": {
+                  "appinvite_service": {
+                    "other_platform_oauth_client": []
+                  }
+                }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          EOF
+
       - name: SmartRide app analyze + test + build APK
         run: |
           cd apps/patient_app

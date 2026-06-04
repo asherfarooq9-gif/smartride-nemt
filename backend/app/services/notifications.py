@@ -2,6 +2,7 @@
 Notification service: Twilio SMS + HL7 FHIR R4 hospital pre-alerts.
 Falls back gracefully when credentials are absent.
 """
+
 import httpx
 from datetime import datetime, timezone
 
@@ -14,9 +15,10 @@ def _send_sms(to: str, body: str) -> None:
         return
     try:
         from twilio.rest import Client
-        msg = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN).messages.create(
-            body=body, from_=settings.TWILIO_FROM_NUMBER, to=to
-        )
+
+        msg = Client(
+            settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN
+        ).messages.create(body=body, from_=settings.TWILIO_FROM_NUMBER, to=to)
         print(f"[SMS sent] SID={msg.sid}")
     except Exception as exc:
         print(f"[SMS error] {exc}")
@@ -71,8 +73,12 @@ def _build_fhir_bundle(*, ride, triage: dict, patient) -> dict:
                     "status": "in-progress",
                     "class": {"code": "EMER", "display": "emergency"},
                     "subject": {"reference": f"Patient/{patient.id}"},
-                    "reasonCode": [{"text": triage.get("specialty", "general_emergency")}],
-                    "meta": {"tag": [{"code": f"severity-{triage.get('severity', '3')}"}]},
+                    "reasonCode": [
+                        {"text": triage.get("specialty", "general_emergency")}
+                    ],
+                    "meta": {
+                        "tag": [{"code": f"severity-{triage.get('severity', '3')}"}]
+                    },
                 }
             }
         ],

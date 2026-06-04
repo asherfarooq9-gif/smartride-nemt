@@ -11,7 +11,9 @@ class Settings(BaseSettings):
     JWT_EXPIRE_MINUTES: int = 60
 
     # Database
-    DATABASE_URL: str = "postgresql+asyncpg://smartride:password@postgres:5432/smartride"
+    DATABASE_URL: str = (
+        "postgresql+asyncpg://smartride:password@postgres:5432/smartride"
+    )
 
     # Redis
     REDIS_URL: str = "redis://redis:6379/0"

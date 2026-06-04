@@ -5,6 +5,7 @@ Revises:
 Create Date: 2026-05-21
 
 """
+
 from typing import Sequence, Union
 from alembic import op
 
@@ -15,7 +16,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.execute('CREATE EXTENSION IF NOT EXISTS postgis')
+    op.execute("CREATE EXTENSION IF NOT EXISTS postgis")
     op.execute('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')
 
     op.execute("CREATE TYPE user_role    AS ENUM ('patient','driver','admin')")
@@ -189,7 +190,9 @@ def upgrade() -> None:
             UNIQUE(snapshot_hour, city, zone_id)
         )
     """)
-    op.execute("CREATE INDEX idx_analytics_hour ON analytics_hourly(snapshot_hour DESC)")
+    op.execute(
+        "CREATE INDEX idx_analytics_hour ON analytics_hourly(snapshot_hour DESC)"
+    )
 
     op.execute("""
         CREATE OR REPLACE FUNCTION sync_driver_location()

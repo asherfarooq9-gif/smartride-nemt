@@ -13,11 +13,13 @@ logger = logging.getLogger("smartride.tasks")
 )
 def send_sms_task(self, to: str, body: str):
     from app.core.config import settings
+
     if not settings.TWILIO_ACCOUNT_SID:
         logger.info("Twilio not configured — skipping SMS to %s", to)
         return
     try:
         from twilio.rest import Client
+
         client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
         client.messages.create(to=to, from_=settings.TWILIO_FROM_NUMBER, body=body)
         logger.info("SMS sent to %s", to)

@@ -8,9 +8,12 @@ Scoring formula:
   specialty_score = 1.0 if required_specialty in h.specialties else 0.4
   outcome_score   = h.outcome_score (default 0.5)
 """
+
 import pytest
 from app.services.hospital_matching import (
-    HospitalCandidate, MatchResult, match_hospitals, haversine_km
+    HospitalCandidate,
+    match_hospitals,
+    haversine_km,
 )
 
 # ── reference location: PIMS Islamabad ────────────────────────────────────────
@@ -62,7 +65,9 @@ def test_single_candidate_returns_match():
 def test_specialty_filter_excludes_wrong_specialty():
     h_wrong = make_h("B", 33.7200, 73.0400, specialties=["neurology"])
     h_right = make_h("C", 33.7250, 73.0450, specialties=["cardiology"])
-    results = match_hospitals(PATIENT_LAT, PATIENT_LNG, "cardiology", [h_wrong, h_right])
+    results = match_hospitals(
+        PATIENT_LAT, PATIENT_LNG, "cardiology", [h_wrong, h_right]
+    )
     ids = {r.hospital_id for r in results}
     assert "B" not in ids
     assert "C" in ids
@@ -75,7 +80,9 @@ def test_distance_filter_excludes_far_hospital():
     # ~40 km away (Rawalpindi city centre ~20 km; Lahore ~300 km)
     far = make_h("D", 31.5497, 74.3436, specialties=["cardiology"])  # Lahore, ~250 km
     near = make_h("E", 33.7100, 73.0500, specialties=["cardiology"])
-    results = match_hospitals(PATIENT_LAT, PATIENT_LNG, "cardiology", [far, near], max_radius_km=30)
+    results = match_hospitals(
+        PATIENT_LAT, PATIENT_LNG, "cardiology", [far, near], max_radius_km=30
+    )
     ids = {r.hospital_id for r in results}
     assert "D" not in ids
     assert "E" in ids
@@ -85,7 +92,9 @@ def test_distance_filter_excludes_far_hospital():
 # Case 4: full ED excluded
 # ─────────────────────────────────────────────────────────────────────────────
 def test_full_ed_excluded():
-    full = make_h("F", 33.7200, 73.0400, specialties=["cardiology"], capacity=50, load=50)
+    full = make_h(
+        "F", 33.7200, 73.0400, specialties=["cardiology"], capacity=50, load=50
+    )
     ok = make_h("G", 33.7250, 73.0450, specialties=["cardiology"], capacity=50, load=10)
     results = match_hospitals(PATIENT_LAT, PATIENT_LNG, "cardiology", [full, ok])
     ids = {r.hospital_id for r in results}
@@ -106,25 +115,19 @@ def test_full_ed_excluded():
 # ─────────────────────────────────────────────────────────────────────────────
 def test_weighted_score_ranking_closer_busy_vs_farther_empty():
     # place hospitals at known haversine distances: ~2 km north, ~8 km north
-    h1 = make_h("H1", 33.7394, 73.0433, specialties=["cardiology"], capacity=100, load=80)  # ~2 km
-    h2 = make_h("H2", 33.7935, 73.0433, specialties=["cardiology"], capacity=100, load=10)  # ~8 km
+    h1 = make_h(
+        "H1", 33.7394, 73.0433, specialties=["cardiology"], capacity=100, load=80
+    )  # ~2 km
+    h2 = make_h(
+        "H2", 33.7935, 73.0433, specialties=["cardiology"], capacity=100, load=10
+    )  # ~8 km
 
     d1 = haversine_km(PATIENT_LAT, PATIENT_LNG, h1.lat, h1.lng)
     d2 = haversine_km(PATIENT_LAT, PATIENT_LNG, h2.lat, h2.lng)
     max_d = max(d1, d2)
 
-    score1 = (
-        0.40 * (1 - d1 / max_d) +
-        0.30 * (1 - 80 / 100) +
-        0.20 * 1.0 +
-        0.10 * 0.5
-    )
-    score2 = (
-        0.40 * (1 - d2 / max_d) +
-        0.30 * (1 - 10 / 100) +
-        0.20 * 1.0 +
-        0.10 * 0.5
-    )
+    score1 = 0.40 * (1 - d1 / max_d) + 0.30 * (1 - 80 / 100) + 0.20 * 1.0 + 0.10 * 0.5
+    score2 = 0.40 * (1 - d2 / max_d) + 0.30 * (1 - 10 / 100) + 0.20 * 1.0 + 0.10 * 0.5
 
     results = match_hospitals(PATIENT_LAT, PATIENT_LNG, "cardiology", [h1, h2])
     assert len(results) == 2
@@ -138,7 +141,9 @@ def test_weighted_score_ranking_closer_busy_vs_farther_empty():
 def test_general_emergency_bypasses_specialty_filter():
     h_neuro = make_h("J", 33.7200, 73.0400, specialties=["neurology"])
     h_cardio = make_h("K", 33.7250, 73.0450, specialties=["cardiology"])
-    results = match_hospitals(PATIENT_LAT, PATIENT_LNG, "general_emergency", [h_neuro, h_cardio])
+    results = match_hospitals(
+        PATIENT_LAT, PATIENT_LNG, "general_emergency", [h_neuro, h_cardio]
+    )
     ids = {r.hospital_id for r in results}
     assert "J" in ids
     assert "K" in ids
@@ -163,7 +168,9 @@ def test_top_n_limits_results():
         make_h(f"N{i}", 33.7200 + i * 0.002, 73.0400, specialties=["cardiology"])
         for i in range(5)
     ]
-    results = match_hospitals(PATIENT_LAT, PATIENT_LNG, "cardiology", hospitals, top_n=3)
+    results = match_hospitals(
+        PATIENT_LAT, PATIENT_LNG, "cardiology", hospitals, top_n=3
+    )
     assert len(results) == 3
 
 
@@ -172,5 +179,7 @@ def test_top_n_limits_results():
 # ─────────────────────────────────────────────────────────────────────────────
 def test_empty_when_all_out_of_radius():
     far = make_h("Z", 31.5497, 74.3436, specialties=["cardiology"])  # Lahore ~250 km
-    results = match_hospitals(PATIENT_LAT, PATIENT_LNG, "cardiology", [far], max_radius_km=30)
+    results = match_hospitals(
+        PATIENT_LAT, PATIENT_LNG, "cardiology", [far], max_radius_km=30
+    )
     assert results == []

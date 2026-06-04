@@ -3,6 +3,7 @@ Emergency Dispatch Service
 Orchestrates: triage → hospital matching → driver dispatch → family SMS → hospital pre-alert
 Target: entire pipeline < 60 seconds
 """
+
 import asyncio
 import time
 import httpx
@@ -17,9 +18,17 @@ from app.services.notifications import send_family_sms, send_hospital_alert
 
 
 CRITICAL_KEYWORDS = {
-    "chest pain", "heart attack", "not breathing", "stroke",
-    "unconscious", "unresponsive", "seizure", "severe bleeding",
-    "cardiac arrest", "overdose", "choking",
+    "chest pain",
+    "heart attack",
+    "not breathing",
+    "stroke",
+    "unconscious",
+    "unresponsive",
+    "seizure",
+    "severe bleeding",
+    "cardiac arrest",
+    "overdose",
+    "choking",
 }
 
 
@@ -49,12 +58,14 @@ async def call_triage_service(symptom_text: str) -> dict:
             }
 
 
-async def find_nearest_available_driver(db: AsyncSession, patient_lat: float, patient_lng: float) -> Optional[Driver]:
+async def find_nearest_available_driver(
+    db: AsyncSession, patient_lat: float, patient_lng: float
+) -> Optional[Driver]:
     """Fetch available verified drivers from DB, sort by proximity."""
     result = await db.execute(
         select(Driver).where(
             Driver.status == DriverStatus.available,
-            Driver.is_verified == True,
+            Driver.is_verified,
             Driver.current_lat.is_not(None),
         )
     )
@@ -63,6 +74,7 @@ async def find_nearest_available_driver(db: AsyncSession, patient_lat: float, pa
         return None
 
     from app.services.hospital_matching import haversine_km
+
     drivers_with_dist = [
         (d, haversine_km(patient_lat, patient_lng, d.current_lat, d.current_lng))
         for d in drivers
@@ -98,8 +110,10 @@ async def dispatch_emergency(
     # ── STEP 2: hospital matching ──────────────────────────────────────────
     candidates = [
         HospitalCandidate(
-            id=str(h.id), name=h.name,
-            lat=h.lat, lng=h.lng,
+            id=str(h.id),
+            name=h.name,
+            lat=h.lat,
+            lng=h.lng,
             specialties=h.specialties,
             ed_capacity=h.ed_capacity,
             ed_current_load=h.ed_current_load,
@@ -128,6 +142,7 @@ async def dispatch_emergency(
 
     # ── STEP 4: update ride + driver status ───────────────────────────────
     from datetime import datetime, timezone
+
     now = datetime.now(timezone.utc)
 
     await db.execute(
@@ -141,16 +156,21 @@ async def dispatch_emergency(
         )
     )
     await db.execute(
-        update(Driver)
-        .where(Driver.id == driver.id)
-        .values(status=DriverStatus.busy)
+        update(Driver).where(Driver.id == driver.id).values(status=DriverStatus.busy)
     )
     await db.commit()
 
     # ── STEP 5: parallel — family SMS + hospital pre-alert ─────────────────
     await asyncio.gather(
-        send_family_sms(patient=patient, ride=ride, driver=driver, hospital_name=matches[0].hospital_name),
-        send_hospital_alert(ride=ride, triage=triage_result, hospital=matches[0], patient=patient),
+        send_family_sms(
+            patient=patient,
+            ride=ride,
+            driver=driver,
+            hospital_name=matches[0].hospital_name,
+        ),
+        send_hospital_alert(
+            ride=ride, triage=triage_result, hospital=matches[0], patient=patient
+        ),
         return_exceptions=True,
     )
 
@@ -172,7 +192,7 @@ async def dispatch_emergency(
 
 
 async def load_active_hospitals(db: AsyncSession):
-    result = await db.execute(select(Hospital).where(Hospital.is_active == True))
+    result = await db.execute(select(Hospital).where(Hospital.is_active))
     return result.scalars().all()
 
 

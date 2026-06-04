@@ -2,13 +2,20 @@
 Rides router integration tests — HTTP layer only (no dispatch side-effects).
 Dispatch background task is patched to a no-op.
 """
+
 import pytest
 from unittest.mock import AsyncMock, patch
 from httpx import AsyncClient
 
 
 async def _token(client: AsyncClient, phone: str, role: str, **extra) -> str:
-    payload = {"phone": phone, "password": "pass1234", "role": role, "full_name": "Test", **extra}
+    payload = {
+        "phone": phone,
+        "password": "pass1234",
+        "role": role,
+        "full_name": "Test",
+        **extra,
+    }
     r = await client.post("/api/v1/auth/register", json=payload)
     assert r.status_code == 201, r.text
     return r.json()["access_token"]
@@ -55,7 +62,9 @@ async def test_get_ride_by_patient_owner(client: AsyncClient):
             headers={"Authorization": f"Bearer {token}"},
         )
     ride_id = create.json()["id"]
-    r = await client.get(f"/api/v1/rides/{ride_id}", headers={"Authorization": f"Bearer {token}"})
+    r = await client.get(
+        f"/api/v1/rides/{ride_id}", headers={"Authorization": f"Bearer {token}"}
+    )
     assert r.status_code == 200
     assert r.json()["id"] == ride_id
 
@@ -71,7 +80,9 @@ async def test_get_ride_forbidden_for_other_patient(client: AsyncClient):
             headers={"Authorization": f"Bearer {token1}"},
         )
     ride_id = create.json()["id"]
-    r = await client.get(f"/api/v1/rides/{ride_id}", headers={"Authorization": f"Bearer {token2}"})
+    r = await client.get(
+        f"/api/v1/rides/{ride_id}", headers={"Authorization": f"Bearer {token2}"}
+    )
     assert r.status_code == 403
 
 
@@ -84,7 +95,9 @@ async def test_my_rides_returns_only_own(client: AsyncClient):
             json={**PICKUP, "symptom_text": "pain"},
             headers={"Authorization": f"Bearer {token}"},
         )
-    r = await client.get("/api/v1/rides/mine", headers={"Authorization": f"Bearer {token}"})
+    r = await client.get(
+        "/api/v1/rides/mine", headers={"Authorization": f"Bearer {token}"}
+    )
     assert r.status_code == 200
     assert r.json()["total"] >= 1
 
@@ -92,8 +105,12 @@ async def test_my_rides_returns_only_own(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_driver_cannot_create_emergency_ride(client: AsyncClient):
     token = await _token(
-        client, "+92300ER0006", "driver",
-        license_no="DL-ERTEST", vehicle_plate="ER-TEST", vehicle_type="van"
+        client,
+        "+92300ER0006",
+        "driver",
+        license_no="DL-ERTEST",
+        vehicle_plate="ER-TEST",
+        vehicle_type="van",
     )
     with patch("app.routers.rides._run_dispatch", new=AsyncMock()):
         r = await client.post(
@@ -106,6 +123,8 @@ async def test_driver_cannot_create_emergency_ride(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_admin_can_list_all_rides(client: AsyncClient, admin_token: str):
-    r = await client.get("/api/v1/rides", headers={"Authorization": f"Bearer {admin_token}"})
+    r = await client.get(
+        "/api/v1/rides", headers={"Authorization": f"Bearer {admin_token}"}
+    )
     assert r.status_code == 200
     assert "items" in r.json()

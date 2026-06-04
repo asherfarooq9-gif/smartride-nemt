@@ -73,11 +73,14 @@ def require_role(*roles: str):
         # Membership check: a multi-role account passes if it HOLDS any required
         # role, regardless of which portal is currently active.
         if not (set(roles) & current_user.held_roles):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions"
+            )
         return current_user
+
     return checker
 
 
 require_patient = require_role("patient")
-require_driver  = require_role("driver")
-require_admin   = require_role("admin")
+require_driver = require_role("driver")
+require_admin = require_role("admin")

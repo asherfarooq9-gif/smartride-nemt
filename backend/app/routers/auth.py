@@ -45,21 +45,31 @@ def _make_token(user: User, roles: list[str], active_role: str) -> str:
 
 async def _held_roles(db: AsyncSession, user_id) -> list[str]:
     """Authoritative role membership read straight from user_roles."""
-    res = await db.execute(select(UserRoleLink.role).where(UserRoleLink.user_id == user_id))
+    res = await db.execute(
+        select(UserRoleLink.role).where(UserRoleLink.user_id == user_id)
+    )
     return sorted(r.value for r in res.scalars().all())
 
 
 def _require_driver_fields(body) -> None:
     for field in _DRIVER_FIELDS:
         if not getattr(body, field):
-            raise HTTPException(status_code=422, detail=f"{field} is required for drivers")
+            raise HTTPException(
+                status_code=422, detail=f"{field} is required for drivers"
+            )
 
 
-@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED
+)
 @limiter.limit("5/minute")
-async def register(request: Request, body: RegisterRequest, db: AsyncSession = Depends(get_db)):
+async def register(
+    request: Request, body: RegisterRequest, db: AsyncSession = Depends(get_db)
+):
     if UserRole.admin in body.roles:
-        raise HTTPException(status_code=403, detail="Admin accounts cannot be self-registered")
+        raise HTTPException(
+            status_code=403, detail="Admin accounts cannot be self-registered"
+        )
 
     result = await db.execute(select(User).where(User.phone == body.phone))
     if result.scalar_one_or_none():
@@ -70,7 +80,9 @@ async def register(request: Request, body: RegisterRequest, db: AsyncSession = D
 
     active = body.active_role or body.roles[0]
     if active not in body.roles:
-        raise HTTPException(status_code=422, detail="active_role must be one of the requested roles")
+        raise HTTPException(
+            status_code=422, detail="active_role must be one of the requested roles"
+        )
 
     user = User(
         phone=body.phone,
@@ -85,13 +97,15 @@ async def register(request: Request, body: RegisterRequest, db: AsyncSession = D
         if role == UserRole.patient:
             db.add(Patient(user_id=user.id, full_name=body.full_name))
         elif role == UserRole.driver:
-            db.add(Driver(
-                user_id=user.id,
-                full_name=body.full_name,
-                license_no=body.license_no,
-                vehicle_plate=body.vehicle_plate,
-                vehicle_type=body.vehicle_type,
-            ))
+            db.add(
+                Driver(
+                    user_id=user.id,
+                    full_name=body.full_name,
+                    license_no=body.license_no,
+                    vehicle_plate=body.vehicle_plate,
+                    vehicle_type=body.vehicle_type,
+                )
+            )
 
     await db.commit()
 
@@ -107,7 +121,9 @@ async def register(request: Request, body: RegisterRequest, db: AsyncSession = D
 
 @router.post("/login", response_model=TokenResponse)
 @limiter.limit("10/minute")
-async def login(request: Request, body: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(
+    request: Request, body: LoginRequest, db: AsyncSession = Depends(get_db)
+):
     result = await db.execute(select(User).where(User.phone == body.phone))
     user = result.scalar_one_or_none()
     if not user or not verify_password(body.password, user.password_hash):
@@ -148,24 +164,28 @@ async def add_role(
     if body.role == UserRole.driver:
         _require_driver_fields(body)
         # carry the display name over from the existing patient profile, if any
-        existing = (await db.execute(
-            select(Patient).where(Patient.user_id == current_user.id)
-        )).scalar_one_or_none()
-        db.add(Driver(
-            user_id=current_user.id,
-            full_name=(existing.full_name if existing else ""),
-            license_no=body.license_no,
-            vehicle_plate=body.vehicle_plate,
-            vehicle_type=body.vehicle_type,
-        ))
+        existing = (
+            await db.execute(select(Patient).where(Patient.user_id == current_user.id))
+        ).scalar_one_or_none()
+        db.add(
+            Driver(
+                user_id=current_user.id,
+                full_name=(existing.full_name if existing else ""),
+                license_no=body.license_no,
+                vehicle_plate=body.vehicle_plate,
+                vehicle_type=body.vehicle_type,
+            )
+        )
     elif body.role == UserRole.patient:
-        existing = (await db.execute(
-            select(Driver).where(Driver.user_id == current_user.id)
-        )).scalar_one_or_none()
-        db.add(Patient(
-            user_id=current_user.id,
-            full_name=(existing.full_name if existing else ""),
-        ))
+        existing = (
+            await db.execute(select(Driver).where(Driver.user_id == current_user.id))
+        ).scalar_one_or_none()
+        db.add(
+            Patient(
+                user_id=current_user.id,
+                full_name=(existing.full_name if existing else ""),
+            )
+        )
 
     db.add(UserRoleLink(user_id=current_user.id, role=body.role))
     await db.commit()
@@ -212,12 +232,12 @@ async def me(
 ):
     roles = await _held_roles(db, current_user.id)
 
-    patient = (await db.execute(
-        select(Patient).where(Patient.user_id == current_user.id)
-    )).scalar_one_or_none()
-    driver = (await db.execute(
-        select(Driver).where(Driver.user_id == current_user.id)
-    )).scalar_one_or_none()
+    patient = (
+        await db.execute(select(Patient).where(Patient.user_id == current_user.id))
+    ).scalar_one_or_none()
+    driver = (
+        await db.execute(select(Driver).where(Driver.user_id == current_user.id))
+    ).scalar_one_or_none()
 
     return MeResponse(
         user_id=str(current_user.id),

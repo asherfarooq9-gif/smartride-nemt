@@ -7,8 +7,11 @@ from app.core.database import get_db
 from app.core.security import require_driver, require_admin
 from app.models.models import Driver, User
 from app.schemas.drivers import (
-    DriverResponse, DriverUpdate, DriverStatusUpdate,
-    LocationUpdate, DriverListResponse,
+    DriverResponse,
+    DriverUpdate,
+    DriverStatusUpdate,
+    LocationUpdate,
+    DriverListResponse,
 )
 from app.services import driver_service
 
@@ -37,6 +40,7 @@ def _to_response(driver: Driver, user: User) -> DriverResponse:
 
 
 # ── Driver self-service ────────────────────────────────────────────────────────
+
 
 @router.get("/me", response_model=DriverResponse)
 async def get_me(
@@ -82,6 +86,7 @@ async def update_location(
 
 # ── Admin ─────────────────────────────────────────────────────────────────────
 
+
 @router.get("", response_model=DriverListResponse)
 async def list_drivers(
     page: int = Query(1, ge=1),
@@ -92,7 +97,9 @@ async def list_drivers(
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    rows, total = await driver_service.list_drivers(db, page, page_size, status, is_verified, search)
+    rows, total = await driver_service.list_drivers(
+        db, page, page_size, status, is_verified, search
+    )
     items = [_to_response(driver, user) for driver, user in rows]
     return DriverListResponse(items=items, total=total, page=page)
 
@@ -104,5 +111,7 @@ async def verify_driver(
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    driver, user = await driver_service.set_driver_verified(driver_id, body.is_verified, db)
+    driver, user = await driver_service.set_driver_verified(
+        driver_id, body.is_verified, db
+    )
     return _to_response(driver, user)

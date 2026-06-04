@@ -1,25 +1,43 @@
 """Analytics endpoint tests."""
+
 import pytest
 from httpx import AsyncClient
 
 
 @pytest.mark.asyncio
 async def test_summary_returns_expected_keys(client: AsyncClient, admin_token: str):
-    r = await client.get("/api/v1/analytics/summary", headers={"Authorization": f"Bearer {admin_token}"})
+    r = await client.get(
+        "/api/v1/analytics/summary", headers={"Authorization": f"Bearer {admin_token}"}
+    )
     assert r.status_code == 200
     data = r.json()
-    for key in ("total_rides", "emergency_rides_24h", "active_rides",
-                "available_drivers", "total_drivers", "active_hospitals", "snapshot_at"):
+    for key in (
+        "total_rides",
+        "emergency_rides_24h",
+        "active_rides",
+        "available_drivers",
+        "total_drivers",
+        "active_hospitals",
+        "snapshot_at",
+    ):
         assert key in data
 
 
 @pytest.mark.asyncio
 async def test_non_admin_cannot_access_summary(client: AsyncClient):
-    r = await client.post("/api/v1/auth/register", json={
-        "phone": "+92300AN0002", "password": "pass1234", "role": "patient", "full_name": "P",
-    })
+    r = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "phone": "+92300AN0002",
+            "password": "pass1234",
+            "role": "patient",
+            "full_name": "P",
+        },
+    )
     token = r.json()["access_token"]
-    r = await client.get("/api/v1/analytics/summary", headers={"Authorization": f"Bearer {token}"})
+    r = await client.get(
+        "/api/v1/analytics/summary", headers={"Authorization": f"Bearer {token}"}
+    )
     assert r.status_code == 403
 
 

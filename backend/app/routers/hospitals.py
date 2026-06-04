@@ -5,7 +5,10 @@ from app.core.database import get_db
 from app.core.security import require_admin
 from app.models.models import Hospital, User
 from app.schemas.hospitals import (
-    HospitalResponse, HospitalCreate, HospitalUpdate, HospitalListResponse,
+    HospitalResponse,
+    HospitalCreate,
+    HospitalUpdate,
+    HospitalListResponse,
 )
 from app.services import hospital_service
 
@@ -33,6 +36,7 @@ def _to_response(h: Hospital) -> HospitalResponse:
 
 # ── Public ────────────────────────────────────────────────────────────────────
 
+
 @router.get("", response_model=HospitalListResponse)
 async def list_hospitals(
     active_only: bool = Query(True),
@@ -40,7 +44,9 @@ async def list_hospitals(
     page_size: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
 ):
-    items, total = await hospital_service.list_hospitals(db, active_only, page, page_size)
+    items, total = await hospital_service.list_hospitals(
+        db, active_only, page, page_size
+    )
     # items may be HospitalResponse (cached) or Hospital (DB); normalise
     responses = [
         item if isinstance(item, HospitalResponse) else _to_response(item)
@@ -56,6 +62,7 @@ async def get_hospital(hospital_id: str, db: AsyncSession = Depends(get_db)):
 
 
 # ── Admin ─────────────────────────────────────────────────────────────────────
+
 
 @router.post("", response_model=HospitalResponse, status_code=201)
 async def create_hospital(

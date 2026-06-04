@@ -3,11 +3,20 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import get_current_user, require_patient, require_driver, require_admin
-from app.models.models import Ride, Patient, Driver, User
+from app.core.security import (
+    get_current_user,
+    require_patient,
+    require_driver,
+    require_admin,
+)
+from app.models.models import Ride, User
 from app.schemas.rides import (
-    EmergencyRideRequest, ScheduledRideRequest,
-    RideStatusUpdate, RideResponse, RideListResponse, RideDetailResponse,
+    EmergencyRideRequest,
+    ScheduledRideRequest,
+    RideStatusUpdate,
+    RideResponse,
+    RideListResponse,
+    RideDetailResponse,
 )
 from app.services import ride_service
 
@@ -33,7 +42,9 @@ def _to_response(ride: Ride) -> RideResponse:
         completed_at=ride.completed_at,
         cancelled_at=ride.cancelled_at,
         cancel_reason=ride.cancel_reason,
-        estimated_fare_pkr=float(ride.estimated_fare_pkr) if ride.estimated_fare_pkr else None,
+        estimated_fare_pkr=float(ride.estimated_fare_pkr)
+        if ride.estimated_fare_pkr
+        else None,
         final_fare_pkr=float(ride.final_fare_pkr) if ride.final_fare_pkr else None,
     )
 
@@ -60,6 +71,7 @@ async def _run_dispatch(ride_id: str, symptom_text: str) -> None:
 
 
 # ── Patient endpoints ─────────────────────────────────────────────────────────
+
 
 @router.post("/emergency", response_model=RideResponse, status_code=201)
 async def create_emergency_ride(
@@ -117,12 +129,21 @@ async def get_ride_detail(
     patient_data = None
     if ride.patient:
         p, u = ride.patient, ride.patient.user
-        patient_data = {"full_name": p.full_name, "phone": u.phone, "mobility_needs": p.mobility_needs}
+        patient_data = {
+            "full_name": p.full_name,
+            "phone": u.phone,
+            "mobility_needs": p.mobility_needs,
+        }
 
     driver_data = None
     if ride.driver:
         d, u = ride.driver, ride.driver.user
-        driver_data = {"full_name": d.full_name, "phone": u.phone, "vehicle_plate": d.vehicle_plate, "vehicle_type": d.vehicle_type}
+        driver_data = {
+            "full_name": d.full_name,
+            "phone": u.phone,
+            "vehicle_plate": d.vehicle_plate,
+            "vehicle_type": d.vehicle_type,
+        }
 
     hospital_data = None
     if ride.hospital:
@@ -151,6 +172,7 @@ async def get_ride_detail(
 # ── Driver endpoints ──────────────────────────────────────────────────────────
 # IMPORTANT: /pending must be registered BEFORE /{ride_id} so FastAPI does not
 # treat the literal string "pending" as a ride_id parameter.
+
 
 @router.get("/pending", response_model=RideListResponse)
 async def pending_rides(
@@ -187,13 +209,23 @@ async def update_ride_status(
     ride = await ride_service.get_ride_by_id(ride_id, db)
     role = current_user.role.value
 
-    patient = await ride_service.get_patient_by_user(current_user, db) if role == "patient" else None
-    driver = await ride_service.get_driver_by_user(current_user, db) if role == "driver" else None
+    patient = (
+        await ride_service.get_patient_by_user(current_user, db)
+        if role == "patient"
+        else None
+    )
+    driver = (
+        await ride_service.get_driver_by_user(current_user, db)
+        if role == "driver"
+        else None
+    )
 
     if driver and not driver.is_verified:
         raise HTTPException(403, "Driver not verified")
 
-    ride = await ride_service.update_ride_status(ride, body, role, db, patient=patient, driver=driver)
+    ride = await ride_service.update_ride_status(
+        ride, body, role, db, patient=patient, driver=driver
+    )
     return _to_response(ride)
 
 
@@ -218,6 +250,7 @@ async def get_ride(
 
 # ── Admin endpoints ───────────────────────────────────────────────────────────
 
+
 @router.get("", response_model=RideListResponse)
 async def list_rides(
     page: int = Query(1, ge=1),
@@ -228,5 +261,7 @@ async def list_rides(
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    rows, total = await ride_service.list_rides_admin(db, page, page_size, status, ride_type, search)
+    rows, total = await ride_service.list_rides_admin(
+        db, page, page_size, status, ride_type, search
+    )
     return RideListResponse(items=[_to_response(r) for r in rows], total=total)
