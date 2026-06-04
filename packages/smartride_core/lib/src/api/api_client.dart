@@ -1,14 +1,29 @@
 ﻿import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show kReleaseMode;
+import 'package:flutter/foundation.dart' show kReleaseMode, kIsWeb;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../storage/secure_storage.dart';
 import 'api_error.dart';
 
 class ApiClient {
   ApiClient._() {
-    final baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://10.0.2.2:8000';
+    // Read the env value safely — dotenv may not be initialised on web.
+    String? envUrl;
+    try {
+      envUrl = dotenv.isInitialized ? dotenv.env['API_BASE_URL'] : null;
+    } catch (_) {
+      envUrl = null;
+    }
+    // Platform-correct default: 10.0.2.2 is the Android-emulator alias for the
+    // host and is UNREACHABLE from a desktop browser, so web must use localhost.
+    const defaultUrl =
+        kIsWeb ? 'http://localhost:8000' : 'http://10.0.2.2:8000';
+    final baseUrl = (envUrl != null && envUrl.isNotEmpty) ? envUrl : defaultUrl;
     assert(
-      !kReleaseMode || baseUrl.startsWith('https://') || baseUrl.startsWith('http://127.') || baseUrl.startsWith('http://10.0.2.2'),
+      !kReleaseMode ||
+          kIsWeb ||
+          baseUrl.startsWith('https://') ||
+          baseUrl.startsWith('http://127.') ||
+          baseUrl.startsWith('http://10.0.2.2'),
       'API_BASE_URL must use HTTPS in release builds. Got: $baseUrl',
     );
     _dio = Dio(
