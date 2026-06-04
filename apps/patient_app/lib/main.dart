@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,7 +9,12 @@ import 'package:smartride_core/smartride_core.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load();
+  // Never let env loading block the first frame.
+  try {
+    await dotenv.load();
+  } catch (_) {
+    // Fall back to compile-time defaults / API_BASE_URL default in ApiClient.
+  }
   runApp(const ProviderScope(child: SmartRideApp()));
 }
 
@@ -23,8 +29,11 @@ class _SmartRideAppState extends ConsumerState<SmartRideApp> {
   @override
   void initState() {
     super.initState();
-    final router = ref.read(routerProvider);
-    initNotifications(router: router);
+    // Firebase/FCM is mobile-only; skip on web and never let it crash startup.
+    if (!kIsWeb) {
+      final router = ref.read(routerProvider);
+      initNotifications(router: router).catchError((_) {});
+    }
   }
 
   @override

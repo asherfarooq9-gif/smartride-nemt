@@ -39,15 +39,24 @@ def _to_response(ride: Ride) -> RideResponse:
 
 
 async def _run_dispatch(ride_id: str, symptom_text: str) -> None:
+    import logging
     from app.core.database import AsyncSessionLocal
     from app.services.emergency_dispatch import dispatch_emergency
     from sqlalchemy import select
 
-    async with AsyncSessionLocal() as db:
-        result = await db.execute(select(Ride).where(Ride.id == ride_id))
-        ride = result.scalar_one_or_none()
-        if ride:
+    log = logging.getLogger("smartride.dispatch")
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(select(Ride).where(Ride.id == ride_id))
+            ride = result.scalar_one_or_none()
+            if ride is None:
+                log.warning("dispatch skipped: ride %s not found", ride_id)
+                return
             await dispatch_emergency(ride, symptom_text, db)
+    except Exception:
+        # Background tasks have no caller to surface errors to — log loudly so a
+        # failed dispatch (e.g. triage service down) is visible, not silent.
+        log.exception("emergency dispatch failed for ride %s", ride_id)
 
 
 # ── Patient endpoints ─────────────────────────────────────────────────────────
