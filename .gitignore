@@ -52,3 +52,15 @@ apps/*/.flutter-plugins-dependencies
 # Backups / temp
 _archive/
 _flutter_tmp/
+_serveerr.txt
+*.tsbuildinfo
+
+# Agent / skill tooling (local only, not part of the app)
+.agents/
+.claude/
+.superpowers/
+claude-obsidian/
+graphify-out/
+.mcp.json
+install-claude-skills.ps1
+skills-lock.json

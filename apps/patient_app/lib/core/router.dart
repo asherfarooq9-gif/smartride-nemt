@@ -18,6 +18,7 @@ import '../features/rides/schedule_trip_screen.dart';
 import '../features/rides/booking_confirmed_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/settings/settings_screen.dart';
+import '../features/support/support_screen.dart';
 // Driver portal
 import '../driver/dashboard_screen.dart';
 import '../driver/active_ride_screen.dart';
@@ -84,6 +85,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/profile',  builder: (_, __) => const ProfileScreen()),
       GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
+      GoRoute(path: '/help',     builder: (_, __) => const HelpScreen()),
+      GoRoute(path: '/contact',  builder: (_, __) => const ContactScreen()),
 
       // ── Driver portal ─────────────────────────────────────────────────────
       GoRoute(path: '/driver', builder: (_, __) => const DashboardScreen()),

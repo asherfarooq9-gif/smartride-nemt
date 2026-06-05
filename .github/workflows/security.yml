@@ -60,12 +60,6 @@ jobs:
           flutter pub get
           flutter pub outdated || true
 
-      - name: Check outdated - driver app
-        run: |
-          cd apps/driver_app
-          flutter pub get
-          flutter pub outdated || true
-
   secret-scan:
     name: Secret Scan
     runs-on: ubuntu-latest

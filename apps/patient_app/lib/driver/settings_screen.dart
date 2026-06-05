@@ -26,9 +26,13 @@ class DriverSettingsScreen extends ConsumerWidget {
             leading: const Icon(Icons.help_outline),
             title: const Text('Help & FAQ'),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Help center coming soon')),
-            ),
+            onTap: () => context.push('/help'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.contact_support),
+            title: const Text('Contact Us'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () => context.push('/contact'),
           ),
           const Divider(),
           const _SectionHeader('About'),

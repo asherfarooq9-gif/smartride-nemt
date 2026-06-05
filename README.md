@@ -103,7 +103,7 @@ Typed models, Dio API client (auth interceptor + 401→logout), WebSocket client
 | Live Tracking | `flutter_map` (OpenStreetMap) — driver pin via WebSocket |
 | Ride Detail | Status badge, timeline, "Track Live" |
 | Ride History | Paginated list |
-| Profile / Settings | Edit profile, sign out |
+| Profile / Settings | Edit profile, Help & FAQ, Contact Us, sign out |
 
 #### Driver portal (teal theme, accessible via drawer)
 | Screen | Description |

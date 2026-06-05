@@ -14,21 +14,6 @@ workflows:
     artifacts:
       - apps/patient_app/build/app/outputs/flutter-apk/app-debug.apk
 
-  driver-app-android:
-    name: Driver App — Android Debug APK
-    max_build_duration: 30
-    environment:
-      flutter: 3.41.4
-    scripts:
-      - name: Get dependencies
-        script: cd apps/driver_app && flutter pub get
-      - name: Analyze
-        script: cd apps/driver_app && flutter analyze
-      - name: Build APK
-        script: cd apps/driver_app && flutter build apk --debug
-    artifacts:
-      - apps/driver_app/build/app/outputs/flutter-apk/app-debug.apk
-
   patient-app-ios:
     name: Patient App — iOS IPA
     max_build_duration: 60
@@ -53,28 +38,3 @@ workflows:
             --export-options-plist=/Users/builder/export_options.plist
     artifacts:
       - apps/patient_app/build/ios/ipa/*.ipa
-
-  driver-app-ios:
-    name: Driver App — iOS IPA
-    max_build_duration: 60
-    environment:
-      flutter: 3.41.4
-      xcode: latest
-      cocoapods: default
-      vars:
-        BUNDLE_ID: com.smartride.driverApp
-      ios_signing:
-        distribution_type: ad_hoc
-        bundle_identifier: com.smartride.driverApp
-    scripts:
-      - name: Get dependencies
-        script: cd apps/driver_app && flutter pub get
-      - name: Install pods
-        script: cd apps/driver_app/ios && pod install
-      - name: Build IPA
-        script: |
-          cd apps/driver_app
-          flutter build ipa --release \
-            --export-options-plist=/Users/builder/export_options.plist
-    artifacts:
-      - apps/driver_app/build/ios/ipa/*.ipa

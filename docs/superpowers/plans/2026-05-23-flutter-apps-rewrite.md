@@ -1,5 +1,10 @@
 # Flutter Apps Production Rewrite — Implementation Plan
 
+> **ARCHIVED. Do not execute.** This plan is superseded by the shipped UI redesign
+> (commit `49cfac5`) and the current `smartride_core` + unified `patient_app`
+> architecture. It also targets `apps/driver_app`, which has since been retired and
+> removed. Kept for historical reference only.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Fully rewrite `apps/patient_app` and `apps/driver_app` to production-grade Flutter apps with Dart null safety, Riverpod, Dio, flutter_secure_storage, Material3 UI, and zero runtime errors.
