@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import get_current_user, require_patient, require_driver, require_admin
-from app.models.models import Ride, Patient, Driver, User
+from app.models.models import Ride, Patient, Driver, User, RideStatus, RideType
 from app.schemas.rides import (
     EmergencyRideRequest, ScheduledRideRequest,
     RideStatusUpdate, RideResponse, RideListResponse, RideDetailResponse,
@@ -15,27 +15,7 @@ router = APIRouter()
 
 
 def _to_response(ride: Ride) -> RideResponse:
-    return RideResponse(
-        id=str(ride.id),
-        patient_id=str(ride.patient_id),
-        driver_id=str(ride.driver_id) if ride.driver_id else None,
-        hospital_id=str(ride.hospital_id) if ride.hospital_id else None,
-        ride_type=ride.ride_type,
-        status=ride.status,
-        pickup_lat=ride.pickup_lat,
-        pickup_lng=ride.pickup_lng,
-        pickup_address=ride.pickup_address,
-        scheduled_for=ride.scheduled_for,
-        requested_at=ride.requested_at,
-        driver_assigned_at=ride.driver_assigned_at,
-        pickup_at=ride.pickup_at,
-        arrived_at=ride.arrived_at,
-        completed_at=ride.completed_at,
-        cancelled_at=ride.cancelled_at,
-        cancel_reason=ride.cancel_reason,
-        estimated_fare_pkr=float(ride.estimated_fare_pkr) if ride.estimated_fare_pkr else None,
-        final_fare_pkr=float(ride.final_fare_pkr) if ride.final_fare_pkr else None,
-    )
+    return RideResponse.model_validate(ride)
 
 
 async def _run_dispatch(ride_id: str, symptom_text: str) -> None:
@@ -104,15 +84,17 @@ async def get_ride_detail(
 ):
     ride = await ride_service.get_ride_with_relations(ride_id, db)
 
-    role = current_user.role.value
-    if role == "patient":
-        patient = await ride_service.get_patient_by_user(current_user, db)
-        if ride.patient_id != patient.id:
-            raise HTTPException(403, "Forbidden")
-    elif role == "driver":
-        driver = await ride_service.get_driver_by_user(current_user, db)
-        if ride.driver_id != driver.id:
-            raise HTTPException(403, "Forbidden")
+    # Use held_roles (set membership) not active role so multi-role accounts
+    # are checked correctly regardless of which portal they are currently in.
+    if "admin" not in current_user.held_roles:
+        if "patient" in current_user.held_roles:
+            patient = await ride_service.get_patient_by_user(current_user, db)
+            if ride.patient_id != patient.id:
+                raise HTTPException(403, "Forbidden")
+        elif "driver" in current_user.held_roles:
+            driver = await ride_service.get_driver_by_user(current_user, db)
+            if ride.driver_id != driver.id:
+                raise HTTPException(403, "Forbidden")
 
     patient_data = None
     if ride.patient:
@@ -204,15 +186,15 @@ async def get_ride(
     db: AsyncSession = Depends(get_db),
 ):
     ride = await ride_service.get_ride_by_id(ride_id, db)
-    role = current_user.role.value
-    if role == "patient":
-        patient = await ride_service.get_patient_by_user(current_user, db)
-        if ride.patient_id != patient.id:
-            raise HTTPException(403, "Forbidden")
-    elif role == "driver":
-        driver = await ride_service.get_driver_by_user(current_user, db)
-        if ride.driver_id != driver.id:
-            raise HTTPException(403, "Forbidden")
+    if "admin" not in current_user.held_roles:
+        if "patient" in current_user.held_roles:
+            patient = await ride_service.get_patient_by_user(current_user, db)
+            if ride.patient_id != patient.id:
+                raise HTTPException(403, "Forbidden")
+        elif "driver" in current_user.held_roles:
+            driver = await ride_service.get_driver_by_user(current_user, db)
+            if ride.driver_id != driver.id:
+                raise HTTPException(403, "Forbidden")
     return _to_response(ride)
 
 
@@ -222,8 +204,8 @@ async def get_ride(
 async def list_rides(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    status: Optional[str] = Query(None),
-    ride_type: Optional[str] = Query(None),
+    status: Optional[RideStatus] = Query(None),
+    ride_type: Optional[RideType] = Query(None),
     search: Optional[str] = Query(None),
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),

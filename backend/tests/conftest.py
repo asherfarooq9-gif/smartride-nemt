@@ -16,6 +16,7 @@ os.environ.setdefault("DATABASE_URL", TEST_DATABASE_URL)
 os.environ.setdefault("SECRET_KEY", "test-secret-key-32-chars-long!!")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
 os.environ.setdefault("TRIAGE_SERVICE_URL", "http://localhost:8001")
+os.environ.setdefault("ALLOWED_ORIGINS", '["http://localhost:3000"]')
 
 from app.core.database import Base, get_db  # noqa: E402
 from main import app, limiter as _main_limiter  # noqa: E402

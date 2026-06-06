@@ -1,10 +1,11 @@
 from typing import Optional, List
 from datetime import datetime
+from uuid import UUID
 from pydantic import BaseModel
 
 
 class HospitalResponse(BaseModel):
-    id: str
+    id: UUID
     name: str
     address: str
     city: str
