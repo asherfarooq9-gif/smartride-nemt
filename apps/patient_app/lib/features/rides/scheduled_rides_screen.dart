@@ -25,22 +25,34 @@ class ScheduledRidesScreen extends ConsumerWidget {
           NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
-      body: ridesAsync.when(
-        loading: () => const core.LoadingState(message: 'Loading rides...'),
-        error: (e, _) => core.ErrorState(
-          message: e is core.AppError ? e.message : 'Failed to load',
-          onRetry: () => ref.read(ridesProvider.notifier).refresh(),
-        ),
-        data: (data) {
-          if (data.items.isEmpty) {
-            return const core.EmptyState(
-              message: 'No rides yet.',
-              icon: Icons.directions_car_outlined,
-            );
-          }
-          return RefreshIndicator(
-            onRefresh: () => ref.read(ridesProvider.notifier).refresh(),
-            child: ListView.builder(
+      body: RefreshIndicator(
+        onRefresh: () => ref.read(ridesProvider.notifier).refresh(),
+        child: ridesAsync.when(
+          loading: () => const core.LoadingState(message: 'Loading rides...'),
+          error: (e, _) => SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: SizedBox(
+              height: MediaQuery.sizeOf(context).height * 0.6,
+              child: core.ErrorState(
+                message: e is core.AppError ? e.message : 'Failed to load',
+                onRetry: () => ref.read(ridesProvider.notifier).refresh(),
+              ),
+            ),
+          ),
+          data: (data) {
+            if (data.items.isEmpty) {
+              return SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: SizedBox(
+                  height: MediaQuery.sizeOf(context).height * 0.6,
+                  child: const core.EmptyState(
+                    message: 'No rides yet.',
+                    icon: Icons.directions_car_outlined,
+                  ),
+                ),
+              );
+            }
+            return ListView.builder(
               padding: const EdgeInsets.all(core.kSpaceLG),
               itemCount: data.items.length,
               itemBuilder: (context, i) {
@@ -67,9 +79,9 @@ class ScheduledRidesScreen extends ConsumerWidget {
                   ),
                 );
               },
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
