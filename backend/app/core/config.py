@@ -32,6 +32,7 @@ class Settings(BaseSettings):
 
     # Firebase
     FIREBASE_PROJECT_ID: str = ""
+    FIREBASE_CREDENTIALS_PATH: str = "firebase-credentials.json"
 
     # App
     DEBUG: bool = False

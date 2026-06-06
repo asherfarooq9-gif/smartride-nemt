@@ -230,6 +230,18 @@ async def me(
     )
 
 
+@router.post("/fcm-token", status_code=status.HTTP_204_NO_CONTENT)
+async def register_fcm_token(
+    body: dict,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    token = body.get("fcm_token", "")
+    if token:
+        current_user.fcm_token = token
+        await db.commit()
+
+
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),

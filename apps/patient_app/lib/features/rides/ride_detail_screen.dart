@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
+import 'rides_notifier.dart';
 
 final _rideDetailProvider = FutureProvider.autoDispose
     .family<core.RideDetailResponse, String>(
@@ -12,6 +13,54 @@ class RideDetailScreen extends ConsumerWidget {
   const RideDetailScreen({super.key, required this.rideId});
 
   final String rideId;
+
+  Future<void> _confirmCancel(BuildContext context, WidgetRef ref) async {
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        final ctrl = TextEditingController();
+        return AlertDialog(
+          title: const Text('Cancel Ride'),
+          content: TextField(
+            controller: ctrl,
+            decoration: const InputDecoration(
+              hintText: 'Reason (optional)',
+            ),
+            autofocus: true,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Keep Ride'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+              child: const Text('Cancel Ride'),
+            ),
+          ],
+        );
+      },
+    );
+    if (reason == null || !context.mounted) return;
+    try {
+      await core.updateRideStatus(
+        rideId,
+        core.RideStatus.cancelled,
+        cancelReason: reason.isEmpty ? 'Cancelled by patient' : reason,
+      );
+      if (!context.mounted) return;
+      ref.invalidate(_rideDetailProvider(rideId));
+      ref.invalidate(ridesProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ride cancelled')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e is core.AppError ? e.message : 'Failed to cancel')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -77,6 +126,21 @@ class RideDetailScreen extends ConsumerWidget {
                   onPressed: () => context.push('/tracking/$rideId'),
                   color: core.kPatientPrimary,
                 ),
+              if (ride.status == core.RideStatus.pending ||
+                  ride.status == core.RideStatus.driverAssigned) ...[
+                const SizedBox(height: core.kSpaceMD),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.cancel_outlined),
+                  label: const Text('Cancel Ride'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Theme.of(context).colorScheme.error,
+                    side: BorderSide(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                  onPressed: () => _confirmCancel(context, ref),
+                ),
+              ],
             ],
           ),
         ),

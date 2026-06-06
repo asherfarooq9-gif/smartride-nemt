@@ -22,6 +22,7 @@ import '../features/support/support_screen.dart';
 // Driver portal
 import '../driver/dashboard_screen.dart';
 import '../driver/active_ride_screen.dart';
+import '../driver/earnings_screen.dart';
 import '../driver/profile_screen.dart';
 import '../driver/settings_screen.dart';
 
@@ -90,6 +91,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // ── Driver portal ─────────────────────────────────────────────────────
       GoRoute(path: '/driver', builder: (_, __) => const DashboardScreen()),
+      GoRoute(path: '/driver/earnings', builder: (_, __) => const EarningsScreen()),
       GoRoute(
         path: '/driver/ride/:id',
         builder: (_, s) => ActiveRideScreen(rideId: s.pathParameters['id']!),

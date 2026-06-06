@@ -183,6 +183,33 @@ async def update_ride_status(
 
     await db.commit()
     await db.refresh(ride)
+
+    # Push notification to patient on status change
+    try:
+        from app.services.notifications import send_push
+        patient_user = (await db.execute(
+            select(User).join(Patient, Patient.user_id == User.id).where(Patient.id == ride.patient_id)
+        )).scalar_one_or_none()
+        if patient_user and patient_user.fcm_token:
+            labels = {
+                RideStatus.driver_assigned: ("Driver Assigned", "Your driver is on the way!"),
+                RideStatus.driver_en_route: ("Driver En Route", "Your driver is heading to you."),
+                RideStatus.patient_picked_up: ("Picked Up", "You're on the way to the hospital."),
+                RideStatus.arrived_at_hospital: ("Arrived", "You have arrived at the hospital."),
+                RideStatus.completed: ("Ride Complete", "Your ride has been completed."),
+                RideStatus.cancelled: ("Ride Cancelled", ride.cancel_reason or "Your ride was cancelled."),
+            }
+            if ride.status in labels:
+                title, body = labels[ride.status]
+                import asyncio
+                asyncio.create_task(send_push(
+                    fcm_token=patient_user.fcm_token,
+                    title=title, body=body,
+                    data={"ride_id": str(ride.id)},
+                ))
+    except Exception:
+        pass
+
     return ride
 
 

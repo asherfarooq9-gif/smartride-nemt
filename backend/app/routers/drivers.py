@@ -10,7 +10,9 @@ from app.schemas.drivers import (
     DriverResponse, DriverUpdate, DriverStatusUpdate,
     LocationUpdate, DriverListResponse,
 )
+from app.models.models import Ride, RideStatus
 from app.services import driver_service
+from sqlalchemy import select, func, and_
 
 router = APIRouter()
 
@@ -78,6 +80,32 @@ async def update_location(
     driver = await driver_service.get_driver_by_user(current_user, db)
     driver = await driver_service.update_driver_location(driver, body, db)
     return _to_response(driver, current_user)
+
+
+@router.get("/earnings")
+async def get_earnings(
+    current_user: User = Depends(require_driver),
+    db: AsyncSession = Depends(get_db),
+):
+    driver = await driver_service.get_driver_by_user(current_user, db)
+    rows = (await db.execute(
+        select(Ride).where(
+            and_(Ride.driver_id == driver.id, Ride.status == RideStatus.completed)
+        ).order_by(Ride.completed_at.desc())
+    )).scalars().all()
+
+    total_earned = sum(float(r.final_fare_pkr or r.estimated_fare_pkr or 0) for r in rows)
+    rides = [
+        {
+            "id": str(r.id),
+            "pickup_address": r.pickup_address,
+            "completed_at": r.completed_at.isoformat() if r.completed_at else None,
+            "fare_pkr": float(r.final_fare_pkr or r.estimated_fare_pkr or 0),
+            "ride_type": r.ride_type.value,
+        }
+        for r in rows
+    ]
+    return {"total_earned_pkr": total_earned, "ride_count": len(rows), "rides": rides}
 
 
 # ── Admin ─────────────────────────────────────────────────────────────────────

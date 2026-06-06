@@ -129,3 +129,13 @@ Future<List<HospitalResponse>> getHospitals() async {
   final items = data['items'] as List<dynamic>? ?? [];
   return items.map((e) => HospitalResponse.fromJson(e as Map<String, dynamic>)).toList();
 }
+
+Future<Map<String, dynamic>> getDriverEarnings() async {
+  return _c.get('/api/v1/drivers/earnings');
+}
+
+Future<void> registerFcmToken(String token) async {
+  try {
+    await _c.post('/api/v1/auth/fcm-token', {'fcm_token': token});
+  } catch (_) {}
+}

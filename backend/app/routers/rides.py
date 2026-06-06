@@ -1,5 +1,8 @@
+import csv
+import io
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -202,6 +205,43 @@ async def get_ride(
 
 
 # ── Admin endpoints ───────────────────────────────────────────────────────────
+
+@router.get("/export.csv")
+async def export_rides_csv(
+    status: Optional[RideStatus] = Query(None),
+    ride_type: Optional[RideType] = Query(None),
+    search: Optional[str] = Query(None),
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    rows, _ = await ride_service.list_rides_admin(db, 1, 10_000, status, ride_type, search)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "id", "ride_type", "status", "pickup_address",
+        "requested_at", "completed_at", "cancelled_at",
+        "estimated_fare_pkr", "final_fare_pkr",
+        "patient_id", "driver_id", "hospital_id",
+    ])
+    for r in rows:
+        writer.writerow([
+            str(r.id), r.ride_type.value, r.status.value,
+            r.pickup_address or "",
+            r.requested_at.isoformat() if r.requested_at else "",
+            r.completed_at.isoformat() if r.completed_at else "",
+            r.cancelled_at.isoformat() if r.cancelled_at else "",
+            float(r.estimated_fare_pkr) if r.estimated_fare_pkr else "",
+            float(r.final_fare_pkr) if r.final_fare_pkr else "",
+            str(r.patient_id), str(r.driver_id) if r.driver_id else "",
+            str(r.hospital_id) if r.hospital_id else "",
+        ])
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=rides.csv"},
+    )
+
 
 @router.get("", response_model=RideListResponse)
 async def list_rides(

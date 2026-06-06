@@ -1,11 +1,44 @@
 """
-Notification service: Twilio SMS + HL7 FHIR R4 hospital pre-alerts.
+Notification service: Twilio SMS + HL7 FHIR R4 hospital pre-alerts + FCM push.
 Falls back gracefully when credentials are absent.
 """
 import httpx
+import logging
 from datetime import datetime, timezone
 
 from app.core.config import settings
+
+log = logging.getLogger("smartride.notifications")
+
+
+async def send_push(*, fcm_token: str, title: str, body: str, data: dict | None = None) -> None:
+    """Send an FCM push notification via the Firebase HTTP v1 API."""
+    if not settings.FIREBASE_PROJECT_ID or not fcm_token:
+        log.debug("FCM no-op (no project_id or token)")
+        return
+    try:
+        import google.auth.transport.requests
+        import google.oauth2.service_account
+        credentials = google.oauth2.service_account.Credentials.from_service_account_file(
+            settings.FIREBASE_CREDENTIALS_PATH,
+            scopes=["https://www.googleapis.com/auth/firebase.messaging"],
+        )
+        credentials.refresh(google.auth.transport.requests.Request())
+        token = credentials.token
+        url = f"https://fcm.googleapis.com/v1/projects/{settings.FIREBASE_PROJECT_ID}/messages:send"
+        payload: dict = {
+            "message": {
+                "token": fcm_token,
+                "notification": {"title": title, "body": body},
+            }
+        }
+        if data:
+            payload["message"]["data"] = {k: str(v) for k, v in data.items()}
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(url, json=payload, headers={"Authorization": f"Bearer {token}"})
+            resp.raise_for_status()
+    except Exception as exc:
+        log.warning("FCM push failed: %s", exc)
 
 
 def _send_sms(to: str, body: str) -> None:

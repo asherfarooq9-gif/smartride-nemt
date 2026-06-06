@@ -77,9 +77,10 @@ class User(Base):
     # `role` is the user's *active* role (the portal they're currently in).
     # The full set of roles the account holds lives in `user_roles`.
     role:          Mapped[UserRole]   = mapped_column(SAEnum(UserRole, name="user_role", create_type=False), nullable=False)
-    is_active:     Mapped[bool]       = mapped_column(Boolean, default=True)
-    created_at:    Mapped[datetime]   = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at:    Mapped[datetime]   = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    is_active:     Mapped[bool]             = mapped_column(Boolean, default=True)
+    fcm_token:     Mapped[Optional[str]]    = mapped_column(Text, nullable=True)
+    created_at:    Mapped[datetime]         = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at:    Mapped[datetime]         = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     patient: Mapped[Optional["Patient"]] = relationship("Patient", back_populates="user", uselist=False)
     driver:  Mapped[Optional["Driver"]]  = relationship("Driver",  back_populates="user", uselist=False)

@@ -42,6 +42,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         title: const Text('Driver Dashboard'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.payments_outlined),
+            tooltip: 'Earnings',
+            onPressed: () => context.push('/driver/earnings'),
+          ),
+          IconButton(
             icon: const Icon(Icons.person),
             tooltip: 'Profile',
             onPressed: () => context.push('/driver/profile'),
