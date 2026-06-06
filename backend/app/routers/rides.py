@@ -167,7 +167,10 @@ async def update_ride_status(
     db: AsyncSession = Depends(get_db),
 ):
     ride = await ride_service.get_ride_by_id(ride_id, db)
-    role = current_user.role.value
+    role = next(
+        (r for r in ("patient", "driver", "admin") if r in current_user.held_roles),
+        current_user.role.value,
+    )
 
     patient = await ride_service.get_patient_by_user(current_user, db) if role == "patient" else None
     driver = await ride_service.get_driver_by_user(current_user, db) if role == "driver" else None
