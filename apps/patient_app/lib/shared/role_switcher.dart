@@ -68,14 +68,44 @@ class PortalDrawer extends ConsumerWidget {
               ),
 
             // ── Driver portal entry ────────────────────────────────────────
-            if (isDriver)
+            if (isDriver) ...[
               const ListTile(
                 leading: Icon(Icons.check_circle, color: core.kOnlineGreen),
                 title: Text('Driver',
                     style: TextStyle(fontWeight: FontWeight.w600)),
                 subtitle: Text('Current portal'),
-              )
-            else if (hasDriver)
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'City',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: core.kTextSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        for (final city in ['Islamabad', 'Rawalpindi'])
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: ChoiceChip(
+                              label: Text(city),
+                              selected: ref.watch(cityProvider) == city,
+                              onSelected: (_) =>
+                                  ref.read(cityProvider.notifier).state = city,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ] else if (hasDriver)
               ListTile(
                 leading: const Icon(Icons.drive_eta_outlined),
                 title: const Text('Switch to Driver'),

@@ -21,6 +21,15 @@ class DriverSettingsScreen extends ConsumerWidget {
             onTap: () => context.push('/driver/profile'),
           ),
           const Divider(),
+          const _SectionHeader('Appearance'),
+          SwitchListTile(
+            secondary: const Icon(Icons.dark_mode_outlined),
+            title: const Text('Dark Mode'),
+            value: ref.watch(themeModeProvider) == ThemeMode.dark,
+            onChanged: (val) =>
+                ref.read(themeModeProvider.notifier).setDark(val),
+          ),
+          const Divider(),
           const _SectionHeader('Support'),
           ListTile(
             leading: const Icon(Icons.help_outline),

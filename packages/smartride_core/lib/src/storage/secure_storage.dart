@@ -41,6 +41,10 @@ class SecureStorage {
     return raw.split(',').where((s) => s.isNotEmpty).toList();
   }
 
+  Future<String?> readValue(String key) => _storage.read(key: key);
+  Future<void> saveValue(String key, String value) =>
+      _storage.write(key: key, value: value);
+
   Future<void> clear() async {
     await Future.wait([
       _storage.delete(key: _keyToken),

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
@@ -100,6 +101,38 @@ class AuthNotifier extends StateNotifier<AsyncValue<String?>> {
     state = const AsyncValue.data(null);
   }
 }
+
+// ── Theme mode ─────────────────────────────────────────────────────────────────
+
+const _kThemeModeKey = 'app_theme_mode';
+
+final themeModeProvider =
+    StateNotifierProvider<ThemeModeNotifier, ThemeMode>(
+  (ref) => ThemeModeNotifier(),
+);
+
+class ThemeModeNotifier extends StateNotifier<ThemeMode> {
+  ThemeModeNotifier() : super(ThemeMode.system) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    final val =
+        await core.SecureStorage.instance.readValue(_kThemeModeKey);
+    if (val == 'dark') state = ThemeMode.dark;
+    if (val == 'light') state = ThemeMode.light;
+  }
+
+  Future<void> setDark(bool isDark) async {
+    state = isDark ? ThemeMode.dark : ThemeMode.light;
+    await core.SecureStorage.instance
+        .saveValue(_kThemeModeKey, isDark ? 'dark' : 'light');
+  }
+}
+
+// ── City (driver portal) ───────────────────────────────────────────────────────
+
+final cityProvider = StateProvider<String>((ref) => 'Islamabad');
 
 // ── GPS Stream (driver portal) ──────────────────────────────────────────────────
 
