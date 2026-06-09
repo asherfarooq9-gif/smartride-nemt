@@ -45,12 +45,5 @@ class SecureStorage {
   Future<void> saveValue(String key, String value) =>
       _storage.write(key: key, value: value);
 
-  Future<void> clear() async {
-    await Future.wait([
-      _storage.delete(key: _keyToken),
-      _storage.delete(key: _keyUserId),
-      _storage.delete(key: _keyRole),
-      _storage.delete(key: _keyRoles),
-    ]);
-  }
+  Future<void> clear() => _storage.deleteAll();
 }

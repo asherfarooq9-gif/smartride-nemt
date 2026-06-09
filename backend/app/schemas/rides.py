@@ -1,22 +1,33 @@
 from typing import Optional, List, Any, Dict
 from uuid import UUID
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from app.models.models import RideType, RideStatus
 
 
 class EmergencyRideRequest(BaseModel):
-    pickup_lat: float
-    pickup_lng: float
+    pickup_lat: float = Field(ge=-90, le=90)
+    pickup_lng: float = Field(ge=-180, le=180)
     pickup_address: Optional[str] = None
     symptom_text: str = Field(min_length=1, max_length=2000)
 
 
 class ScheduledRideRequest(BaseModel):
-    pickup_lat: float
-    pickup_lng: float
+    pickup_lat: float = Field(ge=-90, le=90)
+    pickup_lng: float = Field(ge=-180, le=180)
     pickup_address: Optional[str] = None
     scheduled_for: datetime
+
+    @field_validator("scheduled_for")
+    @classmethod
+    def must_be_future(cls, v: datetime) -> datetime:
+        from datetime import timezone
+        if v.tzinfo is None:
+            v = v.replace(tzinfo=timezone.utc)
+        from datetime import datetime as dt
+        if v <= dt.now(timezone.utc):
+            raise ValueError("scheduled_for must be a future date")
+        return v
 
 
 class RideStatusUpdate(BaseModel):

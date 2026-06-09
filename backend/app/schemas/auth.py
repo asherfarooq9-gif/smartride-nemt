@@ -21,16 +21,19 @@ class RegisterRequest(BaseModel):
     @field_validator("phone")
     @classmethod
     def phone_not_empty(cls, v: str) -> str:
+        import re
         v = v.strip()
         if not v:
             raise ValueError("phone is required")
+        if not re.match(r'^\+?[0-9]{7,15}$', v):
+            raise ValueError("phone must be 7–15 digits, optionally prefixed with +")
         return v
 
     @field_validator("password")
     @classmethod
     def password_min_length(cls, v: str) -> str:
-        if len(v) < 6:
-            raise ValueError("password must be at least 6 characters")
+        if len(v) < 8:
+            raise ValueError("password must be at least 8 characters")
         return v
 
     @model_validator(mode="after")

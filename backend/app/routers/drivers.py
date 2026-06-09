@@ -183,7 +183,7 @@ async def get_wallet(
 @router.post("/wallet/topup", response_model=DriverResponse)
 async def topup_wallet(
     body: WalletTopUpRequest,
-    current_user: User = Depends(require_driver),
+    current_user: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
     if body.plan_id and body.plan_id in _PLANS:

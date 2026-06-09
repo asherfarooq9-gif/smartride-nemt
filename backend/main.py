@@ -43,8 +43,6 @@ async def lifespan(app: FastAPI):
             stacklevel=2,
         )
 
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
     yield
 
 
@@ -77,6 +75,15 @@ app.add_middleware(
 )
 
 app.add_middleware(StructuredLoggingMiddleware)
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
 
 Instrumentator(
     should_group_status_codes=True,

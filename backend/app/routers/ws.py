@@ -66,7 +66,7 @@ async def driver_location_ws(websocket: WebSocket, ride_id: str):
     # #4 Auth via first message, not query param
     token = await _receive_auth(websocket)
     user = await _auth_user(token) if token else None
-    if not user or user.role.value != "driver":
+    if not user or "driver" not in user.held_roles:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 

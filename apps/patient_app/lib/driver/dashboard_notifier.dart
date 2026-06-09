@@ -52,16 +52,13 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
   Future<void> refresh() async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final results = await Future.wait([
-        core.getDriverMe(),
-        core.getDriverPendingRides(),
-        core.getDriverEarnings(),
-      ]);
+      final driver = await core.getDriverMe();
+      final rides = await core.getDriverPendingRides();
+      final earnings = await core.getDriverEarnings();
       state = DashboardState(
-        driver: results[0] as core.DriverResponse,
-        pendingRides: results[1] as List<core.RideResponse>,
-        todayEarningsPkr:
-            _calcTodayEarnings(results[2] as Map<String, dynamic>),
+        driver: driver,
+        pendingRides: rides,
+        todayEarningsPkr: _calcTodayEarnings(earnings),
         isLoading: false,
       );
     } catch (e) {
@@ -70,6 +67,14 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
         error: e is core.AppError ? e.message : 'Failed to load',
       );
     }
+  }
+
+  void declineRide(String rideId) {
+    state = state.copyWith(
+      pendingRides: state.pendingRides
+          .where((r) => r.id.toString() != rideId)
+          .toList(),
+    );
   }
 
   Future<void> toggleOnline() async {

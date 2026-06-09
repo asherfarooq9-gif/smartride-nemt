@@ -103,12 +103,14 @@ async def get_ride_with_relations(ride_id: str, db: AsyncSession) -> Ride:
 async def get_my_rides(
     user: User, db: AsyncSession, page: int, page_size: int
 ) -> tuple[list[Ride], int]:
-    if user.role.value == "patient":
+    if "patient" in user.held_roles and user.role.value == "patient":
         patient = await get_patient_by_user(user, db)
         condition = Ride.patient_id == patient.id
-    else:
+    elif "driver" in user.held_roles:
         driver = await get_driver_by_user(user, db)
         condition = Ride.driver_id == driver.id
+    else:
+        raise HTTPException(403, "Forbidden")
 
     total = (await db.execute(select(func.count()).select_from(Ride).where(condition))).scalar()
     rows = (await db.execute(
@@ -166,6 +168,12 @@ async def update_ride_status(
         ride.status = RideStatus.cancelled
         ride.cancelled_at = datetime.now(timezone.utc)
         ride.cancel_reason = "Cancelled by admin"
+        if ride.driver_id is not None:
+            assigned_driver = (await db.execute(
+                select(Driver).where(Driver.id == ride.driver_id)
+            )).scalar_one_or_none()
+            if assigned_driver:
+                assigned_driver.status = DriverStatus.available
 
     elif role == "patient":
         if ride.patient_id != patient.id:

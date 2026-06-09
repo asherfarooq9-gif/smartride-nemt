@@ -67,8 +67,8 @@ class DriverSettingsScreen extends ConsumerWidget {
     );
   }
 
-  void _confirmSignOut(BuildContext context, WidgetRef ref) {
-    showDialog<bool>(
+  Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Sign Out'),
@@ -85,13 +85,12 @@ class DriverSettingsScreen extends ConsumerWidget {
           ),
         ],
       ),
-    ).then((confirmed) async {
-      if (confirmed == true) {
-        await ref.read(gpsStreamProvider.notifier).stopStreaming();
-        await ref.read(authProvider.notifier).signOut();
-        if (context.mounted) context.go('/welcome');
-      }
-    });
+    );
+    if (confirmed != true || !context.mounted) return;
+    await ref.read(gpsStreamProvider.notifier).stopStreaming();
+    if (!context.mounted) return;
+    await ref.read(authProvider.notifier).signOut();
+    if (context.mounted) context.go('/welcome');
   }
 }
 

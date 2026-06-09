@@ -136,7 +136,19 @@ final routerProvider = Provider<GoRouter>((ref) {
 
 class _AuthListenable extends ChangeNotifier {
   _AuthListenable(Ref ref) {
-    ref.listen(authProvider, (_, __) => notifyListeners());
-    ref.listen(activeRoleProvider, (_, __) => notifyListeners());
+    _subs = [
+      ref.listen(authProvider, (_, __) => notifyListeners()),
+      ref.listen(activeRoleProvider, (_, __) => notifyListeners()),
+    ];
+  }
+
+  late final List<ProviderSubscription<dynamic>> _subs;
+
+  @override
+  void dispose() {
+    for (final sub in _subs) {
+      sub.close();
+    }
+    super.dispose();
   }
 }

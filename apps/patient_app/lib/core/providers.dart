@@ -77,14 +77,8 @@ class AuthNotifier extends StateNotifier<AsyncValue<String?>> {
 
   /// Flip the active portal. Account must already hold the target role.
   Future<void> switchActiveRole(String role) async {
-    try {
-      final res = await core.switchRole(role);
-      await _persist(res);
-    } catch (_) {
-      // optimistic local fallback so the UI still flips
-      await core.SecureStorage.instance.saveActiveRole(role);
-      _ref.read(activeRoleProvider.notifier).state = role;
-    }
+    final res = await core.switchRole(role);
+    await _persist(res);
   }
 
   /// "Become a driver/patient" — add a role, then switch into it.
@@ -321,9 +315,13 @@ class GpsStreamNotifier extends StateNotifier<bool> {
   Future<void> startStreaming(String rideId) async {
     if (state) return;
 
-    final permission = await Geolocator.checkPermission();
+    var permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
-      await Geolocator.requestPermission();
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      return;
     }
 
     final token = await core.SecureStorage.instance.readToken();

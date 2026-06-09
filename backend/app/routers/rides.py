@@ -192,10 +192,7 @@ async def update_ride_status(
     db: AsyncSession = Depends(get_db),
 ):
     ride = await ride_service.get_ride_by_id(ride_id, db)
-    role = next(
-        (r for r in ("patient", "driver", "admin") if r in current_user.held_roles),
-        current_user.role.value,
-    )
+    role = current_user.role.value
 
     patient = await ride_service.get_patient_by_user(current_user, db) if role == "patient" else None
     driver = await ride_service.get_driver_by_user(current_user, db) if role == "driver" else None
@@ -207,26 +204,8 @@ async def update_ride_status(
     return _to_response(ride)
 
 
-@router.get("/{ride_id}", response_model=RideResponse)
-async def get_ride(
-    ride_id: str,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    ride = await ride_service.get_ride_by_id(ride_id, db)
-    if "admin" not in current_user.held_roles:
-        if "patient" in current_user.held_roles:
-            patient = await ride_service.get_patient_by_user(current_user, db)
-            if ride.patient_id != patient.id:
-                raise HTTPException(403, "Forbidden")
-        elif "driver" in current_user.held_roles:
-            driver = await ride_service.get_driver_by_user(current_user, db)
-            if ride.driver_id != driver.id:
-                raise HTTPException(403, "Forbidden")
-    return _to_response(ride)
-
-
 # ── Admin endpoints ───────────────────────────────────────────────────────────
+# NOTE: /export.csv must be registered BEFORE /{ride_id} to prevent route shadowing.
 
 @router.get("/export.csv")
 async def export_rides_csv(
@@ -263,6 +242,25 @@ async def export_rides_csv(
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=rides.csv"},
     )
+
+
+@router.get("/{ride_id}", response_model=RideResponse)
+async def get_ride(
+    ride_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    ride = await ride_service.get_ride_by_id(ride_id, db)
+    if "admin" not in current_user.held_roles:
+        if "patient" in current_user.held_roles:
+            patient = await ride_service.get_patient_by_user(current_user, db)
+            if ride.patient_id != patient.id:
+                raise HTTPException(403, "Forbidden")
+        elif "driver" in current_user.held_roles:
+            driver = await ride_service.get_driver_by_user(current_user, db)
+            if ride.driver_id != driver.id:
+                raise HTTPException(403, "Forbidden")
+    return _to_response(ride)
 
 
 @router.get("", response_model=RideListResponse)

@@ -18,14 +18,14 @@ class ApiClient {
     const defaultUrl =
         kIsWeb ? 'http://localhost:8000' : 'http://10.0.2.2:8000';
     final baseUrl = (envUrl != null && envUrl.isNotEmpty) ? envUrl : defaultUrl;
-    assert(
-      !kReleaseMode ||
-          kIsWeb ||
-          baseUrl.startsWith('https://') ||
-          baseUrl.startsWith('http://127.') ||
-          baseUrl.startsWith('http://10.0.2.2'),
-      'API_BASE_URL must use HTTPS in release builds. Got: $baseUrl',
-    );
+    if (kReleaseMode &&
+        !kIsWeb &&
+        !baseUrl.startsWith('https://') &&
+        !baseUrl.startsWith('http://127.') &&
+        !baseUrl.startsWith('http://10.0.2.2')) {
+      throw StateError(
+          'API_BASE_URL must use HTTPS in release builds. Got: $baseUrl');
+    }
     _dio = Dio(
       BaseOptions(
         baseUrl: baseUrl,

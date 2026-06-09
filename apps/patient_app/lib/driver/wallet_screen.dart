@@ -22,10 +22,20 @@ class WalletScreen extends ConsumerWidget {
       ),
       body: ref.watch(_walletProvider).when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => const Center(
-              child: Text(
-                'Failed to load wallet',
-                style: TextStyle(color: kText600),
+            error: (e, _) => Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Failed to load wallet',
+                    style: TextStyle(color: kText600),
+                  ),
+                  const SizedBox(height: kSpaceMD),
+                  TextButton(
+                    onPressed: () => ref.invalidate(_walletProvider),
+                    child: const Text('Retry'),
+                  ),
+                ],
               ),
             ),
             data: (wallet) {

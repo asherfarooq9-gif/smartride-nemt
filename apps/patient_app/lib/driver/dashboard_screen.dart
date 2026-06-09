@@ -42,6 +42,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     super.dispose();
   }
 
+  String _greeting() {
+    final h = DateTime.now().hour;
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+
   @override
   Widget build(BuildContext context) {
     final dash = ref.watch(dashboardProvider);
@@ -123,6 +130,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                 ride: dash.pendingRides[i],
                                 onAccept: () =>
                                     _accept(dash.pendingRides[i].id),
+                                onDecline: () => ref
+                                    .read(dashboardProvider.notifier)
+                                    .declineRide(
+                                        dash.pendingRides[i].id.toString()),
                               ),
                               childCount: dash.pendingRides.length,
                             ),
@@ -258,7 +269,7 @@ class _Header extends ConsumerWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'Good morning, $driverName',
+            '${_greeting()}, $driverName',
             style: const TextStyle(
               color: Colors.white,
               fontSize: 16,
@@ -661,10 +672,15 @@ class _NavItem extends StatelessWidget {
 }
 
 class _RideRequestCard extends StatefulWidget {
-  const _RideRequestCard({required this.ride, required this.onAccept});
+  const _RideRequestCard({
+    required this.ride,
+    required this.onAccept,
+    required this.onDecline,
+  });
 
   final core.RideResponse ride;
   final VoidCallback onAccept;
+  final VoidCallback onDecline;
 
   @override
   State<_RideRequestCard> createState() => _RideRequestCardState();
@@ -851,7 +867,7 @@ class _RideRequestCardState extends State<_RideRequestCard> {
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
-                          onPressed: _expired ? null : () {},
+                          onPressed: _expired ? null : widget.onDecline,
                           style: TextButton.styleFrom(
                             foregroundColor: _kRed600,
                             padding: EdgeInsets.zero,

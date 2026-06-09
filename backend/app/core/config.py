@@ -1,6 +1,6 @@
 from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import List
+from typing import List, Literal
 
 _INSECURE_SECRET = "change_me_to_a_32_char_random_string_here"
 
@@ -10,7 +10,7 @@ class Settings(BaseSettings):
 
     # JWT
     SECRET_KEY: str = _INSECURE_SECRET
-    JWT_ALGORITHM: str = "HS256"
+    JWT_ALGORITHM: Literal["HS256", "HS384", "HS512"] = "HS256"
     JWT_EXPIRE_MINUTES: int = 60
 
     # Database

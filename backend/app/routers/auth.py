@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from math import ceil
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import BaseModel, Field
 from jose import JWTError, jwt
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -134,7 +135,9 @@ async def login(request: Request, body: LoginRequest, db: AsyncSession = Depends
 
 
 @router.post("/add-role", response_model=TokenResponse)
+@limiter.limit("5/minute")
 async def add_role(
+    request: Request,
     body: AddRoleRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -230,15 +233,18 @@ async def me(
     )
 
 
+class _FcmTokenRequest(BaseModel):
+    fcm_token: str = Field(max_length=256)
+
+
 @router.post("/fcm-token", status_code=status.HTTP_204_NO_CONTENT)
 async def register_fcm_token(
-    body: dict,
+    body: _FcmTokenRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    token = body.get("fcm_token", "")
-    if token:
-        current_user.fcm_token = token
+    if body.fcm_token:
+        current_user.fcm_token = body.fcm_token
         await db.commit()
 
 
@@ -263,7 +269,9 @@ async def logout(
 
 
 @router.post("/refresh", response_model=RefreshResponse)
+@limiter.limit("20/minute")
 async def refresh_token(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db),
 ):
