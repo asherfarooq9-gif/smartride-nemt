@@ -788,21 +788,23 @@ class _RideRequestCardState extends State<_RideRequestCard> {
                         ],
                       ),
                       const SizedBox(height: 10),
-                      const Row(
+                      Row(
                         children: [
-                          _InfoChip(
+                          const _InfoChip(
                             icon: Icons.route_outlined,
                             label: '~2.4 km',
                           ),
-                          SizedBox(width: 8),
-                          _InfoChip(
+                          const SizedBox(width: 8),
+                          const _InfoChip(
                             icon: Icons.timer_outlined,
                             label: '8 min',
                           ),
-                          SizedBox(width: 8),
+                          const SizedBox(width: 8),
                           _InfoChip(
                             icon: Icons.payments_outlined,
-                            label: 'PKR 450',
+                            label: widget.ride.estimatedFarePkr != null
+                                ? 'PKR ${widget.ride.estimatedFarePkr!.toInt()}'
+                                : 'PKR —',
                           ),
                         ],
                       ),

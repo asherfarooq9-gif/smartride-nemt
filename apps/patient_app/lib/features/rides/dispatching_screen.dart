@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
+import 'package:url_launcher/url_launcher.dart';
 
 class DispatchingScreen extends StatefulWidget {
   const DispatchingScreen({super.key, required this.rideId});
@@ -119,7 +120,12 @@ class _DispatchingScreenState extends State<DispatchingScreen>
               ),
               const Spacer(flex: 3),
               TextButton.icon(
-                onPressed: () {},
+                onPressed: () async {
+                  final uri = Uri.parse('tel:1122');
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri);
+                  }
+                },
                 icon: const Icon(Icons.phone, color: core.kAuthTeal, size: 18),
                 label: const Text(
                   'Call 1122 directly',

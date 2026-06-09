@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
+import 'package:url_launcher/url_launcher.dart';
 
 class LiveTrackingScreen extends ConsumerStatefulWidget {
   const LiveTrackingScreen({super.key, required this.rideId});
@@ -80,9 +81,17 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
             ? 'You have arrived at your destination.'
             : 'Your ride has ended.'),
         actions: [
+          if (status == 'completed')
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                context.go('/rate-driver/${widget.rideId}');
+              },
+              child: const Text('Rate Driver'),
+            ),
           TextButton(
             onPressed: () { Navigator.of(context).pop(); context.go('/'); },
-            child: const Text('OK'),
+            child: const Text('Done'),
           ),
         ],
       ),
@@ -245,7 +254,16 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
                           color: core.kDriverPrimary,
                           shape: BoxShape.circle,
                         ),
+                        child: GestureDetector(
+                        onTap: () async {
+                          final phone = driver?['phone'] as String?;
+                          if (phone != null) {
+                            final uri = Uri.parse('tel:$phone');
+                            if (await canLaunchUrl(uri)) await launchUrl(uri);
+                          }
+                        },
                         child: const Icon(Icons.phone, color: Colors.white, size: 20),
+                      ),
                       ),
                     ],
                   ),

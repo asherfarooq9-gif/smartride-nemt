@@ -31,6 +31,7 @@ import 'package:patient_app/driver/history_screen.dart';
 import 'package:patient_app/features/rides/notifications_screen.dart';
 import 'package:patient_app/features/profile/saved_places_screen.dart';
 import 'package:patient_app/features/rides/system_states_screen.dart';
+import 'package:patient_app/features/rides/rate_driver_screen.dart';
 
 const _authPages = {'/welcome', '/login', '/signup'};
 
@@ -99,6 +100,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/permissions', builder: (_, __) => const PermissionsScreen()),
       GoRoute(path: '/no-drivers', builder: (_, __) => const NoDriversScreen()),
       GoRoute(path: '/no-internet', builder: (_, __) => const NoInternetScreen()),
+      GoRoute(
+        path: '/rate-driver/:id',
+        builder: (_, s) => RateDriverScreen(rideId: s.pathParameters['id']!),
+      ),
 
       // ── Driver portal ─────────────────────────────────────────────────────
       GoRoute(path: '/driver', builder: (_, __) => const DashboardScreen()),

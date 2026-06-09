@@ -24,6 +24,11 @@ class RideStatusUpdate(BaseModel):
     cancel_reason: Optional[str] = None
 
 
+class RateRideRequest(BaseModel):
+    rating: float = Field(ge=1, le=5)
+    comment: Optional[str] = Field(default=None, max_length=500)
+
+
 class RideResponse(BaseModel):
     id: UUID
     patient_id: UUID
@@ -44,6 +49,8 @@ class RideResponse(BaseModel):
     cancel_reason: Optional[str] = None
     estimated_fare_pkr: Optional[float] = None
     final_fare_pkr: Optional[float] = None
+    patient_rating: Optional[float] = None
+    rating_comment: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

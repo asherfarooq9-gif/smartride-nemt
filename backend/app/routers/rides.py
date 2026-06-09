@@ -10,7 +10,7 @@ from app.core.security import get_current_user, require_patient, require_driver,
 from app.models.models import Ride, Patient, Driver, User, RideStatus, RideType
 from app.schemas.rides import (
     EmergencyRideRequest, ScheduledRideRequest,
-    RideStatusUpdate, RideResponse, RideListResponse, RideDetailResponse,
+    RideStatusUpdate, RateRideRequest, RideResponse, RideListResponse, RideDetailResponse,
 )
 from app.services import ride_service
 
@@ -159,6 +159,28 @@ async def accept_ride(
     if not driver.is_verified:
         raise HTTPException(403, "Driver not verified")
     ride = await ride_service.accept_ride(ride_id, driver, db)
+    return _to_response(ride)
+
+
+@router.post("/{ride_id}/rate", response_model=RideResponse)
+async def rate_ride(
+    ride_id: str,
+    body: RateRideRequest,
+    current_user: User = Depends(require_patient),
+    db: AsyncSession = Depends(get_db),
+):
+    patient = await ride_service.get_patient_by_user(current_user, db)
+    ride = await ride_service.get_ride_by_id(ride_id, db)
+    if ride.patient_id != patient.id:
+        raise HTTPException(403, "Forbidden")
+    if ride.status != RideStatus.completed:
+        raise HTTPException(400, "Can only rate completed rides")
+    if ride.patient_rating is not None:
+        raise HTTPException(409, "Ride already rated")
+    ride.patient_rating = body.rating
+    ride.rating_comment = body.comment
+    await db.commit()
+    await db.refresh(ride)
     return _to_response(ride)
 
 

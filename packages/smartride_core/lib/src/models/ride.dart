@@ -93,6 +93,8 @@ class RideResponse {
     this.createdAt,
     this.cancelReason,
     this.symptomText,
+    this.estimatedFarePkr,
+    this.patientRating,
   });
 
   final String id;
@@ -108,6 +110,8 @@ class RideResponse {
   final String? createdAt;
   final String? cancelReason;
   final String? symptomText;
+  final double? estimatedFarePkr;
+  final double? patientRating;
 
   bool get isActive =>
       status != RideStatus.completed && status != RideStatus.cancelled;
@@ -131,6 +135,8 @@ class RideResponse {
         createdAt: (json['requested_at'] ?? json['created_at']) as String?,
         cancelReason: json['cancel_reason'] as String?,
         symptomText: json['symptom_text'] as String?,
+        estimatedFarePkr: (json['estimated_fare_pkr'] as num?)?.toDouble(),
+        patientRating: (json['patient_rating'] as num?)?.toDouble(),
       );
 }
 
@@ -149,6 +155,8 @@ class RideDetailResponse extends RideResponse {
     super.createdAt,
     super.cancelReason,
     super.symptomText,
+    super.estimatedFarePkr,
+    super.patientRating,
     this.patient,
     this.driver,
     this.hospital,
@@ -176,6 +184,8 @@ class RideDetailResponse extends RideResponse {
       createdAt: base.createdAt,
       cancelReason: base.cancelReason,
       symptomText: base.symptomText,
+      estimatedFarePkr: base.estimatedFarePkr,
+      patientRating: base.patientRating,
       patient: json['patient'] as Map<String, dynamic>?,
       driver: json['driver'] as Map<String, dynamic>?,
       hospital: json['hospital'] as Map<String, dynamic>?,

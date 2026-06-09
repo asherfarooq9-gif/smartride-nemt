@@ -202,6 +202,8 @@ class Ride(Base):
     cancel_reason:       Mapped[Optional[str]]        = mapped_column(Text)
     estimated_fare_pkr:  Mapped[Optional[float]]      = mapped_column(Numeric(10, 2))
     final_fare_pkr:      Mapped[Optional[float]]      = mapped_column(Numeric(10, 2))
+    patient_rating:      Mapped[Optional[float]]      = mapped_column(Numeric(2, 1))
+    rating_comment:      Mapped[Optional[str]]        = mapped_column(Text)
     created_at:          Mapped[datetime]             = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (

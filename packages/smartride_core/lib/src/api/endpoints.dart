@@ -119,6 +119,14 @@ Future<void> acceptRide(String rideId) async {
   await _c.post('/api/v1/rides/$rideId/accept', {});
 }
 
+Future<RideResponse> rateRide(String rideId, double rating, {String? comment}) async {
+  final data = await _c.post('/api/v1/rides/$rideId/rate', {
+    'rating': rating,
+    if (comment != null && comment.isNotEmpty) 'comment': comment,
+  });
+  return RideResponse.fromJson(data);
+}
+
 Future<RideResponse> createScheduledRide(ScheduledRideRequest req) async {
   final data = await _c.post('/api/v1/rides/scheduled', req.toJson());
   return RideResponse.fromJson(data);
