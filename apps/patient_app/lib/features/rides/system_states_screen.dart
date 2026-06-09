@@ -1,13 +1,47 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:smartride_core/smartride_core.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-class PermissionsScreen extends StatelessWidget {
+// ── Location permission screen ─────────────────────────────────────────────────
+
+class PermissionsScreen extends StatefulWidget {
   const PermissionsScreen({super.key});
 
-  Future<void> _requestPermission(BuildContext context) async {
-    await Geolocator.requestPermission();
-    if (context.mounted) Navigator.of(context).pop();
+  @override
+  State<PermissionsScreen> createState() => _PermissionsScreenState();
+}
+
+class _PermissionsScreenState extends State<PermissionsScreen> {
+  bool _permanentlyDenied = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkStatus();
+  }
+
+  Future<void> _checkStatus() async {
+    final status = await Geolocator.checkPermission();
+    if (!mounted) return;
+    setState(() {
+      _permanentlyDenied = status == LocationPermission.deniedForever;
+    });
+  }
+
+  Future<void> _requestOrOpenSettings() async {
+    if (_permanentlyDenied) {
+      await Geolocator.openAppSettings();
+      return;
+    }
+    final result = await Geolocator.requestPermission();
+    if (!mounted) return;
+    if (result == LocationPermission.always ||
+        result == LocationPermission.whileInUse) {
+      Navigator.of(context).pop();
+    } else if (result == LocationPermission.deniedForever) {
+      setState(() => _permanentlyDenied = true);
+    }
   }
 
   @override
@@ -23,11 +57,7 @@ class PermissionsScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Icon(
-              Icons.location_on_outlined,
-              size: 64,
-              color: kTeal600,
-            ),
+            const Icon(Icons.location_on_outlined, size: 64, color: kTeal600),
             const SizedBox(height: kSpaceXL),
             const Text(
               'Enable Location',
@@ -39,10 +69,12 @@ class PermissionsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: kSpaceMD),
-            const Text(
-              'SmartRide needs your location to find nearby drivers and hospitals.',
+            Text(
+              _permanentlyDenied
+                  ? 'Location access was denied. Open app settings to enable it.'
+                  : 'SmartRide needs your location to find nearby drivers and hospitals.',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: kFontBody,
                 color: kText600,
                 height: 1.5,
@@ -50,8 +82,9 @@ class PermissionsScreen extends StatelessWidget {
             ),
             const SizedBox(height: kSpaceXXL),
             PrimaryButton(
-              label: 'Allow Access',
-              onPressed: () => _requestPermission(context),
+              label:
+                  _permanentlyDenied ? 'Open App Settings' : 'Allow Access',
+              onPressed: _requestOrOpenSettings,
               color: kTeal600,
               height: kButtonHeight,
             ),
@@ -72,13 +105,20 @@ class PermissionsScreen extends StatelessWidget {
   }
 }
 
+// ── No drivers screen ──────────────────────────────────────────────────────────
+
 class NoDriversScreen extends StatelessWidget {
   const NoDriversScreen({super.key});
 
-  void _call1122(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Calling 1122…')),
-    );
+  Future<void> _call1122(BuildContext context) async {
+    final uri = Uri.parse('tel:1122');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open dialler — call 1122 manually')),
+      );
+    }
   }
 
   @override
@@ -96,11 +136,7 @@ class NoDriversScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Icon(
-              Icons.car_crash_outlined,
-              size: 64,
-              color: kRed600,
-            ),
+            const Icon(Icons.car_crash_outlined, size: 64, color: kRed600),
             const SizedBox(height: kSpaceXL),
             const Text(
               'No drivers nearby',
@@ -148,6 +184,8 @@ class NoDriversScreen extends StatelessWidget {
   }
 }
 
+// ── No internet screen ─────────────────────────────────────────────────────────
+
 class NoInternetScreen extends StatelessWidget {
   const NoInternetScreen({super.key});
 
@@ -164,11 +202,7 @@ class NoInternetScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Icon(
-              Icons.wifi_off_outlined,
-              size: 64,
-              color: kText400,
-            ),
+            const Icon(Icons.wifi_off_outlined, size: 64, color: kText400),
             const SizedBox(height: kSpaceXL),
             const Text(
               'No internet connection',
