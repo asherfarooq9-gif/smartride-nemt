@@ -1,7 +1,11 @@
+import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:go_router/go_router.dart';
+
+final _msgController = StreamController<RemoteMessage>.broadcast();
+Stream<RemoteMessage> get incomingMessageStream => _msgController.stream;
 
 final _localNotifications = FlutterLocalNotificationsPlugin();
 
@@ -58,6 +62,7 @@ Future<void> initNotifications({required GoRouter router}) async {
 void _showLocal(RemoteMessage msg) {
   final notification = msg.notification;
   if (notification == null) return;
+  _msgController.add(msg);
   _localNotifications.show(
     notification.hashCode,
     notification.title,

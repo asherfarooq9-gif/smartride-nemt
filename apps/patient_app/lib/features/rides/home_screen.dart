@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:smartride_core/smartride_core.dart';
+import 'package:patient_app/core/providers.dart';
 import 'package:patient_app/features/rides/rides_notifier.dart';
 import 'package:patient_app/shared/role_switcher.dart';
 
@@ -182,13 +183,14 @@ final _meProvider = FutureProvider.autoDispose<String>((ref) async {
   }
 });
 
-class _NotificationBell extends StatelessWidget {
+class _NotificationBell extends ConsumerWidget {
   const _NotificationBell();
 
-  final bool _hasNotifications = true;
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hasUnread = ref
+        .watch(notificationsProvider('patient'))
+        .any((n) => !n.isRead);
     return GestureDetector(
       onTap: () => context.push('/notifications'),
       child: Container(
@@ -210,7 +212,7 @@ class _NotificationBell extends StatelessWidget {
             const Center(
               child: Icon(Icons.notifications_outlined, size: 20),
             ),
-            if (_hasNotifications)
+            if (hasUnread)
               Positioned(
                 top: 6,
                 right: 6,
