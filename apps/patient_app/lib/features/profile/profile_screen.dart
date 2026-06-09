@@ -43,13 +43,41 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _ecNameCtrl = TextEditingController();
   final _ecPhoneCtrl = TextEditingController();
   bool _editing = false;
+  DateTime? _dobDate;
 
   void _populate(core.PatientResponse p) {
     _nameCtrl.text = p.fullName ?? '';
-    _dobCtrl.text = p.dateOfBirth ?? '';
     _mobilityCtrl.text = p.mobilityNeeds ?? '';
     _ecNameCtrl.text = p.emergencyContactName ?? '';
     _ecPhoneCtrl.text = p.emergencyContactPhone ?? '';
+    final dob = p.dateOfBirth;
+    if (dob != null && dob.isNotEmpty) {
+      _dobDate = DateTime.tryParse(dob);
+      _dobCtrl.text = _dobDate != null ? _formatDob(_dobDate!) : dob;
+    } else {
+      _dobDate = null;
+      _dobCtrl.text = '';
+    }
+  }
+
+  String _formatDob(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')} / ${d.month.toString().padLeft(2, '0')} / ${d.year}';
+
+  Future<void> _pickDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _dobDate ?? DateTime(now.year - 30),
+      firstDate: DateTime(1920),
+      lastDate: now,
+      helpText: 'Date of Birth',
+    );
+    if (picked != null) {
+      setState(() {
+        _dobDate = picked;
+        _dobCtrl.text = _formatDob(picked);
+      });
+    }
   }
 
   @override
@@ -116,10 +144,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ecNameCtrl: _ecNameCtrl,
                   ecPhoneCtrl: _ecPhoneCtrl,
                   isUpdating: isUpdating,
+                  onPickDate: _pickDate,
                   onSave: () => _save(),
                   onCancel: () => setState(() => _editing = false),
                 )
               : _ViewMode(profile: profile),
+
         ),
       ),
     );
@@ -131,8 +161,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           core.PatientUpdate(
             fullName:
                 _nameCtrl.text.trim().isEmpty ? null : _nameCtrl.text.trim(),
-            dateOfBirth:
-                _dobCtrl.text.trim().isEmpty ? null : _dobCtrl.text.trim(),
+            dateOfBirth: _dobDate != null
+                ? '${_dobDate!.year}-${_dobDate!.month.toString().padLeft(2, '0')}-${_dobDate!.day.toString().padLeft(2, '0')}'
+                : null,
             mobilityNeeds: _mobilityCtrl.text.trim().isEmpty
                 ? null
                 : _mobilityCtrl.text.trim(),
@@ -256,6 +287,12 @@ class _QuickLinksCard extends StatelessWidget {
             icon: Icons.place_outlined,
             label: 'Saved Places',
             onTap: () => context.push('/saved-places'),
+          ),
+          const Divider(height: 1),
+          _NavRow(
+            icon: Icons.settings_outlined,
+            label: 'Settings',
+            onTap: () => context.push('/settings'),
           ),
         ],
       ),
@@ -382,6 +419,7 @@ class _EditForm extends StatelessWidget {
   final TextEditingController nameCtrl, dobCtrl, mobilityCtrl, ecNameCtrl,
       ecPhoneCtrl;
   final bool isUpdating;
+  final VoidCallback onPickDate;
   final VoidCallback onSave;
   final VoidCallback onCancel;
 
@@ -393,6 +431,7 @@ class _EditForm extends StatelessWidget {
     required this.ecNameCtrl,
     required this.ecPhoneCtrl,
     required this.isUpdating,
+    required this.onPickDate,
     required this.onSave,
     required this.onCancel,
   });
@@ -413,9 +452,13 @@ class _EditForm extends StatelessWidget {
           const SizedBox(height: core.kSpaceLG),
           TextFormField(
             controller: dobCtrl,
+            readOnly: true,
+            onTap: onPickDate,
             decoration: const InputDecoration(
-                labelText: 'Date of Birth (YYYY-MM-DD)',
-                prefixIcon: Icon(Icons.cake)),
+              labelText: 'Date of Birth',
+              prefixIcon: Icon(Icons.cake),
+              suffixIcon: Icon(Icons.calendar_today_outlined, size: 18),
+            ),
           ),
           const SizedBox(height: core.kSpaceLG),
           TextFormField(
