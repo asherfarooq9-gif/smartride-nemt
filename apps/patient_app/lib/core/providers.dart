@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -135,6 +136,95 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
 // ── City (driver portal) ───────────────────────────────────────────────────────
 
 final cityProvider = StateProvider<String>((ref) => 'Islamabad');
+
+// ── Saved Places ──────────────────────────────────────────────────────────────
+
+const _kSavedPlacesKey = 'saved_places_v1';
+
+class SavedPlace {
+  const SavedPlace({
+    required this.id,
+    required this.label,
+    required this.address,
+    required this.iconType,
+  });
+
+  final String id;
+  final String label;
+  final String address;
+  final String iconType; // home | work | hospital | place
+
+  IconData get icon => switch (iconType) {
+        'home' => Icons.home_outlined,
+        'work' => Icons.work_outline,
+        'hospital' => Icons.local_hospital_outlined,
+        _ => Icons.place_outlined,
+      };
+
+  Map<String, String> toMap() =>
+      {'id': id, 'label': label, 'address': address, 'iconType': iconType};
+
+  factory SavedPlace.fromMap(Map<String, dynamic> m) => SavedPlace(
+        id: m['id'] as String,
+        label: m['label'] as String,
+        address: m['address'] as String,
+        iconType: m['iconType'] as String,
+      );
+}
+
+final _defaultPlaces = [
+  const SavedPlace(id: 'default_home', label: 'Home', address: 'H-13, Street 4, Islamabad', iconType: 'home'),
+  const SavedPlace(id: 'default_work', label: 'Work', address: 'Blue Area, Jinnah Avenue, Islamabad', iconType: 'work'),
+  const SavedPlace(id: 'default_hospital', label: 'Favourite Hospital', address: 'Pakistan Institute of Medical Sciences, G-8, Islamabad', iconType: 'hospital'),
+];
+
+final savedPlacesProvider =
+    StateNotifierProvider<SavedPlacesNotifier, List<SavedPlace>>(
+  (ref) => SavedPlacesNotifier(),
+);
+
+class SavedPlacesNotifier extends StateNotifier<List<SavedPlace>> {
+  SavedPlacesNotifier() : super(const []) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    final raw =
+        await core.SecureStorage.instance.readValue(_kSavedPlacesKey);
+    if (raw == null || raw.isEmpty) {
+      state = List.from(_defaultPlaces);
+      return;
+    }
+    try {
+      final list = jsonDecode(raw) as List<dynamic>;
+      state = list
+          .map((m) => SavedPlace.fromMap(m as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      state = List.from(_defaultPlaces);
+    }
+  }
+
+  Future<void> _persist() async {
+    final encoded = jsonEncode(state.map((p) => p.toMap()).toList());
+    await core.SecureStorage.instance.saveValue(_kSavedPlacesKey, encoded);
+  }
+
+  Future<void> add(SavedPlace place) async {
+    state = [...state, place];
+    await _persist();
+  }
+
+  Future<void> update(SavedPlace place) async {
+    state = [for (final p in state) p.id == place.id ? place : p];
+    await _persist();
+  }
+
+  Future<void> remove(String id) async {
+    state = state.where((p) => p.id != id).toList();
+    await _persist();
+  }
+}
 
 // ── Notifications ──────────────────────────────────────────────────────────────
 
