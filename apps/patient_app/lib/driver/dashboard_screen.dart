@@ -17,6 +17,13 @@ const Color _kBorder = Color(0xFFC8E2E2);
 const double _kRadiusPill = 99;
 const double _kRadiusXL = 16;
 
+String _greeting() {
+  final h = DateTime.now().hour;
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
@@ -40,13 +47,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   void dispose() {
     _refreshTimer?.cancel();
     super.dispose();
-  }
-
-  String _greeting() {
-    final h = DateTime.now().hour;
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
   }
 
   @override
