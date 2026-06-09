@@ -37,7 +37,7 @@ core.RideListResponse _emptyList() => const core.RideListResponse(
       pageSize: 10,
     );
 
-core.RideListResponse _listWithRides() => core.RideListResponse(
+core.RideListResponse _listWithRides() => const core.RideListResponse(
       items: [
         core.RideResponse(
           id: '1',

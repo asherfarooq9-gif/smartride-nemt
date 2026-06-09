@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
-import '../core/providers.dart';
+import 'package:patient_app/core/providers.dart';
 
 /// Side drawer shared by both portals. Lets a multi-role account flip between
 /// Patient and Driver instantly, or "Become a…" if the role isn't held yet.

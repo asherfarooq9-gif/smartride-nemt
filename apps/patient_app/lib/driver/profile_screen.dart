@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 
 final _profileProvider = FutureProvider.autoDispose<core.DriverResponse>(
@@ -106,6 +107,29 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
                 _field(_vehicleModelCtrl, 'Vehicle model', Icons.directions_car),
                 const SizedBox(height: core.kSpaceLG),
                 _field(_vehiclePlateCtrl, 'Vehicle plate', Icons.confirmation_number),
+                if (!_editing) ...[
+                  const SizedBox(height: core.kSpaceXL),
+                  const Divider(),
+                  ListTile(
+                    leading: const Icon(Icons.history),
+                    title: const Text('Trip History'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/driver/history'),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.account_balance_wallet_outlined),
+                    title: const Text('Wallet'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/driver/wallet'),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.bar_chart_outlined),
+                    title: const Text('Earnings'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/driver/earnings'),
+                  ),
+                  const Divider(),
+                ],
                 if (_editing) ...[
                   const SizedBox(height: core.kSpaceXXL),
                   Row(

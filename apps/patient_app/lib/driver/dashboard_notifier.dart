@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
-import '../core/providers.dart';
+import 'package:patient_app/core/providers.dart';
 
 enum AcceptResult { success, alreadyTaken, error }
 
@@ -8,12 +8,14 @@ class DashboardState {
   const DashboardState({
     this.driver,
     this.pendingRides = const [],
+    this.todayEarningsPkr = 0.0,
     this.isLoading = false,
     this.error,
   });
 
   final core.DriverResponse? driver;
   final List<core.RideResponse> pendingRides;
+  final double todayEarningsPkr;
   final bool isLoading;
   final String? error;
 
@@ -22,12 +24,14 @@ class DashboardState {
   DashboardState copyWith({
     core.DriverResponse? driver,
     List<core.RideResponse>? pendingRides,
+    double? todayEarningsPkr,
     bool? isLoading,
     String? error,
   }) =>
       DashboardState(
         driver: driver ?? this.driver,
         pendingRides: pendingRides ?? this.pendingRides,
+        todayEarningsPkr: todayEarningsPkr ?? this.todayEarningsPkr,
         isLoading: isLoading ?? this.isLoading,
         error: error,
       );
@@ -51,10 +55,13 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
       final results = await Future.wait([
         core.getDriverMe(),
         core.getDriverPendingRides(),
+        core.getDriverEarnings(),
       ]);
       state = DashboardState(
         driver: results[0] as core.DriverResponse,
         pendingRides: results[1] as List<core.RideResponse>,
+        todayEarningsPkr:
+            _calcTodayEarnings(results[2] as Map<String, dynamic>),
         isLoading: false,
       );
     } catch (e) {
@@ -94,5 +101,24 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
       );
       return AcceptResult.error;
     }
+  }
+
+  double _calcTodayEarnings(Map<String, dynamic> data) {
+    final rides = data['rides'] as List<dynamic>? ?? [];
+    final today = DateTime.now();
+    var total = 0.0;
+    for (final ride in rides) {
+      final map = ride as Map<String, dynamic>;
+      final completedAtStr = map['completed_at'] as String?;
+      if (completedAtStr == null) continue;
+      final completedAt = DateTime.tryParse(completedAtStr)?.toLocal();
+      if (completedAt == null) continue;
+      if (completedAt.year == today.year &&
+          completedAt.month == today.month &&
+          completedAt.day == today.day) {
+        total += (map['fare_pkr'] as num?)?.toDouble() ?? 0;
+      }
+    }
+    return total;
   }
 }

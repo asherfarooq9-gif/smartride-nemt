@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:smartride_core/smartride_core.dart';
-import '../../core/providers.dart';
-import 'auth_widgets.dart';
+import 'package:patient_app/core/providers.dart';
+import 'package:patient_app/features/auth/auth_widgets.dart';
 
 enum _RoleChoice { patient, driver, both }
 
@@ -22,9 +23,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _confirmCtrl = TextEditingController();
   final _licenseCtrl = TextEditingController();
   final _plateCtrl = TextEditingController();
-  final _vehicleTypeCtrl = TextEditingController();
 
   _RoleChoice _choice = _RoleChoice.patient;
+  String _vehicleType = 'Car';
   bool _obscure = true;
 
   bool get _needsDriverFields =>
@@ -38,15 +39,17 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     _confirmCtrl.dispose();
     _licenseCtrl.dispose();
     _plateCtrl.dispose();
-    _vehicleTypeCtrl.dispose();
     super.dispose();
   }
 
   List<String> get _roles {
     switch (_choice) {
-      case _RoleChoice.patient: return ['patient'];
-      case _RoleChoice.driver:  return ['driver'];
-      case _RoleChoice.both:    return ['patient', 'driver'];
+      case _RoleChoice.patient:
+        return ['patient'];
+      case _RoleChoice.driver:
+        return ['driver'];
+      case _RoleChoice.both:
+        return ['patient', 'driver'];
     }
   }
 
@@ -54,15 +57,15 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     if (!_formKey.currentState!.validate()) return;
     final roles = _roles;
     await ref.read(authProvider.notifier).registerAccount(RegisterRequest(
-      phone: _phoneCtrl.text.trim(),
-      password: _passCtrl.text,
-      fullName: _nameCtrl.text.trim(),
-      roles: roles,
-      activeRole: roles.contains('patient') ? 'patient' : 'driver',
-      licenseNo: _needsDriverFields ? _licenseCtrl.text.trim() : null,
-      vehiclePlate: _needsDriverFields ? _plateCtrl.text.trim() : null,
-      vehicleType: _needsDriverFields ? _vehicleTypeCtrl.text.trim() : null,
-    ));
+          phone: _phoneCtrl.text.trim(),
+          password: _passCtrl.text,
+          fullName: _nameCtrl.text.trim(),
+          roles: roles,
+          activeRole: roles.contains('patient') ? 'patient' : 'driver',
+          licenseNo: _needsDriverFields ? _licenseCtrl.text.trim() : null,
+          vehiclePlate: _needsDriverFields ? _plateCtrl.text.trim() : null,
+          vehicleType: _needsDriverFields ? _vehicleType : null,
+        ));
     if (!mounted) return;
     final auth = ref.read(authProvider);
     if (auth.hasError) {
@@ -91,14 +94,21 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 const SizedBox(height: kSpaceLG),
                 TextButton.icon(
                   onPressed: () => context.pop(),
-                  icon: const Icon(Icons.arrow_back_ios, size: 16, color: kAuthTeal),
-                  label: const Text('Back', style: TextStyle(color: kAuthTeal)),
+                  icon: const Icon(
+                    Icons.arrow_back_ios,
+                    size: 16,
+                    color: kAuthTeal,
+                  ),
+                  label: Text(
+                    'Back',
+                    style: GoogleFonts.dmSans(color: kAuthTeal),
+                  ),
                   style: TextButton.styleFrom(alignment: Alignment.centerLeft),
                 ),
                 const SizedBox(height: kSpaceXL),
-                const Text(
+                Text(
                   'Create Account',
-                  style: TextStyle(
+                  style: GoogleFonts.dmSans(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -127,7 +137,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   obscureText: _obscure,
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                      _obscure
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
                       color: Colors.white38,
                       size: 20,
                     ),
@@ -145,13 +157,13 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       v != _passCtrl.text ? 'Passwords do not match' : null,
                 ),
                 const SizedBox(height: kSpaceXL),
-                const Text(
+                Text(
                   'I AM A...',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+                  style: GoogleFonts.dmSans(
+                    fontSize: kFontCaption,
+                    fontWeight: FontWeight.w700,
                     color: Colors.white38,
-                    letterSpacing: 1.1,
+                    letterSpacing: 0.6,
                   ),
                 ),
                 const SizedBox(height: kSpaceMD),
@@ -159,48 +171,70 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   selected: _choice,
                   onChanged: (c) => setState(() => _choice = c),
                 ),
-                if (_needsDriverFields) ...[
-                  const SizedBox(height: kSpaceXL),
-                  const Text(
-                    'DRIVER DETAILS',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white38,
-                      letterSpacing: 1.1,
-                    ),
-                  ),
-                  const SizedBox(height: kSpaceMD),
-                  DarkField(
-                    controller: _licenseCtrl,
-                    label: 'LICENSE NUMBER',
-                    hint: 'e.g. LHR-DL-12345',
-                    validator: (v) => _needsDriverFields
-                        ? Validators.required(v, field: 'License number')
-                        : null,
-                  ),
-                  const SizedBox(height: kSpaceLG),
-                  DarkField(
-                    controller: _plateCtrl,
-                    label: 'VEHICLE PLATE',
-                    hint: 'e.g. ABC-123',
-                    validator: (v) => _needsDriverFields
-                        ? Validators.required(v, field: 'Vehicle plate')
-                        : null,
-                  ),
-                  const SizedBox(height: kSpaceLG),
-                  DarkField(
-                    controller: _vehicleTypeCtrl,
-                    label: 'VEHICLE TYPE',
-                    hint: 'e.g. Sedan, Ambulette, Van',
-                    validator: (v) => _needsDriverFields
-                        ? Validators.required(v, field: 'Vehicle type')
-                        : null,
-                  ),
-                ],
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeInOut,
+                  child: _needsDriverFields
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const SizedBox(height: kSpaceXL),
+                            Text(
+                              'DRIVER DETAILS',
+                              style: GoogleFonts.dmSans(
+                                fontSize: kFontCaption,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white38,
+                                letterSpacing: 0.6,
+                              ),
+                            ),
+                            const SizedBox(height: kSpaceMD),
+                            DarkField(
+                              controller: _licenseCtrl,
+                              label: 'LICENSE NUMBER',
+                              hint: 'e.g. LHR-DL-12345',
+                              validator: (v) => _needsDriverFields
+                                  ? Validators.required(
+                                      v,
+                                      field: 'License number',
+                                    )
+                                  : null,
+                            ),
+                            const SizedBox(height: kSpaceLG),
+                            DarkField(
+                              controller: _plateCtrl,
+                              label: 'VEHICLE PLATE',
+                              hint: 'e.g. ABC-123',
+                              validator: (v) => _needsDriverFields
+                                  ? Validators.required(
+                                      v,
+                                      field: 'Vehicle plate',
+                                    )
+                                  : null,
+                            ),
+                            const SizedBox(height: kSpaceLG),
+                            Text(
+                              'VEHICLE TYPE',
+                              style: GoogleFonts.dmSans(
+                                fontSize: kFontCaption,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white38,
+                                letterSpacing: 0.6,
+                              ),
+                            ),
+                            const SizedBox(height: kSpaceSM),
+                            _VehicleTypeChips(
+                              selected: _vehicleType,
+                              onChanged: (v) =>
+                                  setState(() => _vehicleType = v),
+                            ),
+                          ],
+                        )
+                      : const SizedBox.shrink(),
+                ),
                 const SizedBox(height: kSpaceXXL),
                 SizedBox(
-                  height: kMinTapTarget,
+                  height: kButtonHeight,
                   child: ElevatedButton(
                     onPressed: isLoading ? null : _submit,
                     style: ElevatedButton.styleFrom(
@@ -219,10 +253,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text(
+                        : Text(
                             'Create Account',
-                            style: TextStyle(
-                              fontSize: kFontMD,
+                            style: GoogleFonts.dmSans(
+                              fontSize: kFontBody,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -232,17 +266,20 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
+                    Text(
                       'Already have an account? ',
-                      style: TextStyle(color: Colors.white54, fontSize: kFontSM),
+                      style: GoogleFonts.dmSans(
+                        color: Colors.white54,
+                        fontSize: kFontSmall,
+                      ),
                     ),
                     GestureDetector(
                       onTap: () => context.go('/login'),
-                      child: const Text(
+                      child: Text(
                         'Log in',
-                        style: TextStyle(
+                        style: GoogleFonts.dmSans(
                           color: kAuthTeal,
-                          fontSize: kFontSM,
+                          fontSize: kFontSmall,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -255,6 +292,59 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _VehicleTypeChips extends StatelessWidget {
+  const _VehicleTypeChips({
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final String selected;
+  final ValueChanged<String> onChanged;
+
+  static const _options = ['Car', 'Van', 'Ambulance'];
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: _options.map((type) {
+        final isSelected = type == selected;
+        return Padding(
+          padding: const EdgeInsets.only(right: kSpaceSM),
+          child: GestureDetector(
+            onTap: () => onChanged(type),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              padding: const EdgeInsets.symmetric(
+                horizontal: kSpaceLG,
+                vertical: kSpaceSM,
+              ),
+              constraints: const BoxConstraints(minHeight: kMinTapTarget),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? kAuthTeal.withValues(alpha: 0.15)
+                    : kDarkFieldBg,
+                borderRadius: BorderRadius.circular(kRadiusMD),
+                border: Border.all(
+                  color: isSelected ? kAuthTeal : kDarkFieldBorder,
+                  width: isSelected ? 1.5 : 1.0,
+                ),
+              ),
+              child: Text(
+                type,
+                style: GoogleFonts.dmSans(
+                  fontSize: kFontSmall,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? kAuthTeal : Colors.white54,
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }
@@ -272,27 +362,27 @@ class _RoleSelector extends StatelessWidget {
         _RoleCard(
           value: _RoleChoice.patient,
           selected: selected,
-          icon: Icons.personal_injury_outlined,
+          emoji: '🏥',
           title: 'Patient',
-          subtitle: 'Receive rides',
+          subtitle: 'Book and receive medical rides',
           onTap: () => onChanged(_RoleChoice.patient),
         ),
         const SizedBox(height: kSpaceSM),
         _RoleCard(
           value: _RoleChoice.driver,
           selected: selected,
-          icon: Icons.add_circle_outline,
+          emoji: '🚗',
           title: 'Driver',
-          subtitle: 'Give rides',
+          subtitle: 'Drive patients to appointments',
           onTap: () => onChanged(_RoleChoice.driver),
         ),
         const SizedBox(height: kSpaceSM),
         _RoleCard(
           value: _RoleChoice.both,
           selected: selected,
-          icon: Icons.people_outline,
+          emoji: '👥',
           title: 'Both',
-          subtitle: 'Both portals',
+          subtitle: 'Access both patient and driver portals',
           onTap: () => onChanged(_RoleChoice.both),
         ),
       ],
@@ -304,7 +394,7 @@ class _RoleCard extends StatelessWidget {
   const _RoleCard({
     required this.value,
     required this.selected,
-    required this.icon,
+    required this.emoji,
     required this.title,
     required this.subtitle,
     required this.onTap,
@@ -312,7 +402,7 @@ class _RoleCard extends StatelessWidget {
 
   final _RoleChoice value;
   final _RoleChoice selected;
-  final IconData icon;
+  final String emoji;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
@@ -324,6 +414,7 @@ class _RoleCard extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
+        constraints: const BoxConstraints(minHeight: kMinTapTarget),
         padding: const EdgeInsets.symmetric(
           horizontal: kSpaceLG,
           vertical: kSpaceMD,
@@ -335,35 +426,35 @@ class _RoleCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(kRadiusMD),
           border: Border.all(
             color: isSelected ? kAuthTeal : kDarkFieldBorder,
-            width: isSelected ? 1.5 : 1,
+            width: isSelected ? 1.5 : 1.0,
           ),
         ),
         child: Row(
           children: [
-            Icon(icon,
-                color: isSelected ? kAuthTeal : Colors.white38, size: 22),
+            Text(emoji, style: const TextStyle(fontSize: 22)),
             const SizedBox(width: kSpaceLG),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : Colors.white70,
-                    fontWeight: FontWeight.w600,
-                    fontSize: kFontMD,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.dmSans(
+                      color: isSelected ? Colors.white : Colors.white70,
+                      fontWeight: FontWeight.w600,
+                      fontSize: kFontBody,
+                    ),
                   ),
-                ),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: Colors.white38,
-                    fontSize: kFontXS,
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.dmSans(
+                      color: Colors.white38,
+                      fontSize: kFontCaption,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-            const Spacer(),
             if (isSelected)
               const Icon(Icons.check_circle, color: kAuthTeal, size: 20),
           ],

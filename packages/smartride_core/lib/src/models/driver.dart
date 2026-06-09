@@ -38,6 +38,7 @@ class DriverResponse {
     this.totalRides = 0,
     this.rating,
     this.isVerified = false,
+    this.walletBalancePkr = 0.0,
   });
 
   final String id;
@@ -52,8 +53,10 @@ class DriverResponse {
   final int totalRides;
   final double? rating;
   final bool isVerified;
+  final double walletBalancePkr;
 
   bool get isOnline => status != DriverStatus.offline;
+  bool get isLowBalance => walletBalancePkr < 500;
 
   factory DriverResponse.fromJson(Map<String, dynamic> json) => DriverResponse(
         id: json['id'].toString(),
@@ -68,6 +71,7 @@ class DriverResponse {
         totalRides: (json['total_rides'] as num?)?.toInt() ?? 0,
         rating: (json['rating'] as num?)?.toDouble(),
         isVerified: json['is_verified'] as bool? ?? false,
+        walletBalancePkr: (json['wallet_balance_pkr'] as num?)?.toDouble() ?? 0.0,
       );
 }
 

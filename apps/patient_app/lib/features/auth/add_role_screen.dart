@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart';
-import '../../core/providers.dart';
+import 'package:patient_app/core/providers.dart';
 
 /// "Become a Driver" / "Become a Patient" — adds a role to the current account.
 class AddRoleScreen extends ConsumerStatefulWidget {

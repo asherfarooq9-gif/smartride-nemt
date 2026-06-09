@@ -214,7 +214,93 @@ class _ViewMode extends StatelessWidget {
           _InfoRow(
               label: 'Phone', value: profile.emergencyContactPhone ?? '—'),
         ]),
+        const SizedBox(height: core.kSpaceLG),
+        const _QuickLinksCard(),
       ],
+    );
+  }
+}
+
+class _QuickLinksCard extends StatelessWidget {
+  const _QuickLinksCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Theme.of(context).dividerColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            child: Text(
+              'Quick Links',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: core.kTextSecondary,
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+          ),
+          const Divider(height: 1),
+          _NavRow(
+            icon: Icons.notifications_outlined,
+            label: 'Notifications',
+            onTap: () => context.push('/notifications'),
+          ),
+          const Divider(height: 1),
+          _NavRow(
+            icon: Icons.place_outlined,
+            label: 'Saved Places',
+            onTap: () => context.push('/saved-places'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NavRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _NavRow({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: core.kMinTapTarget),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: core.kSpaceMD,
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: core.kTextSecondary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(fontWeight: FontWeight.w500),
+              ),
+            ),
+            const Icon(Icons.chevron_right, size: 20, color: core.kTextSecondary),
+          ],
+        ),
+      ),
     );
   }
 }

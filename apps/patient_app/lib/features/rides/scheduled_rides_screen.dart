@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
-import 'rides_notifier.dart';
+import 'package:patient_app/features/rides/rides_notifier.dart';
 
 class ScheduledRidesScreen extends ConsumerWidget {
   const ScheduledRidesScreen({super.key});

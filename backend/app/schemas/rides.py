@@ -1,4 +1,5 @@
 from typing import Optional, List, Any, Dict
+from uuid import UUID
 from datetime import datetime
 from pydantic import BaseModel, Field
 from app.models.models import RideType, RideStatus
@@ -24,10 +25,10 @@ class RideStatusUpdate(BaseModel):
 
 
 class RideResponse(BaseModel):
-    id: str
-    patient_id: str
-    driver_id: Optional[str] = None
-    hospital_id: Optional[str] = None
+    id: UUID
+    patient_id: UUID
+    driver_id: Optional[UUID] = None
+    hospital_id: Optional[UUID] = None
     ride_type: RideType
     status: RideStatus
     pickup_lat: float

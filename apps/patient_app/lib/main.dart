@@ -2,9 +2,9 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'core/router.dart';
-import 'core/providers.dart';
-import 'core/notifications.dart';
+import 'package:patient_app/core/router.dart';
+import 'package:patient_app/core/providers.dart';
+import 'package:patient_app/core/notifications.dart';
 import 'package:smartride_core/smartride_core.dart';
 
 Future<void> main() async {

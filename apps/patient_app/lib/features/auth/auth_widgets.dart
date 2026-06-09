@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:smartride_core/smartride_core.dart';
 
 class DarkField extends StatelessWidget {
@@ -30,11 +31,11 @@ class DarkField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
+          style: GoogleFonts.dmSans(
+            fontSize: kFontCaption,
+            fontWeight: FontWeight.w700,
             color: Colors.white38,
-            letterSpacing: 1.1,
+            letterSpacing: 0.6,
           ),
         ),
         const SizedBox(height: kSpaceXS),
@@ -44,7 +45,10 @@ class DarkField extends StatelessWidget {
           obscureText: obscureText,
           onFieldSubmitted: onFieldSubmitted,
           validator: validator,
-          style: const TextStyle(color: Colors.white, fontSize: kFontMD),
+          style: GoogleFonts.dmSans(
+            color: Colors.white,
+            fontSize: kFontBody,
+          ),
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: const TextStyle(color: Colors.white24),
@@ -52,19 +56,19 @@ class DarkField extends StatelessWidget {
             filled: true,
             fillColor: kDarkFieldBg,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(kRadiusMD),
+              borderRadius: BorderRadius.circular(kRadiusLG),
               borderSide: const BorderSide(color: kDarkFieldBorder),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(kRadiusMD),
+              borderRadius: BorderRadius.circular(kRadiusLG),
               borderSide: const BorderSide(color: kDarkFieldBorder),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(kRadiusMD),
+              borderRadius: BorderRadius.circular(kRadiusLG),
               borderSide: const BorderSide(color: kAuthTeal, width: 1.5),
             ),
             errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(kRadiusMD),
+              borderRadius: BorderRadius.circular(kRadiusLG),
               borderSide: const BorderSide(color: kError),
             ),
             errorStyle: const TextStyle(color: kError),

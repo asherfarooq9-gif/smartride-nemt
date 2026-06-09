@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:smartride_core/smartride_core.dart';
-import '../../core/providers.dart';
-import 'auth_widgets.dart';
+import 'package:patient_app/core/providers.dart';
+import 'package:patient_app/features/auth/auth_widgets.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -27,7 +28,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    await ref.read(authProvider.notifier).signIn(_phoneCtrl.text.trim(), _passCtrl.text);
+    await ref.read(authProvider.notifier).signIn(
+          _phoneCtrl.text.trim(),
+          _passCtrl.text,
+        );
     if (!mounted) return;
     final auth = ref.read(authProvider);
     if (auth.hasError) {
@@ -56,23 +60,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: kSpaceLG),
                 TextButton.icon(
                   onPressed: () => context.pop(),
-                  icon: const Icon(Icons.arrow_back_ios, size: 16, color: kAuthTeal),
-                  label: const Text('Back', style: TextStyle(color: kAuthTeal)),
+                  icon: const Icon(
+                    Icons.arrow_back_ios,
+                    size: 16,
+                    color: kAuthTeal,
+                  ),
+                  label: Text(
+                    'Back',
+                    style: GoogleFonts.dmSans(color: kAuthTeal),
+                  ),
                   style: TextButton.styleFrom(alignment: Alignment.centerLeft),
                 ),
                 const SizedBox(height: kSpaceXL),
-                const Text(
+                Text(
                   'Welcome back',
-                  style: TextStyle(
+                  style: GoogleFonts.dmSans(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: kSpaceXS),
-                const Text(
+                Text(
                   'Log in to your SmartRide account',
-                  style: TextStyle(fontSize: kFontSM, color: Colors.white54),
+                  style: GoogleFonts.dmSans(
+                    fontSize: kFontSmall,
+                    color: Colors.white54,
+                  ),
                 ),
                 const SizedBox(height: kSpaceXXL),
                 DarkField(
@@ -90,7 +104,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   obscureText: _obscure,
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                      _obscure
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
                       color: Colors.white38,
                       size: 20,
                     ),
@@ -104,15 +120,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () {},
-                    child: const Text(
+                    child: Text(
                       'Forgot password?',
-                      style: TextStyle(color: kAuthTeal, fontSize: kFontSM),
+                      style: GoogleFonts.dmSans(
+                        color: kAuthTeal,
+                        fontSize: kFontSmall,
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(height: kSpaceXL),
                 SizedBox(
-                  height: kMinTapTarget,
+                  height: kButtonHeight,
                   child: ElevatedButton(
                     onPressed: isLoading ? null : _submit,
                     style: ElevatedButton.styleFrom(
@@ -131,10 +150,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text(
+                        : Text(
                             'Log In',
-                            style: TextStyle(
-                              fontSize: kFontMD,
+                            style: GoogleFonts.dmSans(
+                              fontSize: kFontBody,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -144,17 +163,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
+                    Text(
                       "Don't have an account? ",
-                      style: TextStyle(color: Colors.white54, fontSize: kFontSM),
+                      style: GoogleFonts.dmSans(
+                        color: Colors.white54,
+                        fontSize: kFontSmall,
+                      ),
                     ),
                     GestureDetector(
                       onTap: () => context.go('/signup'),
-                      child: const Text(
+                      child: Text(
                         'Sign up',
-                        style: TextStyle(
+                        style: GoogleFonts.dmSans(
                           color: kAuthTeal,
-                          fontSize: kFontSM,
+                          fontSize: kFontSmall,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -169,4 +191,3 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 }
-

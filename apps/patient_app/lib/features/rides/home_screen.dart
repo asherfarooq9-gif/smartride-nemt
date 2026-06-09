@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:smartride_core/smartride_core.dart';
-import 'rides_notifier.dart';
-import '../../shared/role_switcher.dart';
+import 'package:patient_app/features/rides/rides_notifier.dart';
+import 'package:patient_app/shared/role_switcher.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -19,7 +19,6 @@ class HomeScreen extends ConsumerWidget {
       drawer: const PortalDrawer(),
       body: Stack(
         children: [
-          // Map background
           FlutterMap(
             options: const MapOptions(
               initialCenter: LatLng(33.6844, 73.0479),
@@ -35,52 +34,59 @@ class HomeScreen extends ConsumerWidget {
               ),
             ],
           ),
-          // Top bar
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(
                   horizontal: kSpaceLG, vertical: kSpaceMD),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Builder(
-                    builder: (ctx) => GestureDetector(
-                      onTap: () => Scaffold.of(ctx).openDrawer(),
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 8,
-                            )
-                          ],
+                  Row(
+                    children: [
+                      Builder(
+                        builder: (ctx) => GestureDetector(
+                          onTap: () => Scaffold.of(ctx).openDrawer(),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: kSurface,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.1),
+                                  blurRadius: 8,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(Icons.menu, size: 20),
+                          ),
                         ),
-                        child: const Icon(Icons.menu, size: 20),
                       ),
-                    ),
+                      const Spacer(),
+                      const _NotificationBell(),
+                    ],
                   ),
-                  const Spacer(),
+                  const SizedBox(height: kSpaceSM),
                   _PortalChip(ref: ref),
                 ],
               ),
             ),
           ),
-          // Bottom panel
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
               decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                color: kSurface,
+                borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(kRadiusSheet)),
                 boxShadow: [
-                  BoxShadow(color: Colors.black12, blurRadius: 16)
+                  BoxShadow(color: Colors.black12, blurRadius: 16),
                 ],
               ),
-              padding: const EdgeInsets.fromLTRB(
-                  kSpaceXL, kSpaceXL, kSpaceXL, 0),
+              padding:
+                  const EdgeInsets.fromLTRB(kSpaceXL, kSpaceXL, kSpaceXL, 0),
               child: SafeArea(
                 top: false,
                 child: Column(
@@ -94,15 +100,16 @@ class HomeScreen extends ConsumerWidget {
                           Text(
                             _greeting(),
                             style: const TextStyle(
-                              fontSize: kFontSM,
-                              color: kTextSecondary,
+                              fontSize: 14,
+                              color: kText400,
                             ),
                           ),
                           Text(
                             name,
                             style: const TextStyle(
-                              fontSize: kFontXL,
+                              fontSize: 22,
                               fontWeight: FontWeight.bold,
+                              color: kText900,
                             ),
                           ),
                         ],
@@ -115,71 +122,18 @@ class HomeScreen extends ConsumerWidget {
                       _ActiveRideBanner(ride: activeRide),
                       const SizedBox(height: kSpaceLG),
                     ],
-                    // Emergency button
-                    Semantics(
-                      label: 'Request emergency ride',
-                      button: true,
-                      child: GestureDetector(
-                        onTap: () => context.push('/symptoms'),
-                        child: Container(
-                          height: kEmergencyButtonHeight + 16,
-                          decoration: BoxDecoration(
-                            color: kEmergencyRed,
-                            borderRadius:
-                                BorderRadius.circular(kRadiusXL),
-                            boxShadow: [
-                              BoxShadow(
-                                color:
-                                    kEmergencyRed.withValues(alpha: 0.4),
-                                blurRadius: 16,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
-                          ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.add_circle_outline,
-                                  color: Colors.white, size: 28),
-                              SizedBox(width: kSpaceMD),
-                              Column(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.center,
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'EMERGENCY',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: kFontLG,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 1,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Tap for immediate help',
-                                    style: TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: kFontXS,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
+                    Center(child: _EmergencyButton()),
                     const SizedBox(height: kSpaceMD),
                     const Row(
                       children: [
                         Expanded(child: Divider()),
                         Padding(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: kSpaceSM),
-                          child: Text('or',
-                              style: TextStyle(color: kTextSecondary)),
+                          padding:
+                              EdgeInsets.symmetric(horizontal: kSpaceSM),
+                          child: Text(
+                            'or',
+                            style: TextStyle(color: kText400),
+                          ),
                         ),
                         Expanded(child: Divider()),
                       ],
@@ -191,22 +145,12 @@ class HomeScreen extends ConsumerWidget {
                       label: const Text('Book a Ride'),
                       style: OutlinedButton.styleFrom(
                         minimumSize:
-                            const Size(double.infinity, kMinTapTarget),
-                        side: BorderSide(
-                            color: Theme.of(context).colorScheme.primary),
+                            const Size(double.infinity, kButtonHeight),
+                        side: const BorderSide(color: kTeal600),
+                        foregroundColor: kTeal600,
                         shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(kRadiusLG),
+                          borderRadius: BorderRadius.circular(kRadiusLG),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: kSpaceXS),
-                    const Text(
-                      'Schedule a trip to your hospital',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: kFontXS,
-                        color: kTextSecondary,
                       ),
                     ),
                     const SizedBox(height: kSpaceLG),
@@ -229,7 +173,6 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-// Provider that loads the patient first name
 final _meProvider = FutureProvider.autoDispose<String>((ref) async {
   try {
     final p = await getPatientMe();
@@ -238,6 +181,54 @@ final _meProvider = FutureProvider.autoDispose<String>((ref) async {
     return 'there';
   }
 });
+
+class _NotificationBell extends StatelessWidget {
+  const _NotificationBell();
+
+  final bool _hasNotifications = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.push('/notifications'),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: kSurface,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 8,
+            ),
+          ],
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            const Center(
+              child: Icon(Icons.notifications_outlined, size: 20),
+            ),
+            if (_hasNotifications)
+              Positioned(
+                top: 6,
+                right: 6,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: kRed600,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _PortalChip extends StatelessWidget {
   const _PortalChip({required this.ref});
@@ -251,29 +242,137 @@ class _PortalChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(
             horizontal: kSpaceMD, vertical: kSpaceXS),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(kRadiusXXL),
+          color: kSurface,
+          borderRadius: BorderRadius.circular(kRadiusPill),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1), blurRadius: 8)
+                color: Colors.black.withValues(alpha: 0.1), blurRadius: 8),
           ],
         ),
-        child: Row(
+        child: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               'Patient',
               style: TextStyle(
-                fontSize: kFontSM,
+                fontSize: kFontSmall,
                 fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.primary,
+                color: kTeal600,
               ),
             ),
-            const SizedBox(width: 2),
-            Icon(Icons.keyboard_arrow_down,
-                size: 16,
-                color: Theme.of(context).colorScheme.primary),
+            SizedBox(width: 2),
+            Icon(Icons.keyboard_arrow_down, size: 16, color: kTeal600),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmergencyButton extends StatefulWidget {
+  @override
+  State<_EmergencyButton> createState() => _EmergencyButtonState();
+}
+
+class _EmergencyButtonState extends State<_EmergencyButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2400),
+    );
+    _pulse = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+
+    if (!WidgetsBinding.instance.accessibilityFeatures.disableAnimations) {
+      _controller.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final disableAnimations =
+        MediaQuery.of(context).disableAnimations;
+
+    return Semantics(
+      label: 'Request emergency ride',
+      button: true,
+      child: GestureDetector(
+        onTap: () => context.push('/symptoms'),
+        child: SizedBox(
+          width: kEmergencyButtonSize + 40,
+          height: kEmergencyButtonSize + 40,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              if (!disableAnimations)
+                AnimatedBuilder(
+                  animation: _pulse,
+                  builder: (context, _) {
+                    final t = _pulse.value;
+                    return Transform.scale(
+                      scale: 1.0 + 0.22 * t,
+                      child: Opacity(
+                        opacity: 0.25 * (1 - t),
+                        child: Container(
+                          width: kEmergencyButtonSize,
+                          height: kEmergencyButtonSize,
+                          decoration: const BoxDecoration(
+                            color: kRed600,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              Container(
+                width: kEmergencyButtonSize,
+                height: kEmergencyButtonSize,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const RadialGradient(
+                    colors: [Color(0xFFE03535), Color(0xFFC62828)],
+                  ),
+                  boxShadow: kEmergencyButtonShadow,
+                ),
+                child: const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.add, color: Colors.white, size: 40),
+                    SizedBox(height: 4),
+                    Text(
+                      'EMERGENCY',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Tap for immediate help',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -291,26 +390,35 @@ class _ActiveRideBanner extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(kSpaceMD),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primaryContainer,
+          color: kTeal100,
           borderRadius: BorderRadius.circular(kRadiusLG),
         ),
         child: Row(
           children: [
-            const Icon(Icons.directions_car),
+            const Icon(Icons.directions_car, color: kTeal600),
             const SizedBox(width: kSpaceMD),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Active Ride',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  Text(ride.status.displayLabel,
-                      style: const TextStyle(
-                          fontSize: kFontSM, color: kTextSecondary)),
+                  const Text(
+                    'Active Ride',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: kText900,
+                    ),
+                  ),
+                  Text(
+                    ride.status.displayLabel,
+                    style: const TextStyle(
+                      fontSize: kFontSmall,
+                      color: kText600,
+                    ),
+                  ),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios, size: 16),
+            const Icon(Icons.arrow_forward_ios, size: 16, color: kText600),
           ],
         ),
       ),

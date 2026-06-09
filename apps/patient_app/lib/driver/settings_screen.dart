@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
-import '../core/providers.dart';
+import 'package:patient_app/core/providers.dart';
 
 class DriverSettingsScreen extends ConsumerWidget {
   const DriverSettingsScreen({super.key});

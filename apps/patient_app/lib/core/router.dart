@@ -1,30 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'providers.dart';
+import 'package:patient_app/core/providers.dart';
 // Auth
-import '../features/auth/welcome_screen.dart';
-import '../features/auth/login_screen.dart';
-import '../features/auth/signup_screen.dart';
-import '../features/auth/add_role_screen.dart';
+import 'package:patient_app/features/auth/welcome_screen.dart';
+import 'package:patient_app/features/auth/login_screen.dart';
+import 'package:patient_app/features/auth/signup_screen.dart';
+import 'package:patient_app/features/auth/add_role_screen.dart';
 // Patient portal
-import '../features/rides/home_screen.dart';
-import '../features/rides/symptom_screen.dart';
-import '../features/rides/dispatching_screen.dart';
-import '../features/rides/ride_detail_screen.dart';
-import '../features/rides/live_tracking_screen.dart';
-import '../features/rides/scheduled_rides_screen.dart';
-import '../features/rides/schedule_trip_screen.dart';
-import '../features/rides/booking_confirmed_screen.dart';
-import '../features/profile/profile_screen.dart';
-import '../features/settings/settings_screen.dart';
-import '../features/support/support_screen.dart';
+import 'package:patient_app/features/rides/home_screen.dart';
+import 'package:patient_app/features/rides/symptom_screen.dart';
+import 'package:patient_app/features/rides/dispatching_screen.dart';
+import 'package:patient_app/features/rides/ride_detail_screen.dart';
+import 'package:patient_app/features/rides/live_tracking_screen.dart';
+import 'package:patient_app/features/rides/scheduled_rides_screen.dart';
+import 'package:patient_app/features/rides/schedule_trip_screen.dart';
+import 'package:patient_app/features/rides/booking_confirmed_screen.dart';
+import 'package:patient_app/features/profile/profile_screen.dart';
+import 'package:patient_app/features/settings/settings_screen.dart';
+import 'package:patient_app/features/support/support_screen.dart';
 // Driver portal
-import '../driver/dashboard_screen.dart';
-import '../driver/active_ride_screen.dart';
-import '../driver/earnings_screen.dart';
-import '../driver/profile_screen.dart';
-import '../driver/settings_screen.dart';
+import 'package:patient_app/driver/dashboard_screen.dart';
+import 'package:patient_app/driver/active_ride_screen.dart';
+import 'package:patient_app/driver/earnings_screen.dart';
+import 'package:patient_app/driver/profile_screen.dart';
+import 'package:patient_app/driver/settings_screen.dart';
+import 'package:patient_app/driver/wallet_screen.dart';
+import 'package:patient_app/driver/top_up_screen.dart';
+import 'package:patient_app/driver/history_screen.dart';
+import 'package:patient_app/features/rides/notifications_screen.dart';
+import 'package:patient_app/features/profile/saved_places_screen.dart';
+import 'package:patient_app/features/rides/system_states_screen.dart';
 
 const _authPages = {'/welcome', '/login', '/signup'};
 
@@ -88,10 +94,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
       GoRoute(path: '/help',     builder: (_, __) => const HelpScreen()),
       GoRoute(path: '/contact',  builder: (_, __) => const ContactScreen()),
+      GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen(portal: 'patient')),
+      GoRoute(path: '/saved-places', builder: (_, __) => const SavedPlacesScreen()),
+      GoRoute(path: '/permissions', builder: (_, __) => const PermissionsScreen()),
+      GoRoute(path: '/no-drivers', builder: (_, __) => const NoDriversScreen()),
+      GoRoute(path: '/no-internet', builder: (_, __) => const NoInternetScreen()),
 
       // ── Driver portal ─────────────────────────────────────────────────────
       GoRoute(path: '/driver', builder: (_, __) => const DashboardScreen()),
       GoRoute(path: '/driver/earnings', builder: (_, __) => const EarningsScreen()),
+      GoRoute(path: '/driver/wallet', builder: (_, __) => const WalletScreen()),
+      GoRoute(path: '/driver/top-up', builder: (_, __) => const TopUpScreen()),
+      GoRoute(path: '/driver/notifications', builder: (_, __) => const NotificationsScreen(portal: 'driver')),
       GoRoute(
         path: '/driver/ride/:id',
         builder: (_, s) => ActiveRideScreen(rideId: s.pathParameters['id']!),
@@ -103,6 +117,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/driver/settings',
         builder: (_, __) => const DriverSettingsScreen(),
+      ),
+      GoRoute(
+        path: '/driver/history',
+        builder: (_, __) => const DriverHistoryScreen(),
       ),
     ],
     errorBuilder: (_, state) => Scaffold(

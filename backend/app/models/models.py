@@ -140,12 +140,13 @@ class Driver(Base):
     license_no:    Mapped[str]                = mapped_column(String(50), unique=True)
     vehicle_plate: Mapped[str]                = mapped_column(String(20), unique=True)
     vehicle_type:  Mapped[str]                = mapped_column(String(50))
-    is_verified:   Mapped[bool]               = mapped_column(Boolean, default=False)
-    status:        Mapped[DriverStatus]       = mapped_column(SAEnum(DriverStatus, name="driver_status", create_type=False), default=DriverStatus.offline)
-    current_lat:   Mapped[Optional[float]]    = mapped_column(DOUBLE_PRECISION)
-    current_lng:   Mapped[Optional[float]]    = mapped_column(DOUBLE_PRECISION)
-    last_seen_at:  Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    created_at:    Mapped[datetime]           = mapped_column(DateTime(timezone=True), server_default=func.now())
+    is_verified:       Mapped[bool]               = mapped_column(Boolean, default=False)
+    status:            Mapped[DriverStatus]       = mapped_column(SAEnum(DriverStatus, name="driver_status", create_type=False), default=DriverStatus.offline)
+    wallet_balance_pkr: Mapped[float]             = mapped_column(DOUBLE_PRECISION, default=0.0, server_default="0")
+    current_lat:       Mapped[Optional[float]]    = mapped_column(DOUBLE_PRECISION)
+    current_lng:       Mapped[Optional[float]]    = mapped_column(DOUBLE_PRECISION)
+    last_seen_at:      Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    created_at:        Mapped[datetime]           = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (
         Index("ix_drivers_status", "status"),

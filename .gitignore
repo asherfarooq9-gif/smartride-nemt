@@ -49,6 +49,10 @@ apps/*/.dart_tool/
 apps/*/.flutter-plugins
 apps/*/.flutter-plugins-dependencies
 
+# Firebase service account credentials (contains private key — never commit)
+backend/firebase-credentials.json
+*firebase-adminsdk*.json
+
 # Backups / temp
 _archive/
 _flutter_tmp/
