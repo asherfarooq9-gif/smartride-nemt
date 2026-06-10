@@ -177,8 +177,11 @@ class HomeScreen extends ConsumerWidget {
 final _meProvider = FutureProvider.autoDispose<String>((ref) async {
   try {
     final p = await getPatientMe();
+    // Cache the name once fetched — without keepAlive, every return to the
+    // home screen re-fires this network call and flashes a loading state.
+    ref.keepAlive();
     return p.fullName ?? 'there';
-  } catch (_) {
+  } on Exception {
     return 'there';
   }
 });

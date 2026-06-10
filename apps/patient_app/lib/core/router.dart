@@ -36,6 +36,10 @@ import 'package:patient_app/features/rides/rate_driver_screen.dart';
 const _authPages = {'/welcome', '/login', '/signup'};
 
 final routerProvider = Provider<GoRouter>((ref) {
+  final authListenable = _AuthListenable(ref);
+  // Close the auth subscriptions if this provider is ever invalidated,
+  // otherwise they would outlive the router and leak.
+  ref.onDispose(authListenable.dispose);
   return GoRouter(
     initialLocation: '/welcome',
     redirect: (context, state) {
@@ -52,9 +56,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (_authPages.contains(loc)) {
         return ref.read(activeRoleProvider) == 'driver' ? '/driver' : '/';
       }
+      // Role guard: driver routes require the driver role. Without this, any
+      // logged-in patient could deep-link straight into the driver portal.
+      if (loc.startsWith('/driver') &&
+          !ref.read(rolesProvider).contains('driver')) {
+        return '/';
+      }
       return null;
     },
-    refreshListenable: _AuthListenable(ref),
+    refreshListenable: authListenable,
     routes: [
       // ── Auth ──────────────────────────────────────────────────────────────
       GoRoute(path: '/welcome', builder: (_, __) => const WelcomeScreen()),

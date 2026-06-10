@@ -3,7 +3,7 @@ import pytest
 from httpx import AsyncClient
 
 BOTH_PAYLOAD = {
-    "phone": "+92-301-1000001",
+    "phone": "+923011000001",
     "password": "secret123",
     "full_name": "Dual Role User",
     "roles": ["patient", "driver"],
@@ -29,7 +29,7 @@ async def test_register_both_roles(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_me_shows_both_profiles(client: AsyncClient):
-    phone = "+92-301-1000002"
+    phone = "+923011000002"
     reg = await client.post("/api/v1/auth/register", json={**BOTH_PAYLOAD, "phone": phone,
                                                            "license_no": "ISB-DL-901", "vehicle_plate": "ISB-901"})
     token = reg.json()["access_token"]
@@ -45,7 +45,7 @@ async def test_me_shows_both_profiles(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_register_driver_missing_fields_rejected(client: AsyncClient):
     payload = {
-        "phone": "+92-301-1000003", "password": "secret123", "full_name": "No Vehicle",
+        "phone": "+923011000003", "password": "secret123", "full_name": "No Vehicle",
         "roles": ["driver"],  # missing license/plate/type
     }
     resp = await client.post("/api/v1/auth/register", json=payload)
@@ -54,7 +54,7 @@ async def test_register_driver_missing_fields_rejected(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_register_blocks_admin(client: AsyncClient):
-    payload = {"phone": "+92-301-1000004", "password": "secret123",
+    payload = {"phone": "+923011000004", "password": "secret123",
                "full_name": "Sneaky", "roles": ["admin"]}
     resp = await client.post("/api/v1/auth/register", json=payload)
     assert resp.status_code == 403
@@ -62,7 +62,7 @@ async def test_register_blocks_admin(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_add_role_patient_becomes_driver(client: AsyncClient):
-    phone = "+92-301-1000005"
+    phone = "+923011000005"
     reg = await client.post("/api/v1/auth/register", json={
         "phone": phone, "password": "secret123", "full_name": "Just Patient",
         "roles": ["patient"],
@@ -83,7 +83,7 @@ async def test_add_role_patient_becomes_driver(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_add_existing_role_rejected(client: AsyncClient):
-    phone = "+92-301-1000006"
+    phone = "+923011000006"
     reg = await client.post("/api/v1/auth/register", json={
         "phone": phone, "password": "secret123", "full_name": "P", "roles": ["patient"],
     })
@@ -94,7 +94,7 @@ async def test_add_existing_role_rejected(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_switch_role(client: AsyncClient):
-    phone = "+92-301-1000007"
+    phone = "+923011000007"
     reg = await client.post("/api/v1/auth/register", json={**BOTH_PAYLOAD, "phone": phone,
                                                            "license_no": "ISB-DL-907", "vehicle_plate": "ISB-907"})
     token = reg.json()["access_token"]
@@ -108,7 +108,7 @@ async def test_switch_role(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_switch_to_unheld_role_rejected(client: AsyncClient):
-    phone = "+92-301-1000008"
+    phone = "+923011000008"
     reg = await client.post("/api/v1/auth/register", json={
         "phone": phone, "password": "secret123", "full_name": "P", "roles": ["patient"],
     })
@@ -120,7 +120,7 @@ async def test_switch_to_unheld_role_rejected(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_both_role_user_passes_patient_and_driver_rbac(client: AsyncClient):
-    phone = "+92-301-1000009"
+    phone = "+923011000009"
     reg = await client.post("/api/v1/auth/register", json={**BOTH_PAYLOAD, "phone": phone,
                                                            "license_no": "ISB-DL-909", "vehicle_plate": "ISB-909"})
     token = reg.json()["access_token"]

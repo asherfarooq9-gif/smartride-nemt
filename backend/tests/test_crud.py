@@ -19,17 +19,17 @@ async def _register_and_token(client: AsyncClient, phone: str, role: str, **extr
 
 @pytest.mark.asyncio
 async def test_patient_get_me(client: AsyncClient):
-    token = await _register_and_token(client, "+92-311-1000001", "patient")
+    token = await _register_and_token(client, "+923001000001", "patient")
     resp = await client.get("/api/v1/patients/me", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 200
     data = resp.json()
     assert data["full_name"] == "Test User"
-    assert data["phone"] == "+92-311-1000001"
+    assert data["phone"] == "+923001000001"
 
 
 @pytest.mark.asyncio
 async def test_patient_update_me(client: AsyncClient):
-    token = await _register_and_token(client, "+92-311-1000002", "patient")
+    token = await _register_and_token(client, "+923001000002", "patient")
     resp = await client.patch(
         "/api/v1/patients/me",
         json={"mobility_needs": "wheelchair"},
@@ -42,13 +42,14 @@ async def test_patient_update_me(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_patient_me_requires_auth(client: AsyncClient):
     resp = await client.get("/api/v1/patients/me")
-    assert resp.status_code == 403
+    # Missing credentials → 401 Unauthorized (403 is for valid-but-insufficient).
+    assert resp.status_code == 401
 
 
 @pytest.mark.asyncio
 async def test_driver_cannot_access_patient_me(client: AsyncClient):
     token = await _register_and_token(
-        client, "+92-311-1000003", "driver",
+        client, "+923001000003", "driver",
         license_no="LHR-DL-900", vehicle_plate="AAA-900", vehicle_type="ambulette"
     )
     resp = await client.get("/api/v1/patients/me", headers={"Authorization": f"Bearer {token}"})
@@ -60,7 +61,7 @@ async def test_driver_cannot_access_patient_me(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_driver_get_me(client: AsyncClient):
     token = await _register_and_token(
-        client, "+92-311-2000001", "driver",
+        client, "+923002000001", "driver",
         license_no="LHR-DL-200", vehicle_plate="BBB-200", vehicle_type="sedan"
     )
     resp = await client.get("/api/v1/drivers/me", headers={"Authorization": f"Bearer {token}"})
@@ -74,7 +75,7 @@ async def test_driver_get_me(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_driver_update_status(client: AsyncClient):
     token = await _register_and_token(
-        client, "+92-311-2000002", "driver",
+        client, "+923002000002", "driver",
         license_no="LHR-DL-201", vehicle_plate="BBB-201", vehicle_type="van"
     )
     resp = await client.patch(
@@ -89,7 +90,7 @@ async def test_driver_update_status(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_driver_update_location(client: AsyncClient):
     token = await _register_and_token(
-        client, "+92-311-2000003", "driver",
+        client, "+923002000003", "driver",
         license_no="LHR-DL-202", vehicle_plate="BBB-202", vehicle_type="van"
     )
     resp = await client.post(
@@ -144,7 +145,7 @@ async def test_admin_create_hospital(client: AsyncClient, admin_token: str):
 
 @pytest.mark.asyncio
 async def test_patient_cannot_create_hospital(client: AsyncClient):
-    token = await _register_and_token(client, "+92-311-9000002", "patient")
+    token = await _register_and_token(client, "+923009000002", "patient")
     resp = await client.post(
         "/api/v1/hospitals",
         json={"name": "X", "address": "Y", "city": "Z", "lat": 0, "lng": 0},

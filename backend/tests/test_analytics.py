@@ -16,7 +16,7 @@ async def test_summary_returns_expected_keys(client: AsyncClient, admin_token: s
 @pytest.mark.asyncio
 async def test_non_admin_cannot_access_summary(client: AsyncClient):
     r = await client.post("/api/v1/auth/register", json={
-        "phone": "+92300AN0002", "password": "pass1234", "role": "patient", "full_name": "P",
+        "phone": "+92300740002", "password": "pass1234", "role": "patient", "full_name": "P",
     })
     token = r.json()["access_token"]
     r = await client.get("/api/v1/analytics/summary", headers={"Authorization": f"Bearer {token}"})

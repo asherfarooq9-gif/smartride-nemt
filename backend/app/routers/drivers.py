@@ -12,6 +12,7 @@ from app.schemas.drivers import (
     DriverResponse, DriverUpdate, DriverStatusUpdate,
     LocationUpdate, DriverListResponse,
     WalletResponse, WalletTopUpRequest, WalletTransaction,
+    EarningsResponse, EarningsRide,
 )
 from app.models.models import Ride, RideStatus
 from app.services import driver_service
@@ -86,18 +87,30 @@ async def update_location(
     return _to_response(driver, current_user)
 
 
-@router.get("/earnings")
+@router.get("/earnings", response_model=EarningsResponse)
 async def get_earnings(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
     current_user: User = Depends(require_driver),
     db: AsyncSession = Depends(get_db),
 ):
     from app.models.models import Hospital
 
     driver = await driver_service.get_driver_by_user(current_user, db)
+    completed = and_(Ride.driver_id == driver.id, Ride.status == RideStatus.completed)
+
+    # Totals aggregate over ALL completed rides; the list below is paginated.
+    total_earned, ride_count = (await db.execute(
+        select(
+            func.coalesce(func.sum(func.coalesce(Ride.final_fare_pkr, Ride.estimated_fare_pkr, 0)), 0),
+            func.count(),
+        ).where(completed)
+    )).one()
+
     rows = (await db.execute(
-        select(Ride).where(
-            and_(Ride.driver_id == driver.id, Ride.status == RideStatus.completed)
-        ).order_by(Ride.completed_at.desc())
+        select(Ride).where(completed)
+        .order_by(Ride.completed_at.desc())
+        .offset((page - 1) * page_size).limit(page_size)
     )).scalars().all()
 
     hospital_ids = list({r.hospital_id for r in rows if r.hospital_id})
@@ -108,19 +121,20 @@ async def get_earnings(
         )).scalars().all()
         hospitals_map = {str(h.id): h.name for h in h_rows}
 
-    total_earned = sum(float(r.final_fare_pkr or r.estimated_fare_pkr or 0) for r in rows)
     rides = [
-        {
-            "id": str(r.id),
-            "pickup_address": r.pickup_address,
-            "hospital_name": hospitals_map.get(str(r.hospital_id)) if r.hospital_id else None,
-            "completed_at": r.completed_at.isoformat() if r.completed_at else None,
-            "fare_pkr": float(r.final_fare_pkr or r.estimated_fare_pkr or 0),
-            "ride_type": r.ride_type.value,
-        }
+        EarningsRide(
+            id=str(r.id),
+            pickup_address=r.pickup_address,
+            hospital_name=hospitals_map.get(str(r.hospital_id)) if r.hospital_id else None,
+            completed_at=r.completed_at.isoformat() if r.completed_at else None,
+            fare_pkr=float(r.final_fare_pkr or r.estimated_fare_pkr or 0),
+            ride_type=r.ride_type.value,
+        )
         for r in rows
     ]
-    return {"total_earned_pkr": total_earned, "ride_count": len(rows), "rides": rides}
+    return EarningsResponse(
+        total_earned_pkr=float(total_earned), ride_count=int(ride_count), rides=rides
+    )
 
 
 # ── Wallet ────────────────────────────────────────────────────────────────────
@@ -180,12 +194,14 @@ async def get_wallet(
     )
 
 
-@router.post("/wallet/topup", response_model=DriverResponse)
+@router.post("/{driver_id}/wallet/topup", response_model=DriverResponse)
 async def topup_wallet(
+    driver_id: str,
     body: WalletTopUpRequest,
-    current_user: User = Depends(require_admin),
+    _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
+    """Admin credits a specific driver's wallet (manual JazzCash/EasyPaisa settlement)."""
     if body.plan_id and body.plan_id in _PLANS:
         amount = float(_PLANS[body.plan_id]["price_pkr"])
     else:
@@ -193,11 +209,15 @@ async def topup_wallet(
             raise HTTPException(status_code=422, detail="amount_pkr must be positive")
         amount = body.amount_pkr
 
-    driver = await driver_service.get_driver_by_user(current_user, db)
+    driver = (await db.execute(select(Driver).where(Driver.id == driver_id))).scalar_one_or_none()
+    if driver is None:
+        raise HTTPException(status_code=404, detail="Driver not found")
+    user = (await db.execute(select(User).where(User.id == driver.user_id))).scalar_one()
+
     driver.wallet_balance_pkr = float(driver.wallet_balance_pkr or 0) + amount
     await db.commit()
     await db.refresh(driver)
-    return _to_response(driver, current_user)
+    return _to_response(driver, user)
 
 
 # ── Admin ─────────────────────────────────────────────────────────────────────

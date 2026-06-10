@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/widgets.dart' show WidgetsBinding;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:go_router/go_router.dart';
 
@@ -80,11 +81,21 @@ void _showLocal(RemoteMessage msg) {
   );
 }
 
-void _handleTap(String? rideId, GoRouter router) {
-  if (rideId != null) router.push('/ride/$rideId');
+// Ride ids are UUIDs — reject anything else before it reaches the router so a
+// malformed or malicious payload can't navigate to an arbitrary location.
+final _rideIdPattern = RegExp(r'^[0-9a-fA-F-]{8,40}$');
+
+void _openRide(String? rideId, GoRouter router) {
+  if (rideId == null || !_rideIdPattern.hasMatch(rideId)) return;
+  // Defer until after the first frame so the router's auth redirect has
+  // resolved — a stale notification tapped while logged out must land on
+  // /welcome, not push a detail screen over it.
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    router.push('/ride/$rideId');
+  });
 }
 
-void _route(Map<String, dynamic> data, GoRouter router) {
-  final rideId = data['ride_id'] as String?;
-  if (rideId != null) router.push('/ride/$rideId');
-}
+void _handleTap(String? rideId, GoRouter router) => _openRide(rideId, router);
+
+void _route(Map<String, dynamic> data, GoRouter router) =>
+    _openRide(data['ride_id'] as String?, router);

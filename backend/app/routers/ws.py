@@ -132,29 +132,38 @@ async def ride_tracking_ws(websocket: WebSocket, ride_id: str):
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
-    role = user.role.value
-    if role == "patient":
+    # Authorize by held_roles + actual relationship to the ride. Using the
+    # active portal here would let a multi-role user in driver portal watch
+    # any ride's GPS stream.
+    authorized = "admin" in user.held_roles
+    if not authorized and "patient" in user.held_roles:
         async with AsyncSessionLocal() as db:
             from app.models.models import Patient
             p = (await db.execute(select(Patient).where(Patient.user_id == user.id))).scalar_one_or_none()
-        if not p or ride.patient_id != p.id:
-            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-            return
-    elif role == "driver":
+        authorized = p is not None and ride.patient_id == p.id
+    if not authorized and "driver" in user.held_roles:
         async with AsyncSessionLocal() as db:
             d = (await db.execute(select(Driver).where(Driver.user_id == user.id))).scalar_one_or_none()
-        if not d or ride.driver_id != d.id:
-            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-            return
-    # admin: no further check
+        authorized = d is not None and ride.driver_id == d.id
+    if not authorized:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
 
     pubsub = await location_manager.subscribe(ride_id)
     try:
         async for message in pubsub.listen():
             if message["type"] != "message":
                 continue
-            if ride.status in (RideStatus.completed, RideStatus.cancelled):
-                await websocket.send_json({"event": "ride_ended", "status": ride.status.value})
+            # Re-read the status from the DB — the `ride` object fetched before
+            # the loop is stale, and a cancelled/completed ride must stop
+            # streaming GPS to the client.
+            async with AsyncSessionLocal() as db:
+                current_status = (await db.execute(
+                    select(Ride.status).where(Ride.id == ride_id)
+                )).scalar_one_or_none()
+            if current_status in (RideStatus.completed, RideStatus.cancelled, None):
+                ended = current_status.value if current_status else "deleted"
+                await websocket.send_json({"event": "ride_ended", "status": ended})
                 break
             await websocket.send_text(message["data"])
     except WebSocketDisconnect:

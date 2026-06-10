@@ -34,8 +34,10 @@ async def _create_emergency(client: AsyncClient, token: str) -> str:
 @pytest_asyncio.fixture
 async def verified_driver_token(client: AsyncClient, db: AsyncSession) -> str:
     uid = uuid.uuid4().hex[:8]
+    # Phone must be digits-only to pass the registration validator.
+    digits = str(uuid.uuid4().int)[:7]
     token = await _register(
-        client, f"+92300{uid}", "driver",
+        client, f"+92300{digits}", "driver",
         license_no=f"DV-{uid}", vehicle_plate=f"DV-{uid[:6]}", vehicle_type="sedan"
     )
     result = await db.execute(select(Driver).order_by(Driver.created_at.desc()).limit(1))
@@ -47,7 +49,7 @@ async def verified_driver_token(client: AsyncClient, db: AsyncSession) -> str:
 
 @pytest.mark.asyncio
 async def test_pending_rides_returns_unassigned(client: AsyncClient, verified_driver_token: str):
-    patient_token = await _register(client, "+92300DV0010", "patient")
+    patient_token = await _register(client, "+92300730010", "patient")
     await _create_emergency(client, patient_token)
 
     r = await client.get("/api/v1/rides/pending", headers={"Authorization": f"Bearer {verified_driver_token}"})
@@ -62,7 +64,7 @@ async def test_pending_rides_returns_unassigned(client: AsyncClient, verified_dr
 @pytest.mark.asyncio
 async def test_unverified_driver_cannot_see_pending(client: AsyncClient, db: AsyncSession):
     token = await _register(
-        client, "+92300DV0002", "driver",
+        client, "+92300730002", "driver",
         license_no="DV-LIC-002", vehicle_plate="DV-002", vehicle_type="van"
     )
     r = await client.get("/api/v1/rides/pending", headers={"Authorization": f"Bearer {token}"})
@@ -71,7 +73,7 @@ async def test_unverified_driver_cannot_see_pending(client: AsyncClient, db: Asy
 
 @pytest.mark.asyncio
 async def test_accept_assigns_ride(client: AsyncClient, verified_driver_token: str, db: AsyncSession):
-    patient_token = await _register(client, "+92300DV0011", "patient")
+    patient_token = await _register(client, "+92300730011", "patient")
     ride_id = await _create_emergency(client, patient_token)
 
     r = await client.post(
@@ -89,7 +91,7 @@ async def test_accept_second_driver_gets_409(client: AsyncClient, verified_drive
     """Second driver accepting the same ride must get 409."""
     # Create a second verified driver
     token2 = await _register(
-        client, "+92300DV0003", "driver",
+        client, "+92300730003", "driver",
         license_no="DV-LIC-003", vehicle_plate="DV-003", vehicle_type="sedan"
     )
     result = await db.execute(select(Driver).order_by(Driver.created_at.desc()).limit(1))
@@ -97,7 +99,7 @@ async def test_accept_second_driver_gets_409(client: AsyncClient, verified_drive
     driver2.is_verified = True
     await db.commit()
 
-    patient_token = await _register(client, "+92300DV0012", "patient")
+    patient_token = await _register(client, "+92300730012", "patient")
     ride_id = await _create_emergency(client, patient_token)
 
     # First accept succeeds
@@ -118,10 +120,10 @@ async def test_accept_second_driver_gets_409(client: AsyncClient, verified_drive
 @pytest.mark.asyncio
 async def test_unverified_driver_cannot_accept(client: AsyncClient, db: AsyncSession):
     token = await _register(
-        client, "+92300DV0004", "driver",
+        client, "+92300730004", "driver",
         license_no="DV-LIC-004", vehicle_plate="DV-004", vehicle_type="van"
     )
-    patient_token = await _register(client, "+92300DV0013", "patient")
+    patient_token = await _register(client, "+92300730013", "patient")
     ride_id = await _create_emergency(client, patient_token)
 
     r = await client.post(

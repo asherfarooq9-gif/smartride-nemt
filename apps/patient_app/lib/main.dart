@@ -1,4 +1,6 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:async';
+import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart' show kIsWeb, FlutterError;
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +11,29 @@ import 'package:smartride_core/smartride_core.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Global error capture: without these, a release-mode crash is a silent
+  // blank screen. Logged locally; swap the log calls for a crash-reporting
+  // service (Sentry/Crashlytics) when one is wired up.
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    developer.log(
+      'Unhandled Flutter error',
+      name: 'smartride.crash',
+      error: details.exception,
+      stackTrace: details.stack,
+    );
+  };
+  WidgetsBinding.instance.platformDispatcher.onError = (error, stack) {
+    developer.log(
+      'Unhandled platform error',
+      name: 'smartride.crash',
+      error: error,
+      stackTrace: stack,
+    );
+    return true;
+  };
+
   // Never let env loading block the first frame.
   try {
     await dotenv.load();

@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 from math import radians, sin, cos, sqrt, atan2
 from typing import Optional
@@ -12,6 +13,12 @@ from app.models.models import (
     RideType, RideStatus, DriverStatus,
 )
 from app.schemas.rides import EmergencyRideRequest, ScheduledRideRequest, RideStatusUpdate
+
+log = logging.getLogger("smartride.rides")
+
+# Cap the dispatch list: drivers only ever see the nearest pending rides, and
+# loading every pending ride in the city into memory does not scale.
+PENDING_RIDES_LIMIT = 100
 
 
 def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
@@ -208,15 +215,17 @@ async def update_ride_status(
                 RideStatus.cancelled: ("Ride Cancelled", ride.cancel_reason or "Your ride was cancelled."),
             }
             if ride.status in labels:
-                title, body = labels[ride.status]
+                title, body_text = labels[ride.status]
                 import asyncio
                 asyncio.create_task(send_push(
                     fcm_token=patient_user.fcm_token,
-                    title=title, body=body,
+                    title=title, body=body_text,
                     data={"ride_id": str(ride.id)},
                 ))
     except Exception:
-        pass
+        # Notification failure must never block a status update, but it must
+        # be visible — a silently dead push pipeline is a production incident.
+        log.warning("push notification failed for ride %s", ride.id, exc_info=True)
 
     return ride
 
@@ -227,6 +236,7 @@ async def get_pending_rides(driver: Driver, db: AsyncSession) -> list[Ride]:
         select(Ride)
         .where(and_(Ride.status == RideStatus.pending, Ride.driver_id.is_(None)))
         .order_by(Ride.requested_at.asc())
+        .limit(PENDING_RIDES_LIMIT)
     )).scalars().all()
 
     if driver.current_lat is not None and driver.current_lng is not None:

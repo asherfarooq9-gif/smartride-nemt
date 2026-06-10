@@ -21,11 +21,13 @@ os.environ.setdefault("ALLOWED_ORIGINS", '["http://localhost:3000"]')
 from app.core.database import Base, get_db  # noqa: E402
 from main import app, limiter as _main_limiter  # noqa: E402
 from app.routers.auth import limiter as _auth_limiter  # noqa: E402
+from app.routers.rides import limiter as _rides_limiter  # noqa: E402
 
 # Rate limits would otherwise reject the many register/login calls the suite
 # makes from a single client IP. Disable them under test.
 _main_limiter.enabled = False
 _auth_limiter.enabled = False
+_rides_limiter.enabled = False
 
 
 async def _run_ddl() -> None:
@@ -89,7 +91,7 @@ async def admin_token(db: AsyncSession) -> str:
 
     user = User(
         id=uuid.uuid4(),
-        phone=f"+92-999-{uuid.uuid4().hex[:7]}",
+        phone=f"+92300{uuid.uuid4().hex[:7]}",
         password_hash=hash_password("adminpass"),
         role=UserRole.admin,
     )

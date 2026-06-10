@@ -29,6 +29,21 @@ class WalletTopUpRequest(BaseModel):
     plan_id: Optional[str] = None  # starter | standard | pro
 
 
+class EarningsRide(BaseModel):
+    id: str
+    pickup_address: Optional[str] = None
+    hospital_name: Optional[str] = None
+    completed_at: Optional[str] = None
+    fare_pkr: float
+    ride_type: str
+
+
+class EarningsResponse(BaseModel):
+    total_earned_pkr: float
+    ride_count: int
+    rides: List[EarningsRide]
+
+
 class WalletTransaction(BaseModel):
     id: str
     type: str  # topup | commission_deduction

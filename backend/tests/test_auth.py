@@ -3,14 +3,14 @@ from httpx import AsyncClient
 
 
 PATIENT_PAYLOAD = {
-    "phone": "+92-300-1111111",
+    "phone": "+923001111111",
     "password": "secret123",
     "role": "patient",
     "full_name": "Ahmed Khan",
 }
 
 DRIVER_PAYLOAD = {
-    "phone": "+92-300-2222222",
+    "phone": "+923002222222",
     "password": "secret123",
     "role": "driver",
     "full_name": "Ali Raza",
@@ -48,14 +48,14 @@ async def test_register_driver(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_register_driver_missing_fields(client: AsyncClient):
-    payload = {**DRIVER_PAYLOAD, "phone": "+92-300-9999999", "license_no": None}
+    payload = {**DRIVER_PAYLOAD, "phone": "+923009999999", "license_no": None}
     resp = await client.post("/api/v1/auth/register", json=payload)
     assert resp.status_code == 422
 
 
 @pytest.mark.asyncio
 async def test_login_success(client: AsyncClient):
-    phone = "+92-300-3333333"
+    phone = "+923003333333"
     await client.post("/api/v1/auth/register", json={**PATIENT_PAYLOAD, "phone": phone})
     resp = await client.post("/api/v1/auth/login", json={"phone": phone, "password": "secret123"})
     assert resp.status_code == 200
@@ -64,7 +64,7 @@ async def test_login_success(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_login_wrong_password(client: AsyncClient):
-    phone = "+92-300-4444444"
+    phone = "+923004444444"
     await client.post("/api/v1/auth/register", json={**PATIENT_PAYLOAD, "phone": phone})
     resp = await client.post("/api/v1/auth/login", json={"phone": phone, "password": "wrongpass"})
     assert resp.status_code == 401
@@ -72,20 +72,20 @@ async def test_login_wrong_password(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_login_unknown_phone(client: AsyncClient):
-    resp = await client.post("/api/v1/auth/login", json={"phone": "+92-000-0000000", "password": "x"})
+    resp = await client.post("/api/v1/auth/login", json={"phone": "+923000000000", "password": "x"})
     assert resp.status_code == 401
 
 
 @pytest.mark.asyncio
 async def test_short_password_rejected(client: AsyncClient):
-    payload = {**PATIENT_PAYLOAD, "phone": "+92-300-5555555", "password": "ab"}
+    payload = {**PATIENT_PAYLOAD, "phone": "+923005555555", "password": "ab"}
     resp = await client.post("/api/v1/auth/register", json=payload)
     assert resp.status_code == 422
 
 
 @pytest.mark.asyncio
 async def test_login_wrong_password_returns_standard_error_shape(client: AsyncClient):
-    phone = "+92-000-0000000"
+    phone = "+923000000000"
     resp = await client.post("/api/v1/auth/login", json={"phone": phone, "password": "wrong"})
     assert resp.status_code == 401
     body = resp.json()

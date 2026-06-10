@@ -17,6 +17,12 @@ class _DispatchingScreenState extends State<DispatchingScreen>
   late AnimationController _pulse;
   Timer? _pollTimer;
 
+  // After this many consecutive failed polls (~24s) the patient is told the
+  // connection is in trouble instead of staring at an endless spinner.
+  static const _maxConsecutiveFailures = 6;
+  int _consecutiveFailures = 0;
+  bool _connectionLost = false;
+
   @override
   void initState() {
     super.initState();
@@ -32,6 +38,12 @@ class _DispatchingScreenState extends State<DispatchingScreen>
       try {
         final ride = await core.getRideDetail(widget.rideId);
         if (!mounted) return;
+        if (_consecutiveFailures > 0 || _connectionLost) {
+          setState(() {
+            _consecutiveFailures = 0;
+            _connectionLost = false;
+          });
+        }
         if (ride.status == core.RideStatus.driverAssigned ||
             ride.status == core.RideStatus.driverEnRoute) {
           _pollTimer?.cancel();
@@ -40,7 +52,14 @@ class _DispatchingScreenState extends State<DispatchingScreen>
           _pollTimer?.cancel();
           if (mounted) context.go('/');
         }
-      } catch (_) {}
+      } on Exception {
+        if (!mounted) return;
+        _consecutiveFailures++;
+        if (_consecutiveFailures >= _maxConsecutiveFailures &&
+            !_connectionLost) {
+          setState(() => _connectionLost = true);
+        }
+      }
     });
   }
 
@@ -119,6 +138,40 @@ class _DispatchingScreenState extends State<DispatchingScreen>
                 ),
               ),
               const Spacer(flex: 3),
+              if (_connectionLost) ...[
+                Container(
+                  padding: const EdgeInsets.all(core.kSpaceMD),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: Colors.red.withValues(alpha: 0.4)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.wifi_off, color: Colors.redAccent, size: 20),
+                      SizedBox(width: core.kSpaceSM),
+                      Expanded(
+                        child: Text(
+                          'Connection lost — we can\'t check your ride status. '
+                          'Check your internet, or call 1122 directly below.',
+                          style: TextStyle(
+                              color: Colors.white70, fontSize: core.kFontSM),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: core.kSpaceSM),
+                TextButton(
+                  onPressed: () => context.go('/'),
+                  child: const Text(
+                    'Back to home',
+                    style: TextStyle(color: Colors.white54),
+                  ),
+                ),
+                const SizedBox(height: core.kSpaceSM),
+              ],
               TextButton.icon(
                 onPressed: () async {
                   final uri = Uri.parse('tel:1122');

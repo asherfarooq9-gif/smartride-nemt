@@ -128,6 +128,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             delegate: SliverChildBuilderDelegate(
                               (context, i) => _RideRequestCard(
                                 ride: dash.pendingRides[i],
+                                driverLat: dash.driver?.currentLat,
+                                driverLng: dash.driver?.currentLng,
                                 onAccept: () =>
                                     _accept(dash.pendingRides[i].id),
                                 onDecline: () => ref
@@ -676,11 +678,15 @@ class _RideRequestCard extends StatefulWidget {
     required this.ride,
     required this.onAccept,
     required this.onDecline,
+    this.driverLat,
+    this.driverLng,
   });
 
   final core.RideResponse ride;
   final VoidCallback onAccept;
   final VoidCallback onDecline;
+  final double? driverLat;
+  final double? driverLng;
 
   @override
   State<_RideRequestCard> createState() => _RideRequestCardState();
@@ -689,6 +695,42 @@ class _RideRequestCard extends StatefulWidget {
 class _RideRequestCardState extends State<_RideRequestCard> {
   late int _secondsLeft;
   Timer? _timer;
+
+  // Average urban ambulance/taxi speed used to estimate pickup ETA.
+  static const _avgSpeedKmh = 25.0;
+
+  /// Haversine distance (km) from the driver to the pickup point, or null
+  /// when either position is unknown — never show made-up numbers.
+  double? get _distanceKm {
+    final dLat = widget.driverLat, dLng = widget.driverLng;
+    final pLat = widget.ride.pickupLat, pLng = widget.ride.pickupLng;
+    if (dLat == null || dLng == null || pLat == null || pLng == null) {
+      return null;
+    }
+    const earthRadiusKm = 6371.0;
+    final dLatRad = _deg2rad(pLat - dLat);
+    final dLngRad = _deg2rad(pLng - dLng);
+    final a = math.sin(dLatRad / 2) * math.sin(dLatRad / 2) +
+        math.cos(_deg2rad(dLat)) *
+            math.cos(_deg2rad(pLat)) *
+            math.sin(dLngRad / 2) *
+            math.sin(dLngRad / 2);
+    return earthRadiusKm * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+  }
+
+  static double _deg2rad(double deg) => deg * math.pi / 180.0;
+
+  String get _distanceLabel {
+    final d = _distanceKm;
+    return d == null ? '— km' : '~${d.toStringAsFixed(1)} km';
+  }
+
+  String get _etaLabel {
+    final d = _distanceKm;
+    if (d == null) return '— min';
+    final minutes = (d / _avgSpeedKmh * 60).ceil().clamp(1, 999);
+    return '$minutes min';
+  }
 
   @override
   void initState() {
@@ -790,8 +832,10 @@ class _RideRequestCardState extends State<_RideRequestCard> {
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
+                              // Raw DB ids mean nothing to a driver — name the
+                              // destination type instead.
                               widget.ride.hospitalId != null
-                                  ? 'Hospital #${widget.ride.hospitalId}'
+                                  ? 'Assigned hospital'
                                   : 'Destination',
                               style: const TextStyle(
                                 fontSize: 14,
@@ -806,14 +850,14 @@ class _RideRequestCardState extends State<_RideRequestCard> {
                       const SizedBox(height: 10),
                       Row(
                         children: [
-                          const _InfoChip(
+                          _InfoChip(
                             icon: Icons.route_outlined,
-                            label: '~2.4 km',
+                            label: _distanceLabel,
                           ),
                           const SizedBox(width: 8),
-                          const _InfoChip(
+                          _InfoChip(
                             icon: Icons.timer_outlined,
-                            label: '8 min',
+                            label: _etaLabel,
                           ),
                           const SizedBox(width: 8),
                           _InfoChip(

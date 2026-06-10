@@ -1,8 +1,10 @@
 import csv
 import io
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query, Request
 from fastapi.responses import StreamingResponse
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -15,6 +17,7 @@ from app.schemas.rides import (
 from app.services import ride_service
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 
 def _to_response(ride: Ride) -> RideResponse:
@@ -45,7 +48,9 @@ async def _run_dispatch(ride_id: str, symptom_text: str) -> None:
 # ── Patient endpoints ─────────────────────────────────────────────────────────
 
 @router.post("/emergency", response_model=RideResponse, status_code=201)
+@limiter.limit("5/minute")
 async def create_emergency_ride(
+    request: Request,
     body: EmergencyRideRequest,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(require_patient),
@@ -58,7 +63,9 @@ async def create_emergency_ride(
 
 
 @router.post("/scheduled", response_model=RideResponse, status_code=201)
+@limiter.limit("10/minute")
 async def create_scheduled_ride(
+    request: Request,
     body: ScheduledRideRequest,
     current_user: User = Depends(require_patient),
     db: AsyncSession = Depends(get_db),
@@ -192,16 +199,31 @@ async def update_ride_status(
     db: AsyncSession = Depends(get_db),
 ):
     ride = await ride_service.get_ride_by_id(ride_id, db)
-    role = current_user.role.value
 
-    patient = await ride_service.get_patient_by_user(current_user, db) if role == "patient" else None
-    driver = await ride_service.get_driver_by_user(current_user, db) if role == "driver" else None
+    # Authorize by held_roles and actual relationship to the ride, not the
+    # active portal — a multi-role account must act as whichever role owns
+    # this ride, and must never touch rides that belong to someone else.
+    held = current_user.held_roles
 
-    if driver and not driver.is_verified:
-        raise HTTPException(403, "Driver not verified")
+    if "admin" in held:
+        ride = await ride_service.update_ride_status(ride, body, "admin", db)
+        return _to_response(ride)
 
-    ride = await ride_service.update_ride_status(ride, body, role, db, patient=patient, driver=driver)
-    return _to_response(ride)
+    if "driver" in held:
+        driver = await ride_service.get_driver_by_user(current_user, db)
+        if ride.driver_id == driver.id:
+            if not driver.is_verified:
+                raise HTTPException(403, "Driver not verified")
+            ride = await ride_service.update_ride_status(ride, body, "driver", db, driver=driver)
+            return _to_response(ride)
+
+    if "patient" in held:
+        patient = await ride_service.get_patient_by_user(current_user, db)
+        if ride.patient_id == patient.id:
+            ride = await ride_service.update_ride_status(ride, body, "patient", db, patient=patient)
+            return _to_response(ride)
+
+    raise HTTPException(403, "Forbidden")
 
 
 # ── Admin endpoints ───────────────────────────────────────────────────────────
@@ -215,30 +237,43 @@ async def export_rides_csv(
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    rows, _ = await ride_service.list_rides_admin(db, 1, 10_000, status, ride_type, search)
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow([
-        "id", "ride_type", "status", "pickup_address",
-        "requested_at", "completed_at", "cancelled_at",
-        "estimated_fare_pkr", "final_fare_pkr",
-        "patient_id", "driver_id", "hospital_id",
-    ])
-    for r in rows:
+    async def generate_csv():
+        # Stream page by page so we never hold the full export in memory.
+        page, page_size = 1, 500
+        buf = io.StringIO()
+        writer = csv.writer(buf)
         writer.writerow([
-            str(r.id), r.ride_type.value, r.status.value,
-            r.pickup_address or "",
-            r.requested_at.isoformat() if r.requested_at else "",
-            r.completed_at.isoformat() if r.completed_at else "",
-            r.cancelled_at.isoformat() if r.cancelled_at else "",
-            float(r.estimated_fare_pkr) if r.estimated_fare_pkr else "",
-            float(r.final_fare_pkr) if r.final_fare_pkr else "",
-            str(r.patient_id), str(r.driver_id) if r.driver_id else "",
-            str(r.hospital_id) if r.hospital_id else "",
+            "id", "ride_type", "status", "pickup_address",
+            "requested_at", "completed_at", "cancelled_at",
+            "estimated_fare_pkr", "final_fare_pkr",
+            "patient_id", "driver_id", "hospital_id",
         ])
-    output.seek(0)
+        yield buf.getvalue()
+        while True:
+            rows, _ = await ride_service.list_rides_admin(db, page, page_size, status, ride_type, search)
+            if not rows:
+                break
+            buf = io.StringIO()
+            writer = csv.writer(buf)
+            for r in rows:
+                writer.writerow([
+                    str(r.id), r.ride_type.value, r.status.value,
+                    r.pickup_address or "",
+                    r.requested_at.isoformat() if r.requested_at else "",
+                    r.completed_at.isoformat() if r.completed_at else "",
+                    r.cancelled_at.isoformat() if r.cancelled_at else "",
+                    float(r.estimated_fare_pkr) if r.estimated_fare_pkr else "",
+                    float(r.final_fare_pkr) if r.final_fare_pkr else "",
+                    str(r.patient_id), str(r.driver_id) if r.driver_id else "",
+                    str(r.hospital_id) if r.hospital_id else "",
+                ])
+            yield buf.getvalue()
+            if len(rows) < page_size:
+                break
+            page += 1
+
     return StreamingResponse(
-        iter([output.getvalue()]),
+        generate_csv(),
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=rides.csv"},
     )

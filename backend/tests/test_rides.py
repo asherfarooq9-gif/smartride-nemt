@@ -3,6 +3,7 @@ Rides router integration tests — HTTP layer only (no dispatch side-effects).
 Dispatch background task is patched to a no-op.
 """
 import pytest
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, patch
 from httpx import AsyncClient
 
@@ -19,7 +20,7 @@ PICKUP = {"pickup_lat": 33.7215, "pickup_lng": 73.0433}
 
 @pytest.mark.asyncio
 async def test_emergency_ride_created_as_pending(client: AsyncClient):
-    token = await _token(client, "+92300ER0001", "patient")
+    token = await _token(client, "+92300710001", "patient")
     with patch("app.routers.rides._run_dispatch", new=AsyncMock()):
         r = await client.post(
             "/api/v1/rides/emergency",
@@ -35,10 +36,14 @@ async def test_emergency_ride_created_as_pending(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_scheduled_ride_created(client: AsyncClient):
-    token = await _token(client, "+92300SR0001", "patient")
+    token = await _token(client, "+92300720001", "patient")
     r = await client.post(
         "/api/v1/rides/scheduled",
-        json={**PICKUP, "scheduled_for": "2026-06-01T10:00:00Z"},
+        json={
+            **PICKUP,
+            # Always one day ahead — a hardcoded date silently expires.
+            "scheduled_for": (datetime.now(timezone.utc) + timedelta(days=1)).isoformat(),
+        },
         headers={"Authorization": f"Bearer {token}"},
     )
     assert r.status_code == 201
@@ -47,7 +52,7 @@ async def test_scheduled_ride_created(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_get_ride_by_patient_owner(client: AsyncClient):
-    token = await _token(client, "+92300ER0002", "patient")
+    token = await _token(client, "+92300710002", "patient")
     with patch("app.routers.rides._run_dispatch", new=AsyncMock()):
         create = await client.post(
             "/api/v1/rides/emergency",
@@ -62,8 +67,8 @@ async def test_get_ride_by_patient_owner(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_get_ride_forbidden_for_other_patient(client: AsyncClient):
-    token1 = await _token(client, "+92300ER0003", "patient")
-    token2 = await _token(client, "+92300ER0004", "patient")
+    token1 = await _token(client, "+92300710003", "patient")
+    token2 = await _token(client, "+92300710004", "patient")
     with patch("app.routers.rides._run_dispatch", new=AsyncMock()):
         create = await client.post(
             "/api/v1/rides/emergency",
@@ -77,7 +82,7 @@ async def test_get_ride_forbidden_for_other_patient(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_my_rides_returns_only_own(client: AsyncClient):
-    token = await _token(client, "+92300ER0005", "patient")
+    token = await _token(client, "+92300710005", "patient")
     with patch("app.routers.rides._run_dispatch", new=AsyncMock()):
         await client.post(
             "/api/v1/rides/emergency",
@@ -92,7 +97,7 @@ async def test_my_rides_returns_only_own(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_driver_cannot_create_emergency_ride(client: AsyncClient):
     token = await _token(
-        client, "+92300ER0006", "driver",
+        client, "+92300710006", "driver",
         license_no="DL-ERTEST", vehicle_plate="ER-TEST", vehicle_type="van"
     )
     with patch("app.routers.rides._run_dispatch", new=AsyncMock()):
