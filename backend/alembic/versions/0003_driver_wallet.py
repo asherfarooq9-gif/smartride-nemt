@@ -9,7 +9,7 @@ from alembic import op
 import sqlalchemy as sa
 
 revision = '0003_driver_wallet'
-down_revision = '0002_user_roles'
+down_revision = '0002'
 branch_labels = None
 depends_on = None
 
