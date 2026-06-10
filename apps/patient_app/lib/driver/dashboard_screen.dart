@@ -832,11 +832,10 @@ class _RideRequestCardState extends State<_RideRequestCard> {
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              // Raw DB ids mean nothing to a driver — name the
-                              // destination type instead.
-                              widget.ride.hospitalId != null
-                                  ? 'Assigned hospital'
-                                  : 'Destination',
+                              widget.ride.hospitalName ??
+                                  (widget.ride.hospitalId != null
+                                      ? 'Assigned hospital'
+                                      : 'Destination'),
                               style: const TextStyle(
                                 fontSize: 14,
                                 color: _kText600,

@@ -21,7 +21,13 @@ limiter = Limiter(key_func=get_remote_address)
 
 
 def _to_response(ride: Ride) -> RideResponse:
-    return RideResponse.model_validate(ride)
+    resp = RideResponse.model_validate(ride)
+    # Only read the relation when it was eagerly loaded — touching a lazy
+    # relation here would raise under the async session.
+    hospital = ride.__dict__.get("hospital")
+    if hospital is not None:
+        resp.hospital_name = hospital.name
+    return resp
 
 
 async def _run_dispatch(ride_id: str, symptom_text: str) -> None:

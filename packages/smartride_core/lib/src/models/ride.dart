@@ -95,6 +95,7 @@ class RideResponse {
     this.symptomText,
     this.estimatedFarePkr,
     this.patientRating,
+    this.hospitalName,
   });
 
   final String id;
@@ -112,6 +113,7 @@ class RideResponse {
   final String? symptomText;
   final double? estimatedFarePkr;
   final double? patientRating;
+  final String? hospitalName;
 
   bool get isActive =>
       status != RideStatus.completed && status != RideStatus.cancelled;
@@ -137,6 +139,7 @@ class RideResponse {
         symptomText: json['symptom_text'] as String?,
         estimatedFarePkr: (json['estimated_fare_pkr'] as num?)?.toDouble(),
         patientRating: (json['patient_rating'] as num?)?.toDouble(),
+        hospitalName: json['hospital_name'] as String?,
       );
 }
 

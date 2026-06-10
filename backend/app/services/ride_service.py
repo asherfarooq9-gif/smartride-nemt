@@ -235,6 +235,7 @@ async def get_pending_rides(driver: Driver, db: AsyncSession) -> list[Ride]:
     rows = (await db.execute(
         select(Ride)
         .where(and_(Ride.status == RideStatus.pending, Ride.driver_id.is_(None)))
+        .options(selectinload(Ride.hospital))
         .order_by(Ride.requested_at.asc())
         .limit(PENDING_RIDES_LIMIT)
     )).scalars().all()

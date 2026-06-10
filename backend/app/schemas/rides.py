@@ -62,6 +62,9 @@ class RideResponse(BaseModel):
     final_fare_pkr: Optional[float] = None
     patient_rating: Optional[float] = None
     rating_comment: Optional[str] = None
+    # Populated only where the hospital relation is loaded (e.g. /pending);
+    # a raw hospital_id is meaningless to a driver deciding on a ride.
+    hospital_name: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

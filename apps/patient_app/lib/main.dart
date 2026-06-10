@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:developer' as developer;
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, FlutterError;
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -12,9 +14,19 @@ import 'package:smartride_core/smartride_core.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Crashlytics needs Firebase before any error can be recorded. Init can
+  // fail (web, missing config) — the app must still boot, falling back to
+  // local-only logging.
+  var crashlyticsReady = false;
+  if (!kIsWeb) {
+    try {
+      await Firebase.initializeApp();
+      crashlyticsReady = true;
+    } catch (_) {}
+  }
+
   // Global error capture: without these, a release-mode crash is a silent
-  // blank screen. Logged locally; swap the log calls for a crash-reporting
-  // service (Sentry/Crashlytics) when one is wired up.
+  // blank screen.
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
     developer.log(
@@ -23,6 +35,9 @@ Future<void> main() async {
       error: details.exception,
       stackTrace: details.stack,
     );
+    if (crashlyticsReady) {
+      FirebaseCrashlytics.instance.recordFlutterFatalError(details);
+    }
   };
   WidgetsBinding.instance.platformDispatcher.onError = (error, stack) {
     developer.log(
@@ -31,6 +46,9 @@ Future<void> main() async {
       error: error,
       stackTrace: stack,
     );
+    if (crashlyticsReady) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    }
     return true;
   };
 
