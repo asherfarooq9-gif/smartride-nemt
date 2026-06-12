@@ -49,9 +49,18 @@ async def send_push(
         log.warning("FCM push failed: %s", exc)
 
 
+def _mask_phone(phone: str) -> str:
+    """Show only the last 3 digits so logs never carry a full PHI phone number."""
+    if not phone or len(phone) < 4:
+        return "***"
+    return f"***{phone[-3:]}"
+
+
 def _send_sms(to: str, body: str) -> None:
+    # PHI discipline: never log the message body (carries patient name /
+    # hospital / location) or the full recipient number.
     if not settings.TWILIO_ACCOUNT_SID:
-        print(f"[SMS no-op] To {to}: {body}")
+        log.info("SMS no-op (Twilio unconfigured) to %s", _mask_phone(to))
         return
     try:
         from twilio.rest import Client
@@ -59,9 +68,10 @@ def _send_sms(to: str, body: str) -> None:
         msg = Client(
             settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN
         ).messages.create(body=body, from_=settings.TWILIO_FROM_NUMBER, to=to)
-        print(f"[SMS sent] SID={msg.sid}")
+        log.info("SMS sent sid=%s to %s", msg.sid, _mask_phone(to))
     except Exception as exc:
-        print(f"[SMS error] {exc}")
+        # Log the exception *type* only — the message text can echo body/phone.
+        log.warning("SMS send failed to %s: %s", _mask_phone(to), type(exc).__name__)
 
 
 async def send_family_sms(*, patient, ride, driver, hospital_name: str) -> None:
@@ -89,7 +99,9 @@ async def send_hospital_alert(*, ride, triage: dict, hospital, patient) -> None:
                 resp.raise_for_status()
                 return
         except Exception as exc:
-            print(f"[FHIR error] Falling back to SMS: {exc}")
+            log.warning(
+                "FHIR pre-alert failed, falling back to SMS: %s", type(exc).__name__
+            )
 
     if not hospital.coordinator_phone:
         return

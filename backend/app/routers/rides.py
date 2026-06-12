@@ -113,15 +113,24 @@ async def get_ride_detail(
 
     # Use held_roles (set membership) not active role so multi-role accounts
     # are checked correctly regardless of which portal they are currently in.
-    if "admin" not in current_user.held_roles:
-        if "patient" in current_user.held_roles:
+    # Track *how* the caller is authorized so we can scope PHI in the response:
+    # a dual-role account that owns the ride is treated as the patient, not
+    # merely the assigned driver.
+    held = current_user.held_roles
+    authorized_as = None
+    if "admin" in held:
+        authorized_as = "admin"
+    else:
+        if "patient" in held:
             patient = await ride_service.get_patient_by_user(current_user, db)
-            if ride.patient_id != patient.id:
-                raise HTTPException(403, "Forbidden")
-        elif "driver" in current_user.held_roles:
+            if patient and ride.patient_id == patient.id:
+                authorized_as = "patient"
+        if authorized_as is None and "driver" in held:
             driver = await ride_service.get_driver_by_user(current_user, db)
-            if ride.driver_id != driver.id:
-                raise HTTPException(403, "Forbidden")
+            if driver and ride.driver_id == driver.id:
+                authorized_as = "driver"
+        if authorized_as is None:
+            raise HTTPException(403, "Forbidden")
 
     patient_data = None
     if ride.patient:
@@ -151,11 +160,15 @@ async def get_ride_detail(
     t = await ride_service.get_triage_for_ride(ride_id, db)
     if t:
         triage_data = {
-            "symptom_text": t.symptom_text,
             "predicted_specialty": t.predicted_specialty.value,
             "confidence_score": float(t.confidence_score),
             "severity_level": t.severity_level.value,
         }
+        # Raw symptom free-text is sensitive PHI. The assigned driver only
+        # needs specialty + severity to prepare; the full complaint is shown
+        # to the patient (their own data) and admins only — minimum necessary.
+        if authorized_as in ("patient", "admin"):
+            triage_data["symptom_text"] = t.symptom_text
 
     return RideDetailResponse(
         **_to_response(ride).model_dump(),
