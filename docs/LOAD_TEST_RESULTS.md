@@ -55,10 +55,27 @@ got a clean `409 Ride already taken`, never a 500 or a phantom second assignment
 
 ---
 
+## Test 3 — Chaos / graceful degradation (`scripts/chaos_test.sh`)
+
+Kill each backing service in turn; the API must degrade honestly, not crash, and
+recover when the service returns.
+
+| Phase | health | ready | Result |
+|-------|--------|-------|--------|
+| Baseline | 200 | 200 (db✓ redis✓) | PASS |
+| Redis down | 200 | 503 (redis=false) | PASS |
+| Redis restored | — | 200 | PASS (auto-recover) |
+| Postgres down | 200 | 503 (db=false) | PASS |
+| Postgres restored | — | 200 | PASS (auto-recover) |
+
+**Result: 7/7 PASS.** `/health` (liveness) stayed 200 throughout — it doesn't
+depend on backing services, so orchestrators won't needlessly kill the pod.
+`/ready` (readiness) honestly reported 503 with the exact failed dependency, so a
+load balancer would stop routing until recovery. `pool_pre_ping=True` let the DB
+connection pool recover automatically after Postgres returned — no restart needed.
+
 ## Follow-ups (not yet done)
 
 - Soak test (sustained traffic 30+ min) to surface memory / connection-pool leaks.
-- Chaos: kill Redis / a DB connection mid-ride, confirm graceful degradation
-  (`/ready` already returns 503 when a dependency is down — good start).
 - Per-user rate limiting (NAT'd mobile users share IPs; per-IP alone can throttle
   legitimate users).
