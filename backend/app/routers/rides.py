@@ -4,11 +4,11 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query, Request
 from fastapi.responses import StreamingResponse
 from slowapi import Limiter
-from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import metrics
 from app.core.database import get_db
+from app.core.ratelimit import rate_limit_key
 from app.core.security import (
     get_current_user,
     require_patient,
@@ -28,7 +28,7 @@ from app.schemas.rides import (
 from app.services import ride_service
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(key_func=rate_limit_key)
 
 
 def _to_response(ride: Ride) -> RideResponse:

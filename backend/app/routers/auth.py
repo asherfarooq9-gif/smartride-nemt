@@ -5,12 +5,12 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from jose import JWTError, jwt
 from slowapi import Limiter
-from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.ratelimit import rate_limit_key
 from app.core.security import (
     hash_password,
     verify_password,
@@ -32,7 +32,7 @@ from app.schemas.auth import (
 from fastapi.security import HTTPAuthorizationCredentials
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(key_func=rate_limit_key)
 
 _DRIVER_FIELDS = ("license_no", "vehicle_plate", "vehicle_type")
 

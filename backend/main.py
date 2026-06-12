@@ -13,7 +13,6 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
-from slowapi.util import get_remote_address
 from sqlalchemy import text
 
 import logging
@@ -23,6 +22,7 @@ from app.core.database import engine
 from app.core.redis_client import ping_redis
 from app.core.logging import StructuredLoggingMiddleware
 from app.core.observability import init_error_tracking
+from app.core.ratelimit import rate_limit_key
 from app.routers import auth, patients, drivers, hospitals, rides, analytics, ws
 from app.schemas.errors import ErrorResponse
 
@@ -57,7 +57,7 @@ async def lifespan(app: FastAPI):
 
 
 # #2 Rate limiter shared across the app
-limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
+limiter = Limiter(key_func=rate_limit_key, default_limits=["200/minute"])
 
 app = FastAPI(
     title="SmartRide NEMT API",
