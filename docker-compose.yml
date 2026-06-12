@@ -92,6 +92,29 @@ services:
     depends_on:
       - backend
 
+  # Opt-in connection pooler. Start with:  docker compose --profile pooling up -d
+  # Then point the backend at it: DATABASE_URL host -> pgbouncer:5432 and set
+  # DB_DISABLE_PREPARED_CACHE=true (asyncpg + transaction pooling).
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.23.1-p0
+    container_name: smartride_pgbouncer
+    profiles: ["pooling"]
+    environment:
+      DB_HOST: postgres
+      DB_USER: smartride
+      DB_PASSWORD: password
+      DB_NAME: smartride
+      POOL_MODE: transaction
+      AUTH_TYPE: scram-sha-256
+      MAX_CLIENT_CONN: "1000"
+      DEFAULT_POOL_SIZE: "25"
+      ADMIN_USERS: smartride
+    ports:
+      - "6432:5432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   prometheus:
     image: prom/prometheus:v2.53.0
     container_name: smartride_prometheus

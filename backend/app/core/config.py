@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     DATABASE_URL: str = (
         "postgresql+asyncpg://smartride:password@postgres:5432/smartride"
     )
+    # Set True when connecting through PgBouncer in transaction-pooling mode:
+    # asyncpg prepared statements are per-session and break under transaction
+    # pooling, so the statement cache must be disabled.
+    DB_DISABLE_PREPARED_CACHE: bool = False
 
     # Redis
     REDIS_URL: str = "redis://redis:6379/0"
