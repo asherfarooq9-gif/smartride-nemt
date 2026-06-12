@@ -7,6 +7,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import metrics
 from app.core.database import get_db
 from app.core.security import (
     get_current_user,
@@ -75,6 +76,7 @@ async def create_emergency_ride(
 ):
     patient = await ride_service.get_patient_by_user(current_user, db)
     ride = await ride_service.create_emergency_ride(patient, body, db)
+    metrics.rides_created_total.labels(ride_type="emergency").inc()
     background_tasks.add_task(_run_dispatch, str(ride.id), body.symptom_text)
     return _to_response(ride)
 
@@ -89,6 +91,7 @@ async def create_scheduled_ride(
 ):
     patient = await ride_service.get_patient_by_user(current_user, db)
     ride = await ride_service.create_scheduled_ride(patient, body, db)
+    metrics.rides_created_total.labels(ride_type="scheduled").inc()
     return _to_response(ride)
 
 
@@ -206,6 +209,7 @@ async def accept_ride(
     if not driver.is_verified:
         raise HTTPException(403, "Driver not verified")
     ride = await ride_service.accept_ride(ride_id, driver, db)
+    metrics.rides_accepted_total.inc()
     return _to_response(ride)
 
 

@@ -36,6 +36,13 @@ class Settings(BaseSettings):
     FIREBASE_PROJECT_ID: str = ""
     FIREBASE_CREDENTIALS_PATH: str = "firebase-credentials.json"
 
+    # Observability
+    # Error tracking is a no-op unless SENTRY_DSN is set (same pattern as Twilio
+    # / Firebase) so local + CI runs stay offline.
+    SENTRY_DSN: str = ""
+    SENTRY_TRACES_SAMPLE_RATE: float = 0.1
+    ENVIRONMENT: str = "development"
+
     # App
     DEBUG: bool = False
     # In production set ALLOWED_ORIGINS to explicit origins, e.g.:

@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 
 from app.core.config import settings
+from app.core import metrics
 from app.models.models import Ride, Driver, DriverStatus, Patient, Hospital, RideStatus
 from app.services.hospital_matching import match_hospitals, HospitalCandidate
 from app.services.notifications import send_family_sms, send_hospital_alert
@@ -130,6 +131,7 @@ async def dispatch_emergency(
     )
 
     if not matches:
+        metrics.dispatch_failures_total.labels(reason="no_hospital").inc()
         return {"error": "No hospitals available in range"}
 
     best_hospital_id = matches[0].hospital_id
@@ -138,6 +140,7 @@ async def dispatch_emergency(
     driver = await find_nearest_available_driver(db, ride.pickup_lat, ride.pickup_lng)
 
     if not driver:
+        metrics.dispatch_failures_total.labels(reason="no_driver").inc()
         return {"error": "No drivers available. Retrying in 30s."}
 
     # ── STEP 4: update ride + driver status ───────────────────────────────
@@ -175,6 +178,7 @@ async def dispatch_emergency(
     )
 
     elapsed = round(time.time() - pipeline_start, 2)
+    metrics.emergency_dispatch_seconds.observe(elapsed)
 
     return {
         "ride_id": str(ride.id),

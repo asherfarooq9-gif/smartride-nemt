@@ -16,12 +16,17 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 from sqlalchemy import text
 
+import logging
+
 from app.core.config import settings
 from app.core.database import engine
 from app.core.redis_client import ping_redis
 from app.core.logging import StructuredLoggingMiddleware
+from app.core.observability import init_error_tracking
 from app.routers import auth, patients, drivers, hospitals, rides, analytics, ws
 from app.schemas.errors import ErrorResponse
+
+log = logging.getLogger("smartride")
 
 _WEAK_SECRET = "change_me_to_a_32_char_random_string_here"
 
@@ -44,6 +49,9 @@ async def lifespan(app: FastAPI):
             "Set ALLOWED_ORIGINS in your .env to explicit origins.",
             stacklevel=2,
         )
+
+    # Wire error tracking (no-op unless SENTRY_DSN is configured).
+    init_error_tracking()
 
     yield
 
@@ -100,13 +108,19 @@ Instrumentator(
 ).instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
 
 
+def _trace_id(request: Request) -> str | None:
+    return getattr(request.state, "trace_id", None)
+
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     first = exc.errors()[0] if exc.errors() else {}
     msg = first.get("msg", "Validation error")
     return JSONResponse(
         status_code=422,
-        content=ErrorResponse(detail=msg, code="validation_error").model_dump(),
+        content=ErrorResponse(
+            detail=msg, code="validation_error", trace_id=_trace_id(request)
+        ).model_dump(),
     )
 
 
@@ -114,7 +128,25 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 async def http_exception_handler(request: Request, exc: HTTPException):
     return JSONResponse(
         status_code=exc.status_code,
-        content=ErrorResponse(detail=str(exc.detail), code="error").model_dump(),
+        content=ErrorResponse(
+            detail=str(exc.detail), code="error", trace_id=_trace_id(request)
+        ).model_dump(),
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    # An unhandled exception is a 500. Without this it would vanish into a bare
+    # stack trace; here we log it with the request's trace_id (Sentry, if
+    # configured, captures it automatically) and hand the client that same
+    # trace_id so support can correlate — but never leak the internal detail.
+    trace_id = _trace_id(request)
+    log.exception("Unhandled exception trace_id=%s path=%s", trace_id, request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content=ErrorResponse(
+            detail="Internal server error", code="internal_error", trace_id=trace_id
+        ).model_dump(),
     )
 
 

@@ -1,0 +1,47 @@
+groups:
+  - name: smartride-availability
+    rules:
+      - alert: BackendDown
+        expr: up{job="smartride-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "SmartRide backend is down"
+          description: "Prometheus cannot scrape backend:8000 for >1m."
+
+      - alert: HighServerErrorRate
+        # >5% of requests returning 5xx over 5m.
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m]))
+            / sum(rate(http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Elevated 5xx error rate"
+          description: "More than 5% of requests are failing with 5xx over the last 5m."
+
+  - name: smartride-dispatch
+    rules:
+      - alert: DispatchFailuresSpiking
+        expr: increase(smartride_dispatch_failures_total[10m]) > 5
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Emergency dispatch failing"
+          description: "More than 5 dispatch failures in 10m (reason label has detail)."
+
+      - alert: SlowEmergencyDispatch
+        # p95 of the dispatch pipeline over the 60s product target.
+        expr: |
+          histogram_quantile(
+            0.95, sum(rate(smartride_emergency_dispatch_seconds_bucket[10m])) by (le)
+          ) > 60
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Emergency dispatch p95 over 60s target"
+          description: "95th-percentile dispatch time exceeded the 60s SLO for 5m."

@@ -8,6 +8,8 @@ from sqlalchemy import select, func, and_, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core import metrics
+
 from app.models.models import (
     Ride,
     Patient,
@@ -342,6 +344,7 @@ async def accept_ride(ride_id: str, driver: Driver, db: AsyncSession) -> Ride:
         ).scalar_one_or_none()
         if check is None:
             raise HTTPException(404, "Ride not found")
+        metrics.ride_accept_conflicts_total.inc()
         raise HTTPException(409, "Ride already taken by another driver")
 
     driver.status = DriverStatus.busy
