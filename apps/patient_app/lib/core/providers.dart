@@ -243,31 +243,14 @@ class AppNotification {
         time: time, icon: icon, isRead: true);
 }
 
-const _patientSeed = [
-  AppNotification(id: 'p1', title: 'Ride Confirmed', body: 'Your ride to Pakistan Institute of Medical Sciences has been confirmed.', time: '2 min ago', icon: Icons.check_circle_outline),
-  AppNotification(id: 'p2', title: 'Driver On The Way', body: 'Ahmed Khan is heading to your pickup location. ETA 8 minutes.', time: '10 min ago', icon: Icons.directions_car_outlined),
-  AppNotification(id: 'p3', title: 'Payment Received', body: 'PKR 350 payment processed successfully for your last ride.', time: '1 hr ago', icon: Icons.payment_outlined, isRead: true),
-  AppNotification(id: 'p4', title: 'Ride Completed', body: 'Your ride has been completed. Thank you for using SmartRide.', time: '3 hr ago', icon: Icons.flag_outlined, isRead: true),
-  AppNotification(id: 'p5', title: 'Rate Your Driver', body: 'How was your experience with Muhammad Ali? Tap to leave a review.', time: 'Yesterday', icon: Icons.star_outline, isRead: true),
-];
-
-const _driverSeed = [
-  AppNotification(id: 'd1', title: 'New Ride Request', body: 'Patient pickup at G-10 Markaz. 3.2 km away. Tap to accept.', time: '1 min ago', icon: Icons.notifications_active_outlined),
-  AppNotification(id: 'd2', title: 'Earnings Credited', body: 'PKR 420 has been credited to your wallet for 3 completed rides.', time: '30 min ago', icon: Icons.account_balance_wallet_outlined),
-  AppNotification(id: 'd3', title: 'Commission Deducted', body: 'PKR 45 platform commission deducted for ride #SR-4821.', time: '2 hr ago', icon: Icons.receipt_long_outlined, isRead: true),
-  AppNotification(id: 'd4', title: 'Verification Approved', body: 'Your driver profile has been verified. You can now go online.', time: 'Yesterday', icon: Icons.verified_outlined, isRead: true),
-];
-
 final notificationsProvider = StateNotifierProvider.family<
     NotificationsNotifier, List<AppNotification>, String>(
   (ref, portal) => NotificationsNotifier(portal),
 );
 
 class NotificationsNotifier extends StateNotifier<List<AppNotification>> {
-  NotificationsNotifier(String portal)
-      : super(portal == 'driver'
-            ? List<AppNotification>.from(_driverSeed)
-            : List<AppNotification>.from(_patientSeed)) {
+  // Starts empty — real notifications arrive via the FCM message stream.
+  NotificationsNotifier(String portal) : super(const []) {
     _sub = incomingMessageStream.listen((msg) {
       final n = msg.notification;
       if (n == null) return;

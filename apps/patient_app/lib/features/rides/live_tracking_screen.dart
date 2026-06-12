@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,6 +24,13 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
   core.RideDetailResponse? _ride;
   bool _loaded = false;
   String? _error;
+
+  // Connection resilience: the GPS socket can drop on mobile networks.
+  // Reconnect automatically and tell the patient while we are offline.
+  bool _connected = false;
+  bool _ended = false;
+  Timer? _reconnectTimer;
+  int _reconnectAttempts = 0;
 
   @override
   void initState() {
@@ -50,10 +58,37 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
     final uri = Uri.parse('$baseWs/ws/ride/${widget.rideId}');
     _ws = core.WsClient(
       onMessage: _handleWsMessage,
-      onDone: () { if (mounted && !_loaded) setState(() => _loaded = true); },
+      onDone: _onWsClosed,
     );
-    await _ws!.connect(uri, token);
-    if (mounted) setState(() => _loaded = true);
+    try {
+      await _ws!.connect(uri, token);
+      if (mounted) {
+        setState(() {
+          _loaded = true;
+          _connected = true;
+          _reconnectAttempts = 0;
+        });
+      }
+    } on Exception {
+      _onWsClosed();
+    }
+  }
+
+  void _onWsClosed() {
+    if (!mounted || _ended) return;
+    setState(() {
+      _loaded = true;
+      _connected = false;
+    });
+    // Exponential backoff capped at 30s so a flaky network does not hammer
+    // the server while still recovering quickly from brief drops.
+    final delay = Duration(
+        seconds: math.min(30, 3 * (1 << math.min(_reconnectAttempts, 3))));
+    _reconnectAttempts++;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = Timer(delay, () {
+      if (mounted && !_ended) _connectWs();
+    });
   }
 
   void _handleWsMessage(Map<String, dynamic> msg) {
@@ -66,6 +101,8 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
       return;
     }
     if (msg['event'] == 'ride_ended') {
+      _ended = true;
+      _reconnectTimer?.cancel();
       _ws?.disconnect();
       if (mounted) _showCompletionDialog(msg['status'] as String? ?? 'completed');
     }
@@ -100,9 +137,43 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
 
   @override
   void dispose() {
+    _ended = true;
+    _reconnectTimer?.cancel();
     _ws?.disconnect();
     _mapController.dispose();
     super.dispose();
+  }
+
+  /// Open the SMS composer pre-filled with the ride details so the patient
+  /// can send it to family. SMS works without data — important mid-emergency.
+  Future<void> _shareWithFamily() async {
+    final hospital = _ride?.hospital?['name'] as String? ?? 'hospital';
+    final pos = _driverPos;
+    final mapLink = pos != null
+        ? ' Track: https://www.openstreetmap.org/?mlat=${pos.latitude}&mlon=${pos.longitude}#map=16/${pos.latitude}/${pos.longitude}'
+        : '';
+    final body = Uri.encodeComponent(
+        'I am in a SmartRide medical transport to $hospital. '
+        'Ride ID: ${widget.rideId}.$mapLink');
+    final uri = Uri.parse('sms:?body=$body');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No SMS app available on this device')),
+      );
+    }
+  }
+
+  /// ETA from the driver's last known position to the pickup point, or null
+  /// until we have both — never display a made-up number.
+  String? get _etaLabel {
+    final d = _driverPos, p = _pickupPos;
+    if (d == null || p == null) return null;
+    const distance = Distance();
+    final km = distance.as(LengthUnit.Kilometer, d, p);
+    final minutes = (km / 25.0 * 60).ceil().clamp(1, 999);
+    return 'ETA: ~$minutes min';
   }
 
   @override
@@ -192,11 +263,31 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
                   ),
                   const SizedBox(height: core.kSpaceSM),
                   Row(children: [
-                    const _StatusChip(label: 'ETA: ~8 min', icon: Icons.access_time),
-                    const SizedBox(width: core.kSpaceSM),
-                    if (ride?.hospitalId != null)
-                      const _StatusChip(label: 'PIMS Hospital', icon: Icons.local_hospital_outlined),
+                    if (_etaLabel != null)
+                      _StatusChip(label: _etaLabel!, icon: Icons.access_time),
+                    if (_etaLabel != null) const SizedBox(width: core.kSpaceSM),
+                    if (ride?.hospital?['name'] != null)
+                      Flexible(
+                        child: _StatusChip(
+                          label: ride!.hospital!['name'] as String,
+                          icon: Icons.local_hospital_outlined,
+                        ),
+                      ),
                   ]),
+                  if (!_connected) ...[
+                    const SizedBox(height: core.kSpaceSM),
+                    const Row(children: [
+                      Icon(Icons.wifi_off, color: Colors.white, size: 14),
+                      SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Reconnecting — driver location may be out of date',
+                          style: TextStyle(
+                              color: Colors.white, fontSize: core.kFontXS),
+                        ),
+                      ),
+                    ]),
+                  ],
                 ],
               ),
             ),
@@ -269,7 +360,7 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
                   ),
                   const SizedBox(height: core.kSpaceMD),
                   OutlinedButton.icon(
-                    onPressed: () {},
+                    onPressed: _shareWithFamily,
                     icon: const Icon(Icons.share_location_outlined, size: 18),
                     label: const Text('Share live location with family'),
                     style: OutlinedButton.styleFrom(

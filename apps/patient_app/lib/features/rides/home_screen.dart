@@ -116,7 +116,22 @@ class HomeScreen extends ConsumerWidget {
                         ],
                       ),
                       loading: () => const SizedBox(height: 40),
-                      error: (_, __) => const SizedBox(height: 40),
+                      // Profile fetch failing shouldn't blank the header —
+                      // fall back to the greeting alone.
+                      error: (_, __) => SizedBox(
+                        height: 40,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            _greeting(),
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: kText900,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: kSpaceXL),
                     if (activeRide != null) ...[

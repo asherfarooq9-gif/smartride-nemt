@@ -119,7 +119,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () {},
+                    // No self-service reset endpoint exists yet — direct the
+                    // user to support instead of a button that does nothing.
+                    onPressed: () => showDialog<void>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Reset password'),
+                        content: const Text(
+                          'Password reset is handled by our support team. '
+                          'Please reach us through Help & Support, or call '
+                          '1122 for ride emergencies.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(),
+                            child: const Text('OK'),
+                          ),
+                        ],
+                      ),
+                    ),
                     child: Text(
                       'Forgot password?',
                       style: GoogleFonts.dmSans(
