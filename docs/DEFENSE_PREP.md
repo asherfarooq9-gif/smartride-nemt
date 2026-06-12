@@ -101,17 +101,29 @@ watchers' connections (they can be on different server processes).
 **Q: What security measures are in place?**
 - bcrypt password hashing; JWT with Redis revocation blocklist
 - Strict input validation (Pydantic schemas; phone format enforced)
-- Rate limiting: register/login 5/min, emergency rides 5/min, global 200/min
+- Rate limiting **keyed per authenticated user** (not just IP — so carrier NAT
+  doesn't make one user throttle another): register/login 5/min, emergency
+  5/min, global 200/min
 - RBAC by held roles + resource ownership on every ride endpoint
+- Missing-credential requests return **401** (not 403) — correct HTTP semantics
+- Security headers incl. **HSTS** (force HTTPS), X-Frame-Options, nosniff
 - Startup refuses to boot in production with a default SECRET_KEY or
   wildcard CORS
 - GPS coordinates validated server-side before persisting
-- App stores tokens in flutter_secure_storage (Keychain/EncryptedSharedPrefs)
+- App stores tokens in flutter_secure_storage (Keychain/EncryptedSharedPrefs);
+  Android blocks cleartext traffic; release build is R8-obfuscated
 
-**Q: What about patient privacy?**
-Only the assigned driver, the ride's own patient, and admins can view a
-ride or its GPS stream — verified per-request, with tests. Error messages
-don't leak internals; notification failures are logged server-side only.
+**Q: What about patient privacy / health-data compliance?**
+A dedicated PHI audit was done (`docs/PHI_COMPLIANCE_AUDIT.md`). Key points:
+- Only the assigned driver, the ride's own patient, and admins can view a ride
+  or its GPS stream — verified per-request, with tests.
+- **Minimum necessary:** the driver does *not* receive the raw symptom free-text
+  — only specialty + severity. The full complaint is shown to the patient and
+  admins only.
+- **No PHI in logs:** SMS bodies and phone numbers are never logged (phones are
+  masked); request logging records method/path/status only, never bodies.
+- Hospital pre-alerts reference the patient by **UUID, not name** (FHIR bundle).
+- All traffic is HTTPS; error responses carry a `trace_id` (no internal leak).
 
 ### Scalability & operations
 
@@ -136,12 +148,27 @@ driver wallet, ride ratings). Migrations are committed and reproducible.
 ### Testing & quality
 
 **Q: How is the system tested?**
-- 77 backend integration tests (pytest + httpx against a test PostgreSQL):
-  auth, multi-role, RBAC, dispatch race conditions, websockets, analytics
-- 36 Flutter tests (widget + model + validator)
-- `flutter analyze` clean; CI builds via Codemagic
-- Review-driven regression tests pin the security fixes so they can't
-  silently regress
+- 81 backend integration tests (pytest + httpx against a test PostgreSQL):
+  auth, multi-role, RBAC, dispatch race conditions, websockets, analytics,
+  rate-limit keying — at ~65% line coverage, enforced as a CI floor
+- 44 Flutter tests (28 app widget/flow + 16 core model/validator)
+- CI gates are **real**: tests must pass to merge (previously `|| true` made
+  them non-blocking), backend coverage floor enforced, ruff lint + format clean
+- `flutter analyze` clean; release APK builds with R8 obfuscation
+- **Load/resilience tested by execution** (not just claimed) — see the next Q
+
+**Q: How do you know it holds up under load and failure?**
+Four executed tests, results in `docs/LOAD_TEST_RESULTS.md`:
+- **Dispatch race:** 50 drivers accept the same ride simultaneously, 10 rounds
+  (500 concurrent accepts) → exactly 1 winner every round, 0 double-assignments,
+  0 crashes.
+- **Endpoint load:** 4100 requests → 0 failures; the rate limiter shed excess
+  with clean 429s instead of falling over.
+- **Chaos:** killed Redis, then Postgres, mid-run → `/health` stayed 200,
+  `/ready` honestly returned 503 naming the dead dependency, auto-recovered when
+  it came back (7/7 checks).
+- **Soak:** 10 min steady load, 1635 requests → memory flat (+0.6%), DB
+  connections steady (no pool leak), 0 errors.
 
 **Q: What was the hardest bug you fixed?**
 Authorization used the *active portal* instead of *held roles + ownership*
@@ -167,8 +194,9 @@ failure is logged loudly, never silently dropped.
 - ETA is haversine distance at an assumed average speed, not road routing;
   OSRM/Google Directions is the upgrade path.
 - Password reset is via support, not self-service email/SMS flow.
-- The notification list mixes live push messages with seeded examples.
 - Single-region deployment; no offline-first data sync.
+- In-app account/data deletion not yet shipped (needed before Play Store
+  submission — flagged in the PHI audit).
 
 ---
 
@@ -176,9 +204,37 @@ failure is logged loudly, never silently dropped.
 
 | Metric | Value |
 |---|---|
-| Backend tests | 77 passing |
-| Flutter tests | 36 passing |
+| Backend tests | 81 passing, ~65% coverage (CI floor enforced) |
+| Flutter tests | 44 passing (28 app + 16 core) |
 | API endpoints | ~35 across auth, rides, drivers, patients, hospitals, analytics, WS |
 | DB migrations | 4 (chained, reproducible) |
-| Rate limits | 5/min auth & emergency, 200/min global |
-| Dispatch race handling | atomic UPDATE, HTTP 409 on conflict |
+| Rate limits | 5/min auth & emergency, 200/min global — **keyed per user** |
+| Dispatch race handling | atomic UPDATE, HTTP 409 — proven: 500 concurrent, 0 double-books |
+| Load proof | 4100 reqs, 0 failures · chaos 7/7 · soak 0 leaks |
+
+---
+
+## 6. Production-readiness hardening
+
+Beyond the FYP feature set, the system was hardened toward a real pilot across
+six areas. Each has a dedicated doc in `docs/`.
+
+| Area | What was done | Evidence |
+|------|---------------|----------|
+| **Testing & CI** | Made CI gates real (were non-blocking), added Flutter flow tests, enforced a backend coverage floor, fixed a 401-vs-403 auth bug | 81 backend + 44 Flutter tests, ruff clean |
+| **Security / PHI** | Audited patient-health-data handling; stopped logging PHI, scoped symptom text away from drivers, added HSTS | `PHI_COMPLIANCE_AUDIT.md` |
+| **Load & resilience** | Dispatch-race, endpoint-load, chaos (kill Redis/DB), and soak tests — all executed | `LOAD_TEST_RESULTS.md` |
+| **Observability** | Sentry error tracking (PHI-safe), ride-lifecycle metrics, Prometheus + Grafana dashboard with alerts | `OBSERVABILITY.md` |
+| **Operations** | Backup/restore scripts with a **proven** restore drill, opt-in PgBouncer pooling, release runbook | `OPERATIONS.md` |
+| **Mobile release** | Release signing config, R8 shrink/obfuscate (build verified), Play Store data-safety declaration | `PLAY_STORE_DATA_SAFETY.md` |
+
+**One-liner for the panel:** *"It's not just a working demo — the dispatch race
+is proven under 500 concurrent accepts with zero double-bookings, it degrades
+gracefully when Redis or the database dies, patient health data is handled to a
+minimum-necessary standard, and it ships with monitoring, alerting, and a tested
+backup/restore."*
+
+**Honest framing:** the hardening is done in code and proven locally; turning it
+on for a real pilot still needs operational setup I can't do without credentials
+— an upload keystore, production secrets, an alert notification channel, in-app
+data deletion, and a staging environment.
