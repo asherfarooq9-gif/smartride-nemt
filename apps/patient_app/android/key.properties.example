@@ -1,0 +1,13 @@
+# Copy to android/key.properties (git-ignored) and fill in real values to sign
+# the release build. Generate a keystore with:
+#
+#   keytool -genkey -v -keystore smartride-release.jks \
+#     -keyalg RSA -keysize 2048 -validity 10000 -alias smartride
+#
+# storeFile may be an absolute path or relative to android/app.
+# NEVER commit the real key.properties or the .jks keystore.
+
+storePassword=your-store-password
+keyPassword=your-key-password
+keyAlias=smartride
+storeFile=smartride-release.jks
