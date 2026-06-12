@@ -3,6 +3,7 @@ Hospital Matching Engine
 Score = 0.40 × distance + 0.30 × ed_wait + 0.20 × specialty + 0.10 × outcome
 All sub-scores normalised to [0, 1]. Higher = better.
 """
+
 import math
 from typing import List, Optional
 from dataclasses import dataclass
@@ -41,7 +42,10 @@ def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     dphi = math.radians(lat2 - lat1)
     dlambda = math.radians(lng2 - lng1)
-    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
+    a = (
+        math.sin(dphi / 2) ** 2
+        + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
+    )
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
@@ -64,18 +68,24 @@ def match_hospitals(
             return False
         if h.ed_current_load >= h.ed_capacity:
             return False
-        if required_specialty not in h.specialties and required_specialty != "general_emergency":
+        if (
+            required_specialty not in h.specialties
+            and required_specialty != "general_emergency"
+        ):
             return False
         return True
 
-    all_with_dist = [(h, haversine_km(patient_lat, patient_lng, h.lat, h.lng)) for h in candidates]
+    all_with_dist = [
+        (h, haversine_km(patient_lat, patient_lng, h.lat, h.lng)) for h in candidates
+    ]
 
     filtered = [(h, d) for h, d in all_with_dist if passes_filter(h, d)]
 
     if not filtered:
         # fallback: relax specialty filter, reuse already-computed distances
         filtered = [
-            (h, d) for h, d in all_with_dist
+            (h, d)
+            for h, d in all_with_dist
             if d <= max_radius_km and h.ed_current_load < h.ed_capacity
         ]
 
@@ -103,21 +113,25 @@ def match_hospitals(
     results = []
     for h, dist in filtered:
         score = (
-            0.40 * dist_score(dist) +
-            0.30 * ed_score(h) +
-            0.20 * specialty_score(h) +
-            0.10 * h.outcome_score
+            0.40 * dist_score(dist)
+            + 0.30 * ed_score(h)
+            + 0.20 * specialty_score(h)
+            + 0.10 * h.outcome_score
         )
-        results.append(MatchResult(
-            hospital_id=h.id,
-            hospital_name=h.name,
-            score=round(score, 4),
-            distance_km=round(dist, 2),
-            ed_occupancy_pct=round((h.ed_current_load / max(h.ed_capacity, 1)) * 100, 1),
-            fhir_endpoint=h.fhir_endpoint,
-            has_fhir=bool(h.fhir_endpoint),
-            coordinator_phone=h.coordinator_phone,
-        ))
+        results.append(
+            MatchResult(
+                hospital_id=h.id,
+                hospital_name=h.name,
+                score=round(score, 4),
+                distance_km=round(dist, 2),
+                ed_occupancy_pct=round(
+                    (h.ed_current_load / max(h.ed_capacity, 1)) * 100, 1
+                ),
+                fhir_endpoint=h.fhir_endpoint,
+                has_fhir=bool(h.fhir_endpoint),
+                coordinator_phone=h.coordinator_phone,
+            )
+        )
 
     results.sort(key=lambda r: r.score, reverse=True)
     return results[:top_n]

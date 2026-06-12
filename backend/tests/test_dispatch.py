@@ -3,6 +3,7 @@ Emergency dispatch pipeline integration tests.
 Seeds real DB rows (hospital + driver + patient), mocks the triage HTTP call,
 then runs dispatch_emergency() directly and verifies the outcome.
 """
+
 import uuid
 import pytest
 import pytest_asyncio
@@ -19,8 +20,15 @@ TEST_DATABASE_URL = os.getenv(
 )
 
 from app.models.models import (
-    User, Patient, Driver, Hospital, Ride,
-    UserRole, DriverStatus, RideType, RideStatus,
+    User,
+    Patient,
+    Driver,
+    Hospital,
+    Ride,
+    UserRole,
+    DriverStatus,
+    RideType,
+    RideStatus,
 )
 from app.services.emergency_dispatch import dispatch_emergency
 from app.core.security import hash_password
@@ -60,9 +68,11 @@ async def _seed(session: AsyncSession):
         name=f"Test Hospital {suffix}",
         address="Test Address",
         city="Islamabad",
-        lat=33.7394, lng=73.0433,
+        lat=33.7394,
+        lng=73.0433,
         specialties=["cardiology", "general_emergency"],
-        ed_capacity=100, ed_current_load=20,
+        ed_capacity=100,
+        ed_current_load=20,
         is_active=True,
     )
     session.add(hospital)
@@ -84,7 +94,8 @@ async def _seed(session: AsyncSession):
         vehicle_type="ambulette",
         is_verified=True,
         status=DriverStatus.available,
-        current_lat=33.7305, current_lng=73.0433,
+        current_lat=33.7305,
+        current_lng=73.0433,
     )
     session.add(driver)
 
@@ -132,7 +143,9 @@ async def test_dispatch_returns_summary(session: AsyncSession):
         "app.services.emergency_dispatch.call_triage_service",
         new=AsyncMock(return_value=TRIAGE_RESPONSE),
     ):
-        result = await dispatch_emergency(ride, "chest pain and shortness of breath", session)
+        result = await dispatch_emergency(
+            ride, "chest pain and shortness of breath", session
+        )
 
     assert "ride_id" in result
     assert "driver_id" in result
@@ -153,10 +166,14 @@ async def test_dispatch_sets_driver_assigned_status(session: AsyncSession):
     ):
         await dispatch_emergency(ride, "chest pain", session)
 
-    refreshed = (await session.execute(select(Ride).where(Ride.id == ride.id))).scalar_one()
+    refreshed = (
+        await session.execute(select(Ride).where(Ride.id == ride.id))
+    ).scalar_one()
     assert refreshed.status == RideStatus.driver_assigned
     assert refreshed.driver_id == driver.id
-    assert refreshed.hospital_id is not None   # a hospital was chosen (may differ from seed)
+    assert (
+        refreshed.hospital_id is not None
+    )  # a hospital was chosen (may differ from seed)
     assert refreshed.driver_assigned_at is not None
 
 
@@ -173,7 +190,9 @@ async def test_dispatch_marks_driver_busy(session: AsyncSession):
     ):
         await dispatch_emergency(ride, "chest pain", session)
 
-    refreshed_driver = (await session.execute(select(Driver).where(Driver.id == driver.id))).scalar_one()
+    refreshed_driver = (
+        await session.execute(select(Driver).where(Driver.id == driver.id))
+    ).scalar_one()
     assert refreshed_driver.status == DriverStatus.busy
 
 
@@ -189,7 +208,9 @@ async def test_severity_override_on_critical_keyword(session: AsyncSession):
         "app.services.emergency_dispatch.call_triage_service",
         new=AsyncMock(return_value=low_severity_triage),
     ):
-        result = await dispatch_emergency(ride, "cardiac arrest patient unresponsive", session)
+        result = await dispatch_emergency(
+            ride, "cardiac arrest patient unresponsive", session
+        )
 
     assert result.get("severity") == "5"
 
@@ -203,8 +224,11 @@ async def test_dispatch_no_drivers_returns_error(session: AsyncSession):
 
     # take the driver offline via a direct update to avoid stale-state issues
     from sqlalchemy import update as sa_update
+
     await session.execute(
-        sa_update(Driver).where(Driver.id == driver.id).values(status=DriverStatus.offline)
+        sa_update(Driver)
+        .where(Driver.id == driver.id)
+        .values(status=DriverStatus.offline)
     )
     await session.commit()
 
@@ -242,12 +266,15 @@ async def test_dispatch_triage_fallback_on_service_error(session: AsyncSession):
 @pytest.mark.asyncio
 async def test_emergency_dispatch_when_no_drivers_available(client):
     """Ride should be created even when no driver is available in the test DB."""
-    reg = await client.post("/api/v1/auth/register", json={
-        "phone": "+92300099003",
-        "password": "Passw0rd!",
-        "role": "patient",
-        "full_name": "No Driver Test",
-    })
+    reg = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "phone": "+92300099003",
+            "password": "Passw0rd!",
+            "role": "patient",
+            "full_name": "No Driver Test",
+        },
+    )
     assert reg.status_code == 201
     token = reg.json()["access_token"]
 

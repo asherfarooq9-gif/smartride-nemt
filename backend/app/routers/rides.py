@@ -8,11 +8,21 @@ from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import get_current_user, require_patient, require_driver, require_admin
-from app.models.models import Ride, Patient, Driver, User, RideStatus, RideType
+from app.core.security import (
+    get_current_user,
+    require_patient,
+    require_driver,
+    require_admin,
+)
+from app.models.models import Ride, User, RideStatus, RideType
 from app.schemas.rides import (
-    EmergencyRideRequest, ScheduledRideRequest,
-    RideStatusUpdate, RateRideRequest, RideResponse, RideListResponse, RideDetailResponse,
+    EmergencyRideRequest,
+    ScheduledRideRequest,
+    RideStatusUpdate,
+    RateRideRequest,
+    RideResponse,
+    RideListResponse,
+    RideDetailResponse,
 )
 from app.services import ride_service
 
@@ -52,6 +62,7 @@ async def _run_dispatch(ride_id: str, symptom_text: str) -> None:
 
 
 # ── Patient endpoints ─────────────────────────────────────────────────────────
+
 
 @router.post("/emergency", response_model=RideResponse, status_code=201)
 @limiter.limit("5/minute")
@@ -115,12 +126,21 @@ async def get_ride_detail(
     patient_data = None
     if ride.patient:
         p, u = ride.patient, ride.patient.user
-        patient_data = {"full_name": p.full_name, "phone": u.phone, "mobility_needs": p.mobility_needs}
+        patient_data = {
+            "full_name": p.full_name,
+            "phone": u.phone,
+            "mobility_needs": p.mobility_needs,
+        }
 
     driver_data = None
     if ride.driver:
         d, u = ride.driver, ride.driver.user
-        driver_data = {"full_name": d.full_name, "phone": u.phone, "vehicle_plate": d.vehicle_plate, "vehicle_type": d.vehicle_type}
+        driver_data = {
+            "full_name": d.full_name,
+            "phone": u.phone,
+            "vehicle_plate": d.vehicle_plate,
+            "vehicle_type": d.vehicle_type,
+        }
 
     hospital_data = None
     if ride.hospital:
@@ -149,6 +169,7 @@ async def get_ride_detail(
 # ── Driver endpoints ──────────────────────────────────────────────────────────
 # IMPORTANT: /pending must be registered BEFORE /{ride_id} so FastAPI does not
 # treat the literal string "pending" as a ride_id parameter.
+
 
 @router.get("/pending", response_model=RideListResponse)
 async def pending_rides(
@@ -220,13 +241,17 @@ async def update_ride_status(
         if ride.driver_id == driver.id:
             if not driver.is_verified:
                 raise HTTPException(403, "Driver not verified")
-            ride = await ride_service.update_ride_status(ride, body, "driver", db, driver=driver)
+            ride = await ride_service.update_ride_status(
+                ride, body, "driver", db, driver=driver
+            )
             return _to_response(ride)
 
     if "patient" in held:
         patient = await ride_service.get_patient_by_user(current_user, db)
         if ride.patient_id == patient.id:
-            ride = await ride_service.update_ride_status(ride, body, "patient", db, patient=patient)
+            ride = await ride_service.update_ride_status(
+                ride, body, "patient", db, patient=patient
+            )
             return _to_response(ride)
 
     raise HTTPException(403, "Forbidden")
@@ -234,6 +259,7 @@ async def update_ride_status(
 
 # ── Admin endpoints ───────────────────────────────────────────────────────────
 # NOTE: /export.csv must be registered BEFORE /{ride_id} to prevent route shadowing.
+
 
 @router.get("/export.csv")
 async def export_rides_csv(
@@ -248,31 +274,48 @@ async def export_rides_csv(
         page, page_size = 1, 500
         buf = io.StringIO()
         writer = csv.writer(buf)
-        writer.writerow([
-            "id", "ride_type", "status", "pickup_address",
-            "requested_at", "completed_at", "cancelled_at",
-            "estimated_fare_pkr", "final_fare_pkr",
-            "patient_id", "driver_id", "hospital_id",
-        ])
+        writer.writerow(
+            [
+                "id",
+                "ride_type",
+                "status",
+                "pickup_address",
+                "requested_at",
+                "completed_at",
+                "cancelled_at",
+                "estimated_fare_pkr",
+                "final_fare_pkr",
+                "patient_id",
+                "driver_id",
+                "hospital_id",
+            ]
+        )
         yield buf.getvalue()
         while True:
-            rows, _ = await ride_service.list_rides_admin(db, page, page_size, status, ride_type, search)
+            rows, _ = await ride_service.list_rides_admin(
+                db, page, page_size, status, ride_type, search
+            )
             if not rows:
                 break
             buf = io.StringIO()
             writer = csv.writer(buf)
             for r in rows:
-                writer.writerow([
-                    str(r.id), r.ride_type.value, r.status.value,
-                    r.pickup_address or "",
-                    r.requested_at.isoformat() if r.requested_at else "",
-                    r.completed_at.isoformat() if r.completed_at else "",
-                    r.cancelled_at.isoformat() if r.cancelled_at else "",
-                    float(r.estimated_fare_pkr) if r.estimated_fare_pkr else "",
-                    float(r.final_fare_pkr) if r.final_fare_pkr else "",
-                    str(r.patient_id), str(r.driver_id) if r.driver_id else "",
-                    str(r.hospital_id) if r.hospital_id else "",
-                ])
+                writer.writerow(
+                    [
+                        str(r.id),
+                        r.ride_type.value,
+                        r.status.value,
+                        r.pickup_address or "",
+                        r.requested_at.isoformat() if r.requested_at else "",
+                        r.completed_at.isoformat() if r.completed_at else "",
+                        r.cancelled_at.isoformat() if r.cancelled_at else "",
+                        float(r.estimated_fare_pkr) if r.estimated_fare_pkr else "",
+                        float(r.final_fare_pkr) if r.final_fare_pkr else "",
+                        str(r.patient_id),
+                        str(r.driver_id) if r.driver_id else "",
+                        str(r.hospital_id) if r.hospital_id else "",
+                    ]
+                )
             yield buf.getvalue()
             if len(rows) < page_size:
                 break
@@ -314,5 +357,7 @@ async def list_rides(
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    rows, total = await ride_service.list_rides_admin(db, page, page_size, status, ride_type, search)
+    rows, total = await ride_service.list_rides_admin(
+        db, page, page_size, status, ride_type, search
+    )
     return RideListResponse(items=[_to_response(r) for r in rows], total=total)

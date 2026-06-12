@@ -4,6 +4,7 @@ Regression tests for the security/correctness fixes from the full code review:
 - ride status authorization uses held roles + ownership, not active portal
 - pending rides include hospital_name
 """
+
 import uuid
 
 import pytest
@@ -11,7 +12,13 @@ from httpx import AsyncClient
 
 
 async def _register(client: AsyncClient, phone: str, role: str, **extra) -> str:
-    payload = {"phone": phone, "password": "pass1234", "role": role, "full_name": "T", **extra}
+    payload = {
+        "phone": phone,
+        "password": "pass1234",
+        "role": role,
+        "full_name": "T",
+        **extra,
+    }
     r = await client.post("/api/v1/auth/register", json=payload)
     assert r.status_code == 201, r.text
     return r.json()["access_token"]
@@ -23,7 +30,13 @@ def _auth(token: str) -> dict:
 
 def _driver_extra() -> dict:
     uid = uuid.uuid4().hex[:8]
-    return {"license_no": f"FX-{uid}", "vehicle_plate": f"FX-{uid[:6]}", "vehicle_type": "sedan"}
+    return {
+        "license_no": f"FX-{uid}",
+        "vehicle_plate": f"FX-{uid[:6]}",
+        "vehicle_type": "sedan",
+    }
+
+
 PICKUP = {"pickup_lat": 33.7215, "pickup_lng": 73.0433}
 
 
@@ -64,6 +77,7 @@ async def test_patient_cannot_cancel_another_patients_ride(client: AsyncClient):
     other = await _register(client, "+92300750004", "patient")
 
     from unittest.mock import AsyncMock, patch
+
     with patch("app.routers.rides._run_dispatch", new=AsyncMock()):
         r = await client.post(
             "/api/v1/rides/emergency",
@@ -90,12 +104,16 @@ async def test_patient_cannot_cancel_another_patients_ride(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_multirole_user_can_cancel_own_ride_from_driver_portal(client: AsyncClient):
+async def test_multirole_user_can_cancel_own_ride_from_driver_portal(
+    client: AsyncClient,
+):
     """A patient+driver account in driver portal must still manage its own
     patient ride — the old code branched on the active portal and broke this."""
     phone = "+92300750005"
     await _register(client, phone, "patient")
-    r = await client.post("/api/v1/auth/login", json={"phone": phone, "password": "pass1234"})
+    r = await client.post(
+        "/api/v1/auth/login", json={"phone": phone, "password": "pass1234"}
+    )
     token = r.json()["access_token"]
 
     r = await client.post(
@@ -106,6 +124,7 @@ async def test_multirole_user_can_cancel_own_ride_from_driver_portal(client: Asy
     assert r.status_code == 200, r.text
 
     from unittest.mock import AsyncMock, patch
+
     with patch("app.routers.rides._run_dispatch", new=AsyncMock()):
         ride = await client.post(
             "/api/v1/rides/emergency",

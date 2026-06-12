@@ -22,10 +22,11 @@ class RegisterRequest(BaseModel):
     @classmethod
     def phone_not_empty(cls, v: str) -> str:
         import re
+
         v = v.strip()
         if not v:
             raise ValueError("phone is required")
-        if not re.match(r'^\+?[0-9]{7,15}$', v):
+        if not re.match(r"^\+?[0-9]{7,15}$", v):
             raise ValueError("phone must be 7–15 digits, optionally prefixed with +")
         return v
 

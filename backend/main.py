@@ -2,6 +2,7 @@
 SmartRide NEMT — FastAPI Backend
 Phase 1: Project scaffold with all core structure
 """
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, HTTPException
@@ -16,7 +17,7 @@ from slowapi.util import get_remote_address
 from sqlalchemy import text
 
 from app.core.config import settings
-from app.core.database import engine, Base
+from app.core.database import engine
 from app.core.redis_client import ping_redis
 from app.core.logging import StructuredLoggingMiddleware
 from app.routers import auth, patients, drivers, hospitals, rides, analytics, ws
@@ -31,12 +32,13 @@ async def lifespan(app: FastAPI):
     if settings.SECRET_KEY == _WEAK_SECRET:
         raise RuntimeError(
             "SECRET_KEY is still the default value. "
-            "Generate a real key with: python -c \"import secrets; print(secrets.token_hex(32))\" "
+            'Generate a real key with: python -c "import secrets; print(secrets.token_hex(32))" '
             "and set it in your .env file."
         )
 
     if not settings.DEBUG and "*" in settings.ALLOWED_ORIGINS:
         import warnings
+
         warnings.warn(
             "ALLOWED_ORIGINS contains '*' in a non-DEBUG deployment. "
             "Set ALLOWED_ORIGINS in your .env to explicit origins.",
@@ -85,6 +87,7 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     return response
 
+
 Instrumentator(
     should_group_status_codes=True,
     should_ignore_untemplated=True,
@@ -109,13 +112,13 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     )
 
 
-app.include_router(auth.router,      prefix="/api/v1/auth",      tags=["Auth"])
-app.include_router(patients.router,  prefix="/api/v1/patients",  tags=["Patients"])
-app.include_router(drivers.router,   prefix="/api/v1/drivers",   tags=["Drivers"])
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
+app.include_router(patients.router, prefix="/api/v1/patients", tags=["Patients"])
+app.include_router(drivers.router, prefix="/api/v1/drivers", tags=["Drivers"])
 app.include_router(hospitals.router, prefix="/api/v1/hospitals", tags=["Hospitals"])
-app.include_router(rides.router,     prefix="/api/v1/rides",     tags=["Rides"])
+app.include_router(rides.router, prefix="/api/v1/rides", tags=["Rides"])
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytics"])
-app.include_router(ws.router,        prefix="/ws",               tags=["WebSocket"])
+app.include_router(ws.router, prefix="/ws", tags=["WebSocket"])
 
 
 @app.get("/health")
@@ -142,5 +145,9 @@ async def ready():
     status_code = 200 if (db_ok and redis_ok) else 503
     return JSONResponse(
         status_code=status_code,
-        content={"status": "ready" if status_code == 200 else "degraded", "db": db_ok, "redis": redis_ok},
+        content={
+            "status": "ready" if status_code == 200 else "degraded",
+            "db": db_ok,
+            "redis": redis_ok,
+        },
     )

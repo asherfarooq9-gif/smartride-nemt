@@ -1,6 +1,5 @@
 from typing import Optional, List
 from datetime import datetime, timedelta, timezone
-import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
@@ -9,10 +8,16 @@ from app.core.database import get_db
 from app.core.security import require_driver, require_admin
 from app.models.models import Driver, User
 from app.schemas.drivers import (
-    DriverResponse, DriverUpdate, DriverStatusUpdate,
-    LocationUpdate, DriverListResponse,
-    WalletResponse, WalletTopUpRequest, WalletTransaction,
-    EarningsResponse, EarningsRide,
+    DriverResponse,
+    DriverUpdate,
+    DriverStatusUpdate,
+    LocationUpdate,
+    DriverListResponse,
+    WalletResponse,
+    WalletTopUpRequest,
+    WalletTransaction,
+    EarningsResponse,
+    EarningsRide,
 )
 from app.models.models import Ride, RideStatus
 from app.services import driver_service
@@ -44,6 +49,7 @@ def _to_response(driver: Driver, user: User) -> DriverResponse:
 
 
 # ── Driver self-service ────────────────────────────────────────────────────────
+
 
 @router.get("/me", response_model=DriverResponse)
 async def get_me(
@@ -100,32 +106,51 @@ async def get_earnings(
     completed = and_(Ride.driver_id == driver.id, Ride.status == RideStatus.completed)
 
     # Totals aggregate over ALL completed rides; the list below is paginated.
-    total_earned, ride_count = (await db.execute(
-        select(
-            func.coalesce(func.sum(func.coalesce(Ride.final_fare_pkr, Ride.estimated_fare_pkr, 0)), 0),
-            func.count(),
-        ).where(completed)
-    )).one()
+    total_earned, ride_count = (
+        await db.execute(
+            select(
+                func.coalesce(
+                    func.sum(
+                        func.coalesce(Ride.final_fare_pkr, Ride.estimated_fare_pkr, 0)
+                    ),
+                    0,
+                ),
+                func.count(),
+            ).where(completed)
+        )
+    ).one()
 
-    rows = (await db.execute(
-        select(Ride).where(completed)
-        .order_by(Ride.completed_at.desc())
-        .offset((page - 1) * page_size).limit(page_size)
-    )).scalars().all()
+    rows = (
+        (
+            await db.execute(
+                select(Ride)
+                .where(completed)
+                .order_by(Ride.completed_at.desc())
+                .offset((page - 1) * page_size)
+                .limit(page_size)
+            )
+        )
+        .scalars()
+        .all()
+    )
 
     hospital_ids = list({r.hospital_id for r in rows if r.hospital_id})
     hospitals_map: dict = {}
     if hospital_ids:
-        h_rows = (await db.execute(
-            select(Hospital).where(Hospital.id.in_(hospital_ids))
-        )).scalars().all()
+        h_rows = (
+            (await db.execute(select(Hospital).where(Hospital.id.in_(hospital_ids))))
+            .scalars()
+            .all()
+        )
         hospitals_map = {str(h.id): h.name for h in h_rows}
 
     rides = [
         EarningsRide(
             id=str(r.id),
             pickup_address=r.pickup_address,
-            hospital_name=hospitals_map.get(str(r.hospital_id)) if r.hospital_id else None,
+            hospital_name=hospitals_map.get(str(r.hospital_id))
+            if r.hospital_id
+            else None,
             completed_at=r.completed_at.isoformat() if r.completed_at else None,
             fare_pkr=float(r.final_fare_pkr or r.estimated_fare_pkr or 0),
             ride_type=r.ride_type.value,
@@ -140,9 +165,9 @@ async def get_earnings(
 # ── Wallet ────────────────────────────────────────────────────────────────────
 
 _PLANS = {
-    "starter":  {"rides": 7,  "price_pkr": 250,  "per_ride_pkr": 36, "savings_pct": 20},
-    "standard": {"rides": 18, "price_pkr": 540,  "per_ride_pkr": 30, "savings_pct": 33},
-    "pro":      {"rides": 36, "price_pkr": 900,  "per_ride_pkr": 25, "savings_pct": 44},
+    "starter": {"rides": 7, "price_pkr": 250, "per_ride_pkr": 36, "savings_pct": 20},
+    "standard": {"rides": 18, "price_pkr": 540, "per_ride_pkr": 30, "savings_pct": 33},
+    "pro": {"rides": 36, "price_pkr": 900, "per_ride_pkr": 25, "savings_pct": 44},
 }
 _COMMISSION_RATE = 0.10
 
@@ -155,17 +180,25 @@ async def get_wallet(
     driver = await driver_service.get_driver_by_user(current_user, db)
 
     week_ago = datetime.now(timezone.utc) - timedelta(days=7)
-    weekly_rides = (await db.execute(
-        select(Ride).where(
-            and_(
-                Ride.driver_id == driver.id,
-                Ride.status == RideStatus.completed,
-                Ride.completed_at >= week_ago,
+    weekly_rides = (
+        (
+            await db.execute(
+                select(Ride).where(
+                    and_(
+                        Ride.driver_id == driver.id,
+                        Ride.status == RideStatus.completed,
+                        Ride.completed_at >= week_ago,
+                    )
+                )
             )
         )
-    )).scalars().all()
+        .scalars()
+        .all()
+    )
 
-    weekly_gross = sum(float(r.final_fare_pkr or r.estimated_fare_pkr or 0) for r in weekly_rides)
+    weekly_gross = sum(
+        float(r.final_fare_pkr or r.estimated_fare_pkr or 0) for r in weekly_rides
+    )
     weekly_commission = weekly_gross * _COMMISSION_RATE
     weekly_net = weekly_gross - weekly_commission
 
@@ -174,13 +207,15 @@ async def get_wallet(
     for r in weekly_rides[:10]:
         fare = float(r.final_fare_pkr or r.estimated_fare_pkr or 0)
         commission = fare * _COMMISSION_RATE
-        transactions.append(WalletTransaction(
-            id=str(r.id),
-            type="commission_deduction",
-            amount_pkr=-commission,
-            description=f"10% commission — {r.pickup_address[:30] if r.pickup_address else 'ride'}",
-            created_at=r.completed_at or datetime.now(timezone.utc),
-        ))
+        transactions.append(
+            WalletTransaction(
+                id=str(r.id),
+                type="commission_deduction",
+                amount_pkr=-commission,
+                description=f"10% commission — {r.pickup_address[:30] if r.pickup_address else 'ride'}",
+                created_at=r.completed_at or datetime.now(timezone.utc),
+            )
+        )
 
     balance = float(driver.wallet_balance_pkr or 0)
     return WalletResponse(
@@ -209,10 +244,14 @@ async def topup_wallet(
             raise HTTPException(status_code=422, detail="amount_pkr must be positive")
         amount = body.amount_pkr
 
-    driver = (await db.execute(select(Driver).where(Driver.id == driver_id))).scalar_one_or_none()
+    driver = (
+        await db.execute(select(Driver).where(Driver.id == driver_id))
+    ).scalar_one_or_none()
     if driver is None:
         raise HTTPException(status_code=404, detail="Driver not found")
-    user = (await db.execute(select(User).where(User.id == driver.user_id))).scalar_one()
+    user = (
+        await db.execute(select(User).where(User.id == driver.user_id))
+    ).scalar_one()
 
     driver.wallet_balance_pkr = float(driver.wallet_balance_pkr or 0) + amount
     await db.commit()
@@ -221,6 +260,7 @@ async def topup_wallet(
 
 
 # ── Admin ─────────────────────────────────────────────────────────────────────
+
 
 @router.get("", response_model=DriverListResponse)
 async def list_drivers(
@@ -232,7 +272,9 @@ async def list_drivers(
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    rows, total = await driver_service.list_drivers(db, page, page_size, status, is_verified, search)
+    rows, total = await driver_service.list_drivers(
+        db, page, page_size, status, is_verified, search
+    )
     items = [_to_response(driver, user) for driver, user in rows]
     return DriverListResponse(items=items, total=total, page=page)
 
@@ -244,5 +286,7 @@ async def verify_driver(
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    driver, user = await driver_service.set_driver_verified(driver_id, body.is_verified, db)
+    driver, user = await driver_service.set_driver_verified(
+        driver_id, body.is_verified, db
+    )
     return _to_response(driver, user)

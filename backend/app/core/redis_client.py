@@ -1,4 +1,8 @@
+import json as _json
+from typing import Any, Awaitable, Callable
+
 import redis.asyncio as aioredis
+
 from app.core.config import settings
 
 _redis: aioredis.Redis | None = None
@@ -27,10 +31,6 @@ async def ping_redis() -> bool:
         return await r.ping()
     except Exception:
         return False
-
-
-import json as _json
-from typing import Any, Callable, Awaitable
 
 
 async def get_cached(key: str, ttl: int, loader: Callable[[], Awaitable[Any]]) -> Any:

@@ -19,11 +19,15 @@ async def get_patient_by_user(user: User, db: AsyncSession) -> Patient:
 
 async def get_patient_total_rides(patient_id: UUID, db: AsyncSession) -> int:
     return (
-        await db.execute(select(func.count()).select_from(Ride).where(Ride.patient_id == patient_id))
+        await db.execute(
+            select(func.count()).select_from(Ride).where(Ride.patient_id == patient_id)
+        )
     ).scalar() or 0
 
 
-async def update_patient(patient: Patient, body: PatientUpdate, db: AsyncSession) -> Patient:
+async def update_patient(
+    patient: Patient, body: PatientUpdate, db: AsyncSession
+) -> Patient:
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(patient, field, value)
     await db.commit()
@@ -42,21 +46,28 @@ async def list_patients(
         base_q = base_q.where(
             Patient.full_name.ilike(f"%{search}%") | User.phone.ilike(f"%{search}%")
         )
-    total = (await db.execute(select(func.count()).select_from(base_q.subquery()))).scalar()
-    rows = (await db.execute(
-        base_q.order_by(Patient.created_at.desc())
-        .offset((page - 1) * page_size).limit(page_size)
-    )).all()
+    total = (
+        await db.execute(select(func.count()).select_from(base_q.subquery()))
+    ).scalar()
+    rows = (
+        await db.execute(
+            base_q.order_by(Patient.created_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+    ).all()
 
     # Batch ride counts in a single query — avoids N+1
     patient_ids = [p.id for p, _ in rows]
     ride_counts: dict[UUID, int] = {}
     if patient_ids:
-        count_rows = (await db.execute(
-            select(Ride.patient_id, func.count(Ride.id))
-            .where(Ride.patient_id.in_(patient_ids))
-            .group_by(Ride.patient_id)
-        )).all()
+        count_rows = (
+            await db.execute(
+                select(Ride.patient_id, func.count(Ride.id))
+                .where(Ride.patient_id.in_(patient_ids))
+                .group_by(Ride.patient_id)
+            )
+        ).all()
         ride_counts = {pid: cnt for pid, cnt in count_rows}
 
     return list(rows), total, ride_counts

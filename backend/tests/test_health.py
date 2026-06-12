@@ -1,7 +1,13 @@
 import pytest
 import os
 
-os.environ.setdefault("DATABASE_URL", os.getenv("TEST_DATABASE_URL", "postgresql+asyncpg://smartride:password@localhost:5432/smartride_test"))
+os.environ.setdefault(
+    "DATABASE_URL",
+    os.getenv(
+        "TEST_DATABASE_URL",
+        "postgresql+asyncpg://smartride:password@localhost:5432/smartride_test",
+    ),
+)
 os.environ.setdefault("SECRET_KEY", "test-secret-key-32-chars-long!!")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
 

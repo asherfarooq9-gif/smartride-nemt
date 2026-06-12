@@ -4,6 +4,7 @@ WebSocket endpoints for real-time GPS tracking.
 Auth: client sends {"token": "<jwt>"} as the very first message after connecting.
 This avoids embedding the token in the URL where it appears in server logs.
 """
+
 import asyncio
 import json
 from datetime import datetime, timezone
@@ -14,7 +15,7 @@ from jose import JWTError, jwt
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.core.redis_client import is_token_blocked
-from app.models.models import User, Driver, Ride, RideStatus, DriverStatus
+from app.models.models import User, Driver, Ride, RideStatus
 from app.services.ws_manager import location_manager
 
 router = APIRouter()
@@ -25,7 +26,9 @@ _AUTH_TIMEOUT_SECONDS = 5
 async def _auth_user(token: str) -> User | None:
     """Decode JWT, check blocklist, return the User or None."""
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
+        )
         user_id = payload.get("sub")
         jti = payload.get("jti")
         if not user_id or not jti:
@@ -45,7 +48,9 @@ async def _auth_user(token: str) -> User | None:
 async def _receive_auth(websocket: WebSocket) -> str | None:
     """Wait up to _AUTH_TIMEOUT_SECONDS for {"token": "..."} from the client."""
     try:
-        raw = await asyncio.wait_for(websocket.receive_text(), timeout=_AUTH_TIMEOUT_SECONDS)
+        raw = await asyncio.wait_for(
+            websocket.receive_text(), timeout=_AUTH_TIMEOUT_SECONDS
+        )
         data = json.loads(raw)
         return data.get("token") if isinstance(data, dict) else None
     except (asyncio.TimeoutError, json.JSONDecodeError, Exception):
@@ -58,6 +63,7 @@ def _valid_coords(lat: float, lng: float) -> bool:
 
 
 # ── Driver → streams GPS ──────────────────────────────────────────────────────
+
 
 @router.websocket("/driver/{ride_id}")
 async def driver_location_ws(websocket: WebSocket, ride_id: str):
@@ -113,6 +119,7 @@ async def driver_location_ws(websocket: WebSocket, ride_id: str):
 
 # ── Patient/family → watches driver location ──────────────────────────────────
 
+
 @router.websocket("/ride/{ride_id}")
 async def ride_tracking_ws(websocket: WebSocket, ride_id: str):
     await websocket.accept()
@@ -139,11 +146,16 @@ async def ride_tracking_ws(websocket: WebSocket, ride_id: str):
     if not authorized and "patient" in user.held_roles:
         async with AsyncSessionLocal() as db:
             from app.models.models import Patient
-            p = (await db.execute(select(Patient).where(Patient.user_id == user.id))).scalar_one_or_none()
+
+            p = (
+                await db.execute(select(Patient).where(Patient.user_id == user.id))
+            ).scalar_one_or_none()
         authorized = p is not None and ride.patient_id == p.id
     if not authorized and "driver" in user.held_roles:
         async with AsyncSessionLocal() as db:
-            d = (await db.execute(select(Driver).where(Driver.user_id == user.id))).scalar_one_or_none()
+            d = (
+                await db.execute(select(Driver).where(Driver.user_id == user.id))
+            ).scalar_one_or_none()
         authorized = d is not None and ride.driver_id == d.id
     if not authorized:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
@@ -158,9 +170,9 @@ async def ride_tracking_ws(websocket: WebSocket, ride_id: str):
             # the loop is stale, and a cancelled/completed ride must stop
             # streaming GPS to the client.
             async with AsyncSessionLocal() as db:
-                current_status = (await db.execute(
-                    select(Ride.status).where(Ride.id == ride_id)
-                )).scalar_one_or_none()
+                current_status = (
+                    await db.execute(select(Ride.status).where(Ride.id == ride_id))
+                ).scalar_one_or_none()
             if current_status in (RideStatus.completed, RideStatus.cancelled, None):
                 ended = current_status.value if current_status else "deleted"
                 await websocket.send_json({"event": "ride_ended", "status": ended})

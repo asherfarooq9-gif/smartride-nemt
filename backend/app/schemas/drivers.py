@@ -1,6 +1,5 @@
 from typing import Optional, List
 from datetime import datetime
-import uuid
 from pydantic import BaseModel
 from app.models.models import DriverStatus
 

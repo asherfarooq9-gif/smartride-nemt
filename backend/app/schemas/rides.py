@@ -22,9 +22,11 @@ class ScheduledRideRequest(BaseModel):
     @classmethod
     def must_be_future(cls, v: datetime) -> datetime:
         from datetime import timezone
+
         if v.tzinfo is None:
             v = v.replace(tzinfo=timezone.utc)
         from datetime import datetime as dt
+
         if v <= dt.now(timezone.utc):
             raise ValueError("scheduled_for must be a future date")
         return v

@@ -7,6 +7,7 @@ Create Date: 2026-05-30
 One account can hold both patient and driver roles. `users.role` keeps the
 *active* role (current portal); `user_roles` holds all roles the account has.
 """
+
 from typing import Sequence, Union
 from alembic import op
 

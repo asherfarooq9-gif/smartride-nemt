@@ -54,19 +54,23 @@ async def list_patients(
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    rows, total, ride_counts = await patient_service.list_patients(db, page, page_size, search)
+    rows, total, ride_counts = await patient_service.list_patients(
+        db, page, page_size, search
+    )
     items = []
     for patient, user in rows:
         total_rides = ride_counts.get(patient.id, 0)
-        items.append(PatientResponse(
-            id=str(patient.id),
-            phone=user.phone,
-            full_name=patient.full_name,
-            date_of_birth=patient.date_of_birth,
-            mobility_needs=patient.mobility_needs,
-            emergency_contact_name=patient.emergency_contact_name,
-            emergency_contact_phone=patient.emergency_contact_phone,
-            created_at=patient.created_at,
-            total_rides=total_rides,
-        ))
+        items.append(
+            PatientResponse(
+                id=str(patient.id),
+                phone=user.phone,
+                full_name=patient.full_name,
+                date_of_birth=patient.date_of_birth,
+                mobility_needs=patient.mobility_needs,
+                emergency_contact_name=patient.emergency_contact_name,
+                emergency_contact_phone=patient.emergency_contact_phone,
+                created_at=patient.created_at,
+                total_rides=total_rides,
+            )
+        )
     return PatientListResponse(items=items, total=total)

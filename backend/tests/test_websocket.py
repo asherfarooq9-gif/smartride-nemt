@@ -9,14 +9,14 @@ unit tests rather than through the HTTP layer:
   - location_manager publish/subscribe (mocked Redis)
   - WS router registration on the app
 """
+
 import json
 import uuid
 import pytest
 import pytest_asyncio
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.pool import NullPool
-from sqlalchemy import select
 
 import os
 
@@ -25,13 +25,23 @@ TEST_DATABASE_URL = os.getenv(
     "postgresql+asyncpg://smartride:password@localhost:5432/smartride_test",
 )
 
-from app.models.models import User, Patient, Driver, Ride, UserRole, DriverStatus, RideType, RideStatus
+from app.models.models import (
+    User,
+    Patient,
+    Driver,
+    Ride,
+    UserRole,
+    DriverStatus,
+    RideType,
+    RideStatus,
+)
 from app.core.security import create_access_token, hash_password
 from app.routers.ws import _auth_user
 from app.services.ws_manager import LocationManager
 
 
 # ── fixtures ──────────────────────────────────────────────────────────────────
+
 
 @pytest_asyncio.fixture
 async def ws_session():
@@ -49,28 +59,44 @@ async def ws_session():
 async def _seed_driver_ride(session: AsyncSession):
     suffix = uuid.uuid4().hex[:8]
 
-    pu = User(phone=f"+923009W{suffix}", password_hash=hash_password("x"), role=UserRole.patient)
+    pu = User(
+        phone=f"+923009W{suffix}",
+        password_hash=hash_password("x"),
+        role=UserRole.patient,
+    )
     session.add(pu)
     await session.flush()
     patient = Patient(user_id=pu.id, full_name="WS Patient")
     session.add(patient)
 
-    du = User(phone=f"+923019W{suffix}", password_hash=hash_password("x"), role=UserRole.driver)
+    du = User(
+        phone=f"+923019W{suffix}",
+        password_hash=hash_password("x"),
+        role=UserRole.driver,
+    )
     session.add(du)
     await session.flush()
     driver = Driver(
-        user_id=du.id, full_name="WS Driver",
-        license_no=f"WS-{suffix}", vehicle_plate=f"WSP-{suffix[:4]}",
-        vehicle_type="ambulette", is_verified=True,
-        status=DriverStatus.busy, current_lat=33.72, current_lng=73.04,
+        user_id=du.id,
+        full_name="WS Driver",
+        license_no=f"WS-{suffix}",
+        vehicle_plate=f"WSP-{suffix[:4]}",
+        vehicle_type="ambulette",
+        is_verified=True,
+        status=DriverStatus.busy,
+        current_lat=33.72,
+        current_lng=73.04,
     )
     session.add(driver)
     await session.flush()
 
     ride = Ride(
-        patient_id=patient.id, driver_id=driver.id,
-        ride_type=RideType.emergency, status=RideStatus.driver_assigned,
-        pickup_lat=33.7215, pickup_lng=73.0433,
+        patient_id=patient.id,
+        driver_id=driver.id,
+        ride_type=RideType.emergency,
+        status=RideStatus.driver_assigned,
+        pickup_lat=33.7215,
+        pickup_lng=73.0433,
     )
     session.add(ride)
     await session.commit()
@@ -121,7 +147,10 @@ async def test_auth_user_resolves_valid_token(ws_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_auth_user_rejects_wrong_secret(ws_session: AsyncSession):
     from jose import jwt as _jwt
-    bad_token = _jwt.encode({"sub": str(uuid.uuid4()), "role": "driver"}, "wrong-secret", algorithm="HS256")
+
+    bad_token = _jwt.encode(
+        {"sub": str(uuid.uuid4()), "role": "driver"}, "wrong-secret", algorithm="HS256"
+    )
     user = await _auth_user(bad_token)
     assert user is None
 
@@ -168,6 +197,7 @@ async def test_location_manager_subscribe():
 # ─────────────────────────────────────────────────────────────────────────────
 def test_ws_routes_registered():
     from main import app
+
     routes = {r.path for r in app.routes}
     assert "/ws/driver/{ride_id}" in routes
     assert "/ws/ride/{ride_id}" in routes
@@ -182,6 +212,7 @@ async def test_websocket_driver_rejects_invalid_token(client):
     with TestClient(_app) as tc:
         try:
             import json
+
             with tc.websocket_connect("/ws/driver") as ws:
                 ws.send_text(json.dumps({"token": "not.a.real.jwt"}))
                 # server should close — receive will raise

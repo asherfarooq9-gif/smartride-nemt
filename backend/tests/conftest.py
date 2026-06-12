@@ -49,6 +49,7 @@ async def _reset_redis_singleton():
     first created it. Each pytest-asyncio test runs in its own loop, so reset the
     singleton per test (close on the same loop) to avoid 'Event loop is closed'."""
     import app.core.redis_client as rc
+
     rc._redis = None
     yield
     if rc._redis is not None:
@@ -78,7 +79,9 @@ async def client(db: AsyncSession):
         yield db
 
     app.dependency_overrides[get_db] = _override
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
         yield ac
     app.dependency_overrides.clear()
 
@@ -101,9 +104,11 @@ async def admin_token(db: AsyncSession) -> str:
     await db.commit()
     await db.refresh(user)
 
-    return create_access_token({
-        "sub": str(user.id),
-        "role": "admin",
-        "roles": ["admin"],
-        "active_role": "admin",
-    })
+    return create_access_token(
+        {
+            "sub": str(user.id),
+            "role": "admin",
+            "roles": ["admin"],
+            "active_role": "admin",
+        }
+    )
