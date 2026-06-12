@@ -1,0 +1,13 @@
+# Ruff configuration for the SmartRide backend.
+line-length = 88
+target-version = "py311"
+
+[lint]
+# Default rule set (E, F, W) is enough for this project's CI gate.
+
+[lint.per-file-ignores]
+# Test modules and conftest intentionally set environment variables and adjust
+# sys.path before importing the app, so module-level imports cannot all sit at
+# the top of the file (E402).
+"tests/*" = ["E402"]
+"tests/conftest.py" = ["E402"]

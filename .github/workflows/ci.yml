@@ -91,7 +91,8 @@ jobs:
       - name: Run tests with coverage
         run: |
           cd backend
-          pytest -v --tb=short --cov=app --cov-report=term-missing --cov-report=json
+          # Fail the build if coverage drops below the floor (measured ~66%).
+          pytest -v --tb=short --cov=app --cov-report=term-missing --cov-report=json --cov-fail-under=60
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
@@ -128,15 +129,23 @@ jobs:
       - name: Core package tests
         run: |
           cd packages/smartride_core
-          flutter test --reporter=compact || true
+          flutter test --reporter=compact
 
       - name: SmartRide app analyze + test + build APK
         run: |
           cd apps/patient_app
           flutter pub get
           flutter analyze
-          flutter test --reporter=compact || true
+          # Tests are a real gate now — a failure must fail the build.
+          flutter test --reporter=compact --coverage
           flutter build apk --debug --no-pub
+
+      - name: Upload SmartRide coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: smartride-coverage
+          path: apps/patient_app/coverage/lcov.info
+          retention-days: 7
 
       - name: Upload SmartRide APK
         uses: actions/upload-artifact@v4

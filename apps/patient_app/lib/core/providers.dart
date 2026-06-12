@@ -248,24 +248,31 @@ final notificationsProvider = StateNotifierProvider.family<
   (ref, portal) => NotificationsNotifier(portal),
 );
 
-class NotificationsNotifier extends StateNotifier<List<AppNotification>> {
-  // Starts empty — real notifications arrive via the FCM message stream.
-  NotificationsNotifier(String portal) : super(const []) {
-    _sub = incomingMessageStream.listen((msg) {
-      final n = msg.notification;
-      if (n == null) return;
-      final item = AppNotification(
+/// Maps the raw FCM message stream into displayable [AppNotification]s.
+/// Kept separate so the notifier can be driven by a fake stream in tests.
+Stream<AppNotification> mapIncomingNotifications() =>
+    incomingMessageStream.where((m) => m.notification != null).map((m) {
+      final n = m.notification!;
+      return AppNotification(
         id: '${DateTime.now().millisecondsSinceEpoch}',
         title: n.title ?? 'Notification',
         body: n.body ?? '',
         time: 'Just now',
         icon: Icons.notifications_active_outlined,
       );
+    });
+
+class NotificationsNotifier extends StateNotifier<List<AppNotification>> {
+  // Starts empty — real notifications arrive via the injected stream
+  // (FCM in production, a fake stream under test).
+  NotificationsNotifier(String portal, {Stream<AppNotification>? incoming})
+      : super(const []) {
+    _sub = (incoming ?? mapIncomingNotifications()).listen((item) {
       state = [item, ...state];
     });
   }
 
-  StreamSubscription<dynamic>? _sub;
+  StreamSubscription<AppNotification>? _sub;
 
   void markRead(String id) {
     state = [for (final n in state) n.id == id ? n.withRead() : n];

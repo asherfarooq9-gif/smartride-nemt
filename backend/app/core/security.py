@@ -12,7 +12,10 @@ from app.core.config import settings
 from app.core.database import get_db
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-bearer_scheme = HTTPBearer()
+# auto_error=False so a *missing* Authorization header yields our own
+# 401 (semantically correct for "not authenticated") rather than the
+# library default of 403 (which should mean "authenticated but forbidden").
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def hash_password(plain: str) -> str:
@@ -34,7 +37,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db),
 ):
     from app.models.models import User
@@ -45,6 +48,12 @@ async def get_current_user(
         detail="Invalid or expired token",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     try:
         payload = jwt.decode(
             credentials.credentials,
@@ -73,11 +82,14 @@ def require_role(*roles: str):
         # Membership check: a multi-role account passes if it HOLDS any required
         # role, regardless of which portal is currently active.
         if not (set(roles) & current_user.held_roles):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions"
+            )
         return current_user
+
     return checker
 
 
 require_patient = require_role("patient")
-require_driver  = require_role("driver")
-require_admin   = require_role("admin")
+require_driver = require_role("driver")
+require_admin = require_role("admin")
