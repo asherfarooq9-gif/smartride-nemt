@@ -50,6 +50,12 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://localhost:8000/health').status==200 else sys.exit(1)\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   triage:
     build: ./ai-services/triage
@@ -66,6 +72,12 @@ services:
       - ./ai-services/triage:/app
       - triage_model:/app/model
     command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://localhost:8001/health').status==200 else sys.exit(1)\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   celery_worker:
     build: ./backend
@@ -78,9 +90,18 @@ services:
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
       TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER:-}
     depends_on:
-      - postgres
-      - redis
-      - backend
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.core.celery_app inspect ping -d celery@$$HOSTNAME || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   admin_dashboard:
     build: ./admin-dashboard
@@ -91,6 +112,12 @@ services:
       NEXT_PUBLIC_API_URL: http://localhost:8000
     depends_on:
       - backend
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3000',r=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
 
   # Opt-in connection pooler. Start with:  docker compose --profile pooling up -d
   # Then point the backend at it: DATABASE_URL host -> pgbouncer:5432 and set
@@ -114,6 +141,11 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U smartride || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
 
   prometheus:
     image: prom/prometheus:v2.53.0
@@ -126,6 +158,11 @@ services:
       - prometheus_data:/prometheus
     depends_on:
       - backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9090/-/healthy || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
 
   grafana:
     image: grafana/grafana:11.1.0
@@ -142,6 +179,12 @@ services:
       - grafana_data:/var/lib/grafana
     depends_on:
       - prometheus
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
 volumes:
   postgres_data:
