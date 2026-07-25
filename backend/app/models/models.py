@@ -63,6 +63,7 @@ class Specialty(str, enum.Enum):
     ophthalmology = "ophthalmology"
     ent = "ent"
     dermatology = "dermatology"
+    urology = "urology"
     general_emergency = "general_emergency"
 
 
