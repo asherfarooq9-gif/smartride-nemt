@@ -1,0 +1,141 @@
+text,label
+My grandfather stopped talking and eating and seems disoriented since this afternoon. Can you send an ambulance immediately?,Psychiatry_MentalHealth
+My father-in-law is due for a follow-up after ear surgery for the past few days. Please arrange a wheelchair-accessible pickup.,ENT
+My father-in-law fell from the roof and is not moving since this morning. Can you send an ambulance immediately?,Emergency_Trauma
+My wife is scheduled for a routine oncology follow-up for the past few days. We need help getting to the hospital quickly.,Oncology
+My uncle is vomiting blood and feels extremely weak. We need help getting to the hospital quickly.,Gastroenterology
+My mother has severe abdominal pain and can't stand up straight since last night. Please confirm a pickup time for the hospital visit.,Gastroenterology
+My father has a chemotherapy session booked. Please book a ride to the hospital for the appointment.,Oncology
+My cousin is due for a routine prenatal checkup. Could you arrange pickup for the scheduled hospital appointment?,Obstetrics_Gynecology
+My mother-in-law is due for a routine urology checkup this week. Please arrange a wheelchair-accessible pickup.,Urology
+My brother has severe urinary retention and is in a lot of discomfort right now. We need a vehicle to reach the hospital as soon as possible.,Urology
+My sister needs a routine checkup for ongoing hypertension tomorrow. Can you send an ambulance immediately?,General_Medicine
+"My mother is having a severe allergic reaction and the face is swelling for the past few hours. Need immediate pickup, this cannot wait.",Emergency_Trauma
+My wife has severe joint pain from arthritis and can't reach the car this week. We need urgent transport to the hospital.,Orthopedics
+My sister needs a follow-up appointment for thyroid medication tomorrow. We need a vehicle to reach the hospital as soon as possible.,General_Medicine
+My wife is bleeding heavily and going pale for the past few hours. We need urgent transport to the hospital.,Emergency_Trauma
+My daughter is due for scheduled vaccinations. Can someone be sent to pick us up for the hospital?,Pediatrics
+"My brother has ongoing urinary difficulty and needs a urology consultation this week. Please send transport right away, this is urgent.",Urology
+My aunt is due for a follow-up MRI for ongoing headaches tomorrow. Please book a ride to the hospital for the appointment.,Neurology
+My grandfather is unable to swallow properly due to a severely swollen throat for the past few hours. Please book a ride to the hospital for the appointment.,ENT
+My mother is due for a follow-up after recent heart surgery. Please confirm a pickup time for the hospital visit.,Cardiology
+My husband is complaining of a heavy feeling in the chest and cold sweats right now. Can you send an ambulance immediately?,Cardiology
+My mother-in-law has a fractured wrist from a fall right now. Can you send an ambulance immediately?,Orthopedics
+"My mother-in-law is undergoing chemotherapy and has a session scheduled. Need immediate pickup, this cannot wait.",Oncology
+A family friend has ongoing stomach ulcers and needs a checkup this week. Please confirm a pickup time for the hospital visit.,Gastroenterology
+My grandfather is wheezing badly and can't catch a breath. We need help getting to the hospital quickly.,Pulmonology
+A family friend is bleeding heavily and going pale. We need urgent transport to the hospital.,Emergency_Trauma
+My uncle dislocated the shoulder while lifting something heavy right now. We need urgent transport to the hospital.,Orthopedics
+My grandmother is due for a dialysis session at the hospital. We need help getting to the hospital quickly.,Nephrology_Dialysis
+My mother-in-law has a scheduled dialysis appointment tomorrow. Requesting a car for hospital transport.,Nephrology_Dialysis
+My uncle has chronic acid reflux and needs a gastroenterology consultation this week. Please confirm a pickup time for the hospital visit.,Gastroenterology
+"My sister-in-law is pregnant and experiencing heavy bleeding suddenly, just now. Please send transport right away, this is urgent.",Obstetrics_Gynecology
+A family friend is due for a scheduled psychiatric follow-up appointment. We need help getting to the hospital quickly.,Psychiatry_MentalHealth
+My grandmother fell from the roof and is not moving for the past few hours. Please confirm a pickup time for the hospital visit.,Emergency_Trauma
+"My little sister had an allergic reaction after eating something suddenly, just now. Can you send an ambulance immediately?",Pediatrics
+"My father is having a severe allergic reaction and the face is swelling suddenly, just now. We need a vehicle to reach the hospital as soon as possible.",Emergency_Trauma
+My father fainted and is confused since last night. Requesting a car for hospital transport.,Neurology
+"My colleague has a foreign object stuck in the ear since last night. Need immediate pickup, this cannot wait.",ENT
+My daughter-in-law is due for a routine prenatal checkup this week. We need help getting to the hospital quickly.,Obstetrics_Gynecology
+"My elderly neighbor has chronic acid reflux and needs a gastroenterology consultation this week. Need immediate pickup, this cannot wait.",Gastroenterology
+My elderly neighbor stopped talking and eating and seems disoriented since last night. We need a vehicle to reach the hospital as soon as possible.,Psychiatry_MentalHealth
+My baby is due for a routine pediatric checkup this week. Can someone be sent to pick us up for the hospital?,Pediatrics
+My father-in-law fell down the stairs and the leg looks broken since this morning. Can you send an ambulance immediately?,Orthopedics
+My grandfather is scheduled for a routine oncology follow-up for the past few days. Requesting a car for hospital transport.,Oncology
+My grandmother has mild fever and wants a general physician consultation since this afternoon. We need help getting to the hospital quickly.,General_Medicine
+"My uncle has a bad ear infection with severe pain suddenly, just now. Please send transport right away, this is urgent.",ENT
+My sister is pregnant and the water just broke. We need urgent transport to the hospital.,Obstetrics_Gynecology
+"My sister-in-law needs urgent care after a miscarriage since this morning. Please send transport right away, this is urgent.",Obstetrics_Gynecology
+"My nephew has a bad cough and is having trouble breathing since this morning. Please send transport right away, this is urgent.",Pediatrics
+My aunt is having a mental health crisis and needs urgent evaluation for the past few hours. Can you send an ambulance immediately?,Psychiatry_MentalHealth
+"A family friend has been vomiting continuously since last night. Need immediate pickup, this cannot wait.",Gastroenterology
+My grandmother is scheduled for a routine oncology follow-up this week. Can you send an ambulance immediately?,Oncology
+A family friend has a broken bone visible after an accident since this morning. Please confirm a pickup time for the hospital visit.,Emergency_Trauma
+My mother has sudden severe pain in the upper stomach since this morning. Can you send an ambulance immediately?,Gastroenterology
+"My daughter has a very high fever that won't come down for the past few hours. Please send transport right away, this is urgent.",Pediatrics
+"My uncle has multiple injuries after a fall from a ladder suddenly, just now. Could you arrange pickup for the scheduled hospital appointment?",Emergency_Trauma
+My elderly neighbor is feeling very breathless with chest pain since this afternoon. Please book a ride to the hospital for the appointment.,Cardiology
+My elderly neighbor has a fractured wrist from a fall since last night. Can you send an ambulance immediately?,Orthopedics
+My elderly neighbor has a scheduled pulmonology follow-up appointment for the past few days. Could you arrange pickup for the scheduled hospital appointment?,Pulmonology
+"My grandmother has swelling in the legs and reduced urination. Need immediate pickup, this cannot wait.",Nephrology_Dialysis
+My brother needs transport for a scheduled oncology consultation today. Please book a ride to the hospital for the appointment.,Oncology
+My sister is due for a cast removal appointment today. We need urgent transport to the hospital.,Orthopedics
+My husband has a severe nosebleed that won't stop for the past few hours. Can someone be sent to pick us up for the hospital?,ENT
+"My grandmother has a bad case of the flu and needs to see a doctor suddenly, just now. Need immediate pickup, this cannot wait.",General_Medicine
+My mother has multiple injuries after a fall from a ladder since this morning. Can you send an ambulance immediately?,Emergency_Trauma
+"My wife has swelling in the legs and reduced urination right now. Please send transport right away, this is urgent.",Nephrology_Dialysis
+"My wife has general body weakness and wants to see a doctor suddenly, just now. Need immediate pickup, this cannot wait.",General_Medicine
+My brother was hit by a motorbike and can't stand up right now. We need a vehicle to reach the hospital as soon as possible.,Emergency_Trauma
+My mother-in-law is due for a routine urology checkup tomorrow. Can someone be sent to pick us up for the hospital?,Urology
+My elderly neighbor is having a seizure right now. Can you send an ambulance immediately?,Neurology
+"My toddler has severe vomiting and diarrhea suddenly, just now. Please book a ride to the hospital for the appointment.",Pediatrics
+My elderly neighbor is unable to urinate and is in severe pain since last night. Can you send an ambulance immediately?,Urology
+My grandfather has stomach pain and nausea since this morning since last night. We need a vehicle to reach the hospital as soon as possible.,General_Medicine
+My mother missed the last dialysis session and needs to go in urgently. Please book a ride to the hospital for the appointment.,Nephrology_Dialysis
+My brother has severe knee pain and difficulty bearing weight. We need help getting to the hospital quickly.,Orthopedics
+My elderly neighbor hurt the back badly while working and can't sit up. We need urgent transport to the hospital.,Orthopedics
+My uncle is scheduled for a routine oncology follow-up for the past few days. Please book a ride to the hospital for the appointment.,Oncology
+My daughter-in-law needs urgent care after a miscarriage since this morning. Please confirm a pickup time for the hospital visit.,Obstetrics_Gynecology
+"My colleague has severe pain related to ongoing cancer treatment suddenly, just now. We need help getting to the hospital quickly.",Oncology
+My father-in-law is a long-term dialysis patient and needs a wheelchair-accessible vehicle this week. We need urgent transport to the hospital.,Nephrology_Dialysis
+My father has been vomiting continuously right now. We need urgent transport to the hospital.,Gastroenterology
+My elderly neighbor is unable to urinate and is in severe pain right now. We need a vehicle to reach the hospital as soon as possible.,Urology
+"My mother needs a wheelchair-accessible ride for a physiotherapy session for the past few days. Please send transport right away, this is urgent.",Orthopedics
+My colleague has a scheduled pulmonology follow-up appointment today. We need urgent transport to the hospital.,Pulmonology
+My mother-in-law has severe burning and pain during urination since this afternoon. We need urgent transport to the hospital.,Urology
+"My brother has high blood pressure and is complaining of chest pressure since last night. Need immediate pickup, this cannot wait.",Cardiology
+My colleague is overdue and the doctor advised coming in immediately since this afternoon. We need a vehicle to reach the hospital as soon as possible.,Obstetrics_Gynecology
+My grandmother is unable to swallow properly due to a severely swollen throat since this morning. We need help getting to the hospital quickly.,ENT
+My colleague is having tremors and difficulty walking. We need a vehicle to reach the hospital as soon as possible.,Neurology
+My grandmother has chronic tonsillitis and needs a specialist consultation tomorrow. Requesting a car for hospital transport.,ENT
+My sister is having a seizure since this afternoon. We need help getting to the hospital quickly.,Neurology
+My father has a persistent cough and chest congestion tomorrow. Please confirm a pickup time for the hospital visit.,Pulmonology
+My sister has a severe nosebleed that won't stop. We need help getting to the hospital quickly.,ENT
+My elderly neighbor has severe pain related to ongoing cancer treatment right now. Please book a ride to the hospital for the appointment.,Oncology
+My sister-in-law is overdue and the doctor advised coming in immediately for the past few hours. We need urgent transport to the hospital.,Obstetrics_Gynecology
+My elderly neighbor has high blood pressure and is complaining of chest pressure for the past few hours. Please confirm a pickup time for the hospital visit.,Cardiology
+My brother has severe urinary retention and is in a lot of discomfort. Can you send an ambulance immediately?,Urology
+My wife is due for a scheduled psychiatric follow-up appointment this week. Can someone be sent to pick us up for the hospital?,Psychiatry_MentalHealth
+My brother needs a cardiac checkup after recent palpitations tomorrow. Can someone be sent to pick us up for the hospital?,Cardiology
+My elderly neighbor needs a hearing test appointment for the past few days. Requesting a car for hospital transport.,ENT
+My grandfather is due for a follow-up after a recent lung infection. Please arrange a wheelchair-accessible pickup.,Pulmonology
+My granddaughter has a high fever and is unusually drowsy right now. We need urgent transport to the hospital.,Pediatrics
+My son is due for a routine pediatric checkup. Could you arrange pickup for the scheduled hospital appointment?,Pediatrics
+My grandmother has kidney failure and needs regular dialysis transport tomorrow. Please arrange a wheelchair-accessible pickup.,Nephrology_Dialysis
+"My colleague has severe burning and pain during urination for the past few hours. Need immediate pickup, this cannot wait.",Urology
+My uncle has chronic back pain and can barely move around. Requesting a car for hospital transport.,Orthopedics
+"My grandson won't stop crying and isn't feeding well since this morning. Need immediate pickup, this cannot wait.",Pediatrics
+My wife has a scheduled pulmonology follow-up appointment tomorrow. Can someone be sent to pick us up for the hospital?,Pulmonology
+My mother needs oxygen support during transport to the hospital since this afternoon. We need help getting to the hospital quickly.,Pulmonology
+My mother-in-law has ongoing stomach ulcers and needs a checkup tomorrow. Please book a ride to the hospital for the appointment.,Gastroenterology
+My niece is pregnant and having severe abdominal pain since this afternoon. Please book a ride to the hospital for the appointment.,Obstetrics_Gynecology
+"My mother has sudden weakness down one side of the body since this morning. Please send transport right away, this is urgent.",Neurology
+My niece is in labor and needs to reach the hospital immediately since last night. Please confirm a pickup time for the hospital visit.,Obstetrics_Gynecology
+My sister is complaining of a heavy feeling in the chest and cold sweats. Requesting a car for hospital transport.,Cardiology
+My sister is having a mental health crisis and needs urgent evaluation since last night. Requesting a car for hospital transport.,Psychiatry_MentalHealth
+My colleague has numbness on one side of the face and arm. We need urgent transport to the hospital.,Neurology
+My mother-in-law is not responding normally and seems disoriented right now. Could you arrange pickup for the scheduled hospital appointment?,Neurology
+My husband is hearing and seeing things that aren't there since this afternoon. Can someone be sent to pick us up for the hospital?,Psychiatry_MentalHealth
+My sister is a cancer patient and needs to go for radiotherapy tomorrow. We need urgent transport to the hospital.,Oncology
+My wife needs a routine checkup for ongoing hypertension for the past few days. Please arrange a wheelchair-accessible pickup.,General_Medicine
+A family friend has severe burning and pain during urination right now. Can you send an ambulance immediately?,Urology
+"My mother has general body weakness and wants to see a doctor. Need immediate pickup, this cannot wait.",General_Medicine
+My grandson is due for scheduled vaccinations this week. Could you arrange pickup for the scheduled hospital appointment?,Pediatrics
+My sister needs a routine consultation for chronic gastritis today. Please book a ride to the hospital for the appointment.,Gastroenterology
+My father has been unusually withdrawn and not making sense when speaking. Please book a ride to the hospital for the appointment.,Psychiatry_MentalHealth
+"My father-in-law is wheezing badly and can't catch a breath since this morning. Please send transport right away, this is urgent.",Pulmonology
+"My wife missed the last dialysis session and needs to go in urgently right now. Please send transport right away, this is urgent.",Nephrology_Dialysis
+My elderly neighbor has chronic tonsillitis and needs a specialist consultation tomorrow. Please arrange a wheelchair-accessible pickup.,ENT
+"My mother suddenly lost vision in one eye for the past few hours. Please send transport right away, this is urgent.",Neurology
+A family friend has severe lower back pain suspected to be kidney stones right now. Please confirm a pickup time for the hospital visit.,Nephrology_Dialysis
+"My aunt is a known heart patient and is feeling severe chest discomfort suddenly, just now. Can someone be sent to pick us up for the hospital?",Cardiology
+"My brother is complaining of a heavy feeling in the chest and cold sweats since this morning. Please send transport right away, this is urgent.",Cardiology
+My husband is showing very aggressive and unusual behavior since this morning. Can you send an ambulance immediately?,Psychiatry_MentalHealth
+My uncle needs a routine checkup for managing diabetes medication tomorrow. We need a vehicle to reach the hospital as soon as possible.,General_Medicine
+My husband has COPD and is struggling to breathe for the past few hours. Please arrange a wheelchair-accessible pickup.,Pulmonology
+My mother-in-law has been unusually withdrawn and not making sense when speaking. We need urgent transport to the hospital.,Psychiatry_MentalHealth
+My mother-in-law fainted and is confused right now. Can you send an ambulance immediately?,Neurology
+My husband has had a fever and body aches. Requesting a car for hospital transport.,General_Medicine
+"My grandfather is due for a follow-up after recent heart surgery this week. Need immediate pickup, this cannot wait.",Cardiology
+My brother is a long-term dialysis patient and needs a wheelchair-accessible vehicle for the past few days. Please book a ride to the hospital for the appointment.,Nephrology_Dialysis
+My elderly neighbor has COPD and is struggling to breathe since this afternoon. We need a vehicle to reach the hospital as soon as possible.,Pulmonology

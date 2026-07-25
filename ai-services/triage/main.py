@@ -6,39 +6,17 @@ Phase 3: Replace infer_specialty() with fine-tuned DistilBERT ONNX model
 import time
 from fastapi import FastAPI
 from pydantic import BaseModel
-import re
+
+from specialties import SEVERITY_5_KEYWORDS, SPECIALTY_RULES, FALLBACK_SPECIALTY
 
 app = FastAPI(title="SmartRide Triage Service", version="1.0.0")
-
-# ── KEYWORD RULES (active until DistilBERT is trained) ────────────────────────
-
-SEVERITY_5_KEYWORDS = [
-    "chest pain", "heart attack", "not breathing", "stroke",
-    "unconscious", "unresponsive", "seizure", "severe bleeding",
-    "cardiac arrest", "overdose", "choking", "can't breathe",
-]
-
-SPECIALTY_RULES = [
-    (["chest", "heart", "palpitation", "cardiac"],             "cardiology"),
-    (["stroke", "brain", "unconscious", "numbness", "can't talk", "cant talk", "slurred"],  "neurology"),
-    (["broken", "fracture", "joint", "bone", "sprain"],        "orthopedics"),
-    (["pregnant", "labour", "delivery", "contractions"],       "obstetrics"),
-    (["child", "infant", "baby", "toddler", "pediatric"],      "pediatrics"),
-    (["mental", "anxiety", "depression", "hallucination"],     "psychiatry"),
-    (["cancer", "tumor", "chemotherapy", "chemo"],             "oncology"),
-    (["kidney", "dialysis", "renal"],                          "nephrology"),
-    (["breathing", "lungs", "asthma", "copd", "respiratory"],  "pulmonology"),
-    (["stomach", "abdomen", "vomit", "diarrhea", "bowel"],     "gastroenterology"),
-    (["eye", "vision", "blind"],                               "ophthalmology"),
-    (["ear", "nose", "throat", "hearing"],                     "ent"),
-    (["skin", "rash", "burn", "allergy"],                      "dermatology"),
-]
 
 
 def infer_specialty(text: str) -> tuple[str, float]:
     """
     Rule-based specialty inference.
-    REPLACE this function body with ONNX DistilBERT call in Phase 3.
+    REPLACE this function body with ONNX DistilBERT call in Phase 3 (pass the
+    model output through specialties.normalize_specialty before returning).
     """
     text_lower = text.lower()
 
@@ -46,7 +24,7 @@ def infer_specialty(text: str) -> tuple[str, float]:
         if any(kw in text_lower for kw in keywords):
             return specialty, 0.78
 
-    return "general_emergency", 0.60
+    return FALLBACK_SPECIALTY, 0.60
 
 
 def compute_severity(text: str, specialty: str) -> tuple[str, bool]:

@@ -1,0 +1,16 @@
+{
+  "Cardiology": 0,
+  "ENT": 1,
+  "Emergency_Trauma": 2,
+  "Gastroenterology": 3,
+  "General_Medicine": 4,
+  "Nephrology_Dialysis": 5,
+  "Neurology": 6,
+  "Obstetrics_Gynecology": 7,
+  "Oncology": 8,
+  "Orthopedics": 9,
+  "Pediatrics": 10,
+  "Psychiatry_MentalHealth": 11,
+  "Pulmonology": 12,
+  "Urology": 13
+}

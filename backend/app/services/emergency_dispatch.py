@@ -13,6 +13,7 @@ from sqlalchemy import select, update
 
 from app.core.config import settings
 from app.core import metrics
+from app.core.specialties import normalize_specialty
 from app.models.models import Ride, Driver, DriverStatus, Patient, Hospital, RideStatus
 from app.services.hospital_matching import match_hospitals, HospitalCandidate
 from app.services.notifications import send_family_sms, send_hospital_alert
@@ -103,6 +104,10 @@ async def dispatch_emergency(
     hospital_rows = await load_active_hospitals(db)
     patient = await load_patient(db, ride.patient_id)
     triage_result = await triage_task
+
+    # Normalize specialty to a canonical enum value before it reaches hospital
+    # matching or the DB — the fine-tuned model emits richer dataset labels.
+    triage_result["specialty"] = normalize_specialty(triage_result.get("specialty"))
 
     if detect_severity_override(symptom_text):
         triage_result["severity"] = "5"
