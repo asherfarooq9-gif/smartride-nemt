@@ -8,16 +8,20 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 
 from specialties import SEVERITY_5_KEYWORDS, SPECIALTY_RULES, FALLBACK_SPECIALTY
+from model_infer import predict_specialty, load_model, MODEL_VERSION
+
+RULES_VERSION = "rules-v1.0"
 
 app = FastAPI(title="SmartRide Triage Service", version="1.0.0")
 
 
-def infer_specialty(text: str) -> tuple[str, float]:
-    """
-    Rule-based specialty inference.
-    REPLACE this function body with ONNX DistilBERT call in Phase 3 (pass the
-    model output through specialties.normalize_specialty before returning).
-    """
+def _active_model_version() -> str:
+    """distilbert-v1.0 when a model is loaded, otherwise rules-v1.0."""
+    return MODEL_VERSION if load_model() is not None else RULES_VERSION
+
+
+def infer_rules(text: str) -> tuple[str, float]:
+    """Keyword-based specialty inference (fallback when no model is loaded)."""
     text_lower = text.lower()
 
     for keywords, specialty in SPECIALTY_RULES:
@@ -25,6 +29,14 @@ def infer_specialty(text: str) -> tuple[str, float]:
             return specialty, 0.78
 
     return FALLBACK_SPECIALTY, 0.60
+
+
+def infer_specialty(text: str) -> tuple[str, float]:
+    """Use the DistilBERT model when available; otherwise the keyword rules."""
+    model_result = predict_specialty(text)
+    if model_result is not None:
+        return model_result
+    return infer_rules(text)
 
 
 def compute_severity(text: str, specialty: str) -> tuple[str, bool]:
@@ -68,11 +80,11 @@ async def triage(req: TriageRequest):
         confidence=confidence,
         severity=severity,
         rule_override=rule_override,
-        model_version="rules-v1.0",   # change to "distilbert-v1.0" in Phase 3
+        model_version=_active_model_version(),
         inference_ms=elapsed_ms,
     )
 
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "model": "rules-v1.0"}
+    return {"status": "ok", "model": _active_model_version()}
