@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:patient_app/core/pending_ride_queue.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 
 const _specialties = [
@@ -71,6 +72,24 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
       ));
       if (!mounted) return;
       context.go('/booking-confirmed/${ride.id}');
+    } on core.NetworkError {
+      // Offline: don't just fail — queue it and resubmit automatically once
+      // connectivity returns, so the patient doesn't lose the whole form.
+      await PendingRideQueue.instance.enqueue(
+        pickupAddress: _addressCtrl.text.trim().isEmpty
+            ? 'Current location'
+            : _addressCtrl.text.trim(),
+        scheduledFor: dt,
+        hospitalId: _selectedHospital?.id,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text(
+          "You're offline — this booking will be submitted automatically "
+          'once you have a connection.',
+        ),
+      ));
+      context.pop();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(

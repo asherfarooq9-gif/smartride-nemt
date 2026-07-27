@@ -6,9 +6,12 @@ import 'package:flutter/foundation.dart' show kIsWeb, FlutterError;
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:patient_app/core/connectivity.dart';
+import 'package:patient_app/core/pending_ride_queue.dart';
 import 'package:patient_app/core/router.dart';
 import 'package:patient_app/core/providers.dart';
 import 'package:patient_app/core/notifications.dart';
+import 'package:patient_app/shared/offline_banner.dart';
 import 'package:smartride_core/smartride_core.dart';
 
 Future<void> main() async {
@@ -69,6 +72,8 @@ class SmartRideApp extends ConsumerStatefulWidget {
 }
 
 class _SmartRideAppState extends ConsumerState<SmartRideApp> {
+  bool? _wasOnline;
+
   @override
   void initState() {
     super.initState();
@@ -84,6 +89,18 @@ class _SmartRideAppState extends ConsumerState<SmartRideApp> {
     final router = ref.watch(routerProvider);
     // Theme follows the active portal: blue for patient, teal for driver.
     final isDriver = ref.watch(activeRoleProvider) == 'driver';
+
+    // Drain any queued scheduled-ride booking the moment connectivity comes
+    // back — not on every rebuild while online, so this only fires on the
+    // offline -> online transition.
+    ref.listen(connectivityProvider, (previous, next) {
+      final isOnline = next.valueOrNull ?? true;
+      if (isOnline && _wasOnline == false) {
+        PendingRideQueue.instance.drain();
+      }
+      _wasOnline = isOnline;
+    });
+
     return MaterialApp.router(
       title: 'SmartRide',
       theme: isDriver ? AppTheme.driver() : AppTheme.patient(),
@@ -91,6 +108,12 @@ class _SmartRideAppState extends ConsumerState<SmartRideApp> {
       themeMode: ref.watch(themeModeProvider),
       routerConfig: router,
       debugShowCheckedModeBanner: false,
+      builder: (context, child) => Column(
+        children: [
+          const OfflineBanner(),
+          Expanded(child: child ?? const SizedBox.shrink()),
+        ],
+      ),
     );
   }
 }
