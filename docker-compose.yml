@@ -35,6 +35,9 @@ services:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://smartride:password@postgres:5432/smartride
+      # Used only by the pytest suite (backend/tests/conftest.py). Points at a
+      # throwaway database so running tests never touches the dev data.
+      TEST_DATABASE_URL: postgresql+asyncpg://smartride:password@postgres:5432/smartride_test
       REDIS_URL: redis://redis:6379/0
       TRIAGE_SERVICE_URL: http://triage:8001
       SECRET_KEY: ${SECRET_KEY:-dev_secret_change_in_prod}
@@ -86,9 +89,12 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://smartride:password@postgres:5432/smartride
       REDIS_URL: redis://redis:6379/0
+      TRIAGE_SERVICE_URL: http://triage:8001
+      SECRET_KEY: ${SECRET_KEY:-dev_secret_change_in_prod}
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
       TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER:-}
+      DEBUG: "true"
     depends_on:
       postgres:
         condition: service_healthy
