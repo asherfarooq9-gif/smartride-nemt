@@ -82,7 +82,9 @@ export const api = {
       `/api/v1/patients${qs({ page, page_size: 20, search })}`
     ),
 
-  hospitals: () => request<{ items: Hospital[]; total: number }>('/api/v1/hospitals?active_only=false'),
+  // The admin route, not the public one: the edit form needs fhir_endpoint and
+  // coordinator_phone, which the public listing deliberately withholds.
+  hospitals: () => request<{ items: Hospital[]; total: number }>('/api/v1/hospitals/admin?active_only=false'),
 
   createHospital: (body: Partial<Hospital>) =>
     request<Hospital>('/api/v1/hospitals', { method: 'POST', body: JSON.stringify(body) }),

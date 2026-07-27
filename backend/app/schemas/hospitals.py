@@ -4,7 +4,15 @@ from uuid import UUID
 from pydantic import BaseModel
 
 
-class HospitalResponse(BaseModel):
+class HospitalPublicResponse(BaseModel):
+    """Hospital fields safe to expose to unauthenticated callers.
+
+    Deliberately excludes `fhir_endpoint` and `coordinator_phone`: the first is
+    internal integration infrastructure and the second is a staff contact
+    number, neither of which patients need. See `HospitalResponse` for the
+    admin-only view.
+    """
+
     id: UUID
     name: str
     address: str
@@ -15,12 +23,17 @@ class HospitalResponse(BaseModel):
     specialties: List[str]
     ed_capacity: int
     ed_current_load: int
-    fhir_endpoint: Optional[str] = None
-    coordinator_phone: Optional[str] = None
     is_active: bool
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class HospitalResponse(HospitalPublicResponse):
+    """Full hospital record, including internal fields. Admin routes only."""
+
+    fhir_endpoint: Optional[str] = None
+    coordinator_phone: Optional[str] = None
 
 
 class HospitalCreate(BaseModel):
@@ -52,5 +65,10 @@ class HospitalUpdate(BaseModel):
 
 
 class HospitalListResponse(BaseModel):
+    items: List[HospitalPublicResponse]
+    total: int
+
+
+class HospitalAdminListResponse(BaseModel):
     items: List[HospitalResponse]
     total: int

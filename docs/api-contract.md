@@ -212,10 +212,23 @@ All authenticated endpoints require: `Authorization: Bearer <jwt_token>`
 
 ---
 
+### `GET /hospitals/admin`
+**Auth:** admin
+
+Same listing as `GET /hospitals`, but each item also carries the internal
+`fhir_endpoint` and `coordinator_phone` fields. Used by the admin dashboard to
+prefill the hospital edit form.
+
+**Errors:** `401` unauthenticated, `403` not an admin
+
+---
+
 ### `GET /hospitals/{id}`
 **Auth:** public
 
-**Response `200`:** single hospital object (full detail including `fhir_endpoint`, `coordinator_phone`)
+**Response `200`:** single hospital object. `fhir_endpoint` and
+`coordinator_phone` are **not** included — they are internal fields exposed only
+on admin routes (`GET /hospitals/admin`, `POST /hospitals`, `PATCH /hospitals/{id}`).
 
 **Errors:** `404` not found
 
