@@ -12,13 +12,13 @@ const _symptoms = [
   'Other / Not Sure',
 ];
 
-final _submitProvider =
-    StateNotifierProvider.autoDispose<_SubmitNotifier, AsyncValue<void>>(
-  (_) => _SubmitNotifier(),
+final symptomSubmitProvider =
+    StateNotifierProvider.autoDispose<SymptomSubmitNotifier, AsyncValue<void>>(
+  (_) => SymptomSubmitNotifier(),
 );
 
-class _SubmitNotifier extends StateNotifier<AsyncValue<void>> {
-  _SubmitNotifier() : super(const AsyncValue.data(null));
+class SymptomSubmitNotifier extends StateNotifier<AsyncValue<void>> {
+  SymptomSubmitNotifier() : super(const AsyncValue.data(null));
 
   Future<String?> submit({
     required String address,
@@ -75,7 +75,7 @@ class _SymptomScreenState extends ConsumerState<SymptomScreen> {
         ? _detailsCtrl.text.trim()
         : [_selected.join(', '), if (_detailsCtrl.text.trim().isNotEmpty) _detailsCtrl.text.trim()].join('. ');
 
-    final rideId = await ref.read(_submitProvider.notifier).submit(
+    final rideId = await ref.read(symptomSubmitProvider.notifier).submit(
           address: _addressCtrl.text.trim().isEmpty ? 'Current location' : _addressCtrl.text.trim(),
           symptoms: symptomText,
         );
@@ -83,7 +83,7 @@ class _SymptomScreenState extends ConsumerState<SymptomScreen> {
     if (rideId != null) {
       context.go('/dispatching/$rideId');
     } else {
-      final err = ref.read(_submitProvider).error;
+      final err = ref.read(symptomSubmitProvider).error;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(err is core.AppError ? err.message : 'Failed to request ride'),
         backgroundColor: core.kError,
@@ -93,7 +93,7 @@ class _SymptomScreenState extends ConsumerState<SymptomScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = ref.watch(_submitProvider) is AsyncLoading;
+    final isLoading = ref.watch(symptomSubmitProvider) is AsyncLoading;
 
     return Scaffold(
       backgroundColor: core.kEmergencyDarkBg,

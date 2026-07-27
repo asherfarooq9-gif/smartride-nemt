@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:patient_app/core/pending_ride_queue.dart';
+import 'package:patient_app/features/rides/schedule_submit_notifier.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 
 const _specialties = [
@@ -61,49 +61,35 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
       return;
     }
     final dt = _selectedDateTime ?? DateTime.now().add(const Duration(hours: 2));
-    // One key for this whole submission attempt, reused across the network
-    // retry and the offline-queue retry below — the backend dedupes by this
-    // value, so a fresh key per retry would defeat the point.
-    final idempotencyKey = core.generateIdempotencyKey();
     setState(() => _submitting = true);
     try {
-      final ride = await core.createScheduledRide(
-        core.ScheduledRideRequest(
-          pickupAddress: _addressCtrl.text.trim().isEmpty
-              ? 'Current location'
-              : _addressCtrl.text.trim(),
-          scheduledFor: dt,
-          hospitalId: _selectedHospital?.id,
-        ),
-        idempotencyKey: idempotencyKey,
-      );
+      final result = await ref.read(scheduleSubmitProvider.notifier).submit(
+            pickupAddress: _addressCtrl.text.trim().isEmpty
+                ? 'Current location'
+                : _addressCtrl.text.trim(),
+            scheduledFor: dt,
+            hospitalId: _selectedHospital?.id,
+          );
       if (!mounted) return;
-      context.go('/booking-confirmed/${ride.id}');
-    } on core.NetworkError {
-      // Offline: don't just fail — queue it and resubmit automatically once
-      // connectivity returns, so the patient doesn't lose the whole form.
-      await PendingRideQueue.instance.enqueue(
-        pickupAddress: _addressCtrl.text.trim().isEmpty
-            ? 'Current location'
-            : _addressCtrl.text.trim(),
-        scheduledFor: dt,
-        idempotencyKey: idempotencyKey,
-        hospitalId: _selectedHospital?.id,
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text(
-          "You're offline — this booking will be submitted automatically "
-          'once you have a connection.',
-        ),
-      ));
-      context.pop();
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(e is core.AppError ? e.message : 'Booking failed'),
-        backgroundColor: core.kError,
-      ));
+      switch (result) {
+        case ScheduleSubmitSuccess(:final ride):
+          context.go('/booking-confirmed/${ride.id}');
+        case ScheduleSubmitQueuedOffline():
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+              "You're offline — this booking will be submitted automatically "
+              'once you have a connection.',
+            ),
+          ));
+          context.pop();
+        case ScheduleSubmitFailed(:final error):
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+              error is core.AppError ? error.message : 'Booking failed',
+            ),
+            backgroundColor: core.kError,
+          ));
+      }
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
