@@ -87,6 +87,14 @@ class ApiClient {
     }
   }
 
+  Future<void> delete(String path, {Map<String, dynamic>? body}) async {
+    try {
+      await _dio.delete<dynamic>(path, data: body);
+    } on DioException catch (e) {
+      throw _mapError(e);
+    }
+  }
+
   AppError _mapError(DioException e) {
     if (e.response?.statusCode == 401) {
       // Read the backend detail first — login failures return "Invalid credentials"

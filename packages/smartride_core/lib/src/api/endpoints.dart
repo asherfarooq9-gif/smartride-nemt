@@ -171,6 +171,14 @@ Future<void> registerFcmToken(String token) async {
   } catch (_) {}
 }
 
+/// Removes this device's token so it stops receiving push after logout.
+/// Other devices the same account is logged into are unaffected.
+Future<void> unregisterFcmToken(String token) async {
+  try {
+    await _c.delete('/api/v1/auth/fcm-token', body: {'fcm_token': token});
+  } catch (_) {}
+}
+
 Future<Map<String, dynamic>> getDriverWallet() async {
   return _c.get('/api/v1/drivers/wallet');
 }

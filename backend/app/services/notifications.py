@@ -3,9 +3,14 @@ Notification service: Twilio SMS + HL7 FHIR R4 hospital pre-alerts + FCM push.
 Falls back gracefully when credentials are absent.
 """
 
+import asyncio
 import httpx
 import logging
+import uuid
 from datetime import datetime, timezone
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.url_guard import UnsafeOutboundURL, assert_safe_outbound_url
@@ -48,6 +53,32 @@ async def send_push(
             resp.raise_for_status()
     except Exception as exc:
         log.warning("FCM push failed: %s", exc)
+
+
+async def send_push_to_user(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    *,
+    title: str,
+    body: str,
+    data: dict | None = None,
+) -> None:
+    """Fan out to every device the user is currently logged into."""
+    from app.models.models import UserFcmToken
+
+    tokens = (
+        (
+            await db.execute(
+                select(UserFcmToken.token).where(UserFcmToken.user_id == user_id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    for fcm_token in tokens:
+        asyncio.create_task(
+            send_push(fcm_token=fcm_token, title=title, body=body, data=data)
+        )
 
 
 def _mask_phone(phone: str) -> str:

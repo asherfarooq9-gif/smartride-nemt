@@ -92,7 +92,6 @@ class User(Base):
         SAEnum(UserRole, name="user_role", create_type=False), nullable=False
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    fcm_token: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -141,6 +140,30 @@ class UserRoleLink(Base):
     )
 
     user: Mapped["User"] = relationship("User", back_populates="roles")
+
+
+class UserFcmToken(Base):
+    """One row per device a user is logged into. Push fans out to every
+    registered token for a user (multi-device), and a row is deleted on
+    that device's logout so a stale token doesn't keep receiving pushes."""
+
+    __tablename__ = "user_fcm_tokens"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    token: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    __table_args__ = (
+        Index("ix_user_fcm_tokens_user_id", "user_id"),
+        Index("uq_user_fcm_tokens_user_token", "user_id", "token", unique=True),
+    )
 
 
 # ─── PATIENT ──────────────────────────────────────────────────────────────────

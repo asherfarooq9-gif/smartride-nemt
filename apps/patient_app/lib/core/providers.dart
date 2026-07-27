@@ -91,6 +91,10 @@ class AuthNotifier extends StateNotifier<AsyncValue<String?>> {
 
   Future<void> signOut() async {
     core.TokenRefreshScheduler.instance.stop();
+    final fcmToken = await currentFcmToken();
+    if (fcmToken != null) {
+      await core.unregisterFcmToken(fcmToken);
+    }
     try {
       await core.logout();
     } catch (_) {}

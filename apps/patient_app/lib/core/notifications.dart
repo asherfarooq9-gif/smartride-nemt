@@ -72,6 +72,16 @@ Future<void> initNotifications({required GoRouter router}) async {
   FirebaseMessaging.onBackgroundMessage(firebaseBackgroundHandler);
 }
 
+/// The device's current FCM token, for unregistering it on logout. Returns
+/// null on any failure — logout must never be blocked by this.
+Future<String?> currentFcmToken() async {
+  try {
+    return await FirebaseMessaging.instance.getToken();
+  } on Exception {
+    return null;
+  }
+}
+
 Future<void> _registerToken(FirebaseMessaging messaging) async {
   try {
     final token = await messaging.getToken();

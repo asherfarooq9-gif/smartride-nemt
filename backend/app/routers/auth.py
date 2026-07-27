@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from jose import JWTError, jwt
 from slowapi import Limiter
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, delete
 
 from app.core.config import settings
 from app.core.database import get_db
@@ -19,7 +19,7 @@ from app.core.security import (
     bearer_scheme,
 )
 from app.core.redis_client import block_token
-from app.models.models import User, Patient, Driver, UserRole, UserRoleLink
+from app.models.models import User, Patient, Driver, UserRole, UserRoleLink, UserFcmToken
 from app.schemas.auth import (
     RegisterRequest,
     LoginRequest,
@@ -263,9 +263,36 @@ async def register_fcm_token(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if body.fcm_token:
-        current_user.fcm_token = body.fcm_token
+    if not body.fcm_token:
+        return
+    existing = (
+        await db.execute(
+            select(UserFcmToken).where(
+                UserFcmToken.user_id == current_user.id,
+                UserFcmToken.token == body.fcm_token,
+            )
+        )
+    ).scalar_one_or_none()
+    if not existing:
+        db.add(UserFcmToken(user_id=current_user.id, token=body.fcm_token))
         await db.commit()
+
+
+@router.delete("/fcm-token", status_code=status.HTTP_204_NO_CONTENT)
+async def unregister_fcm_token(
+    body: _FcmTokenRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Remove this device's token on logout so it stops receiving push —
+    other devices this user is logged into are unaffected."""
+    await db.execute(
+        delete(UserFcmToken).where(
+            UserFcmToken.user_id == current_user.id,
+            UserFcmToken.token == body.fcm_token,
+        )
+    )
+    await db.commit()
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)

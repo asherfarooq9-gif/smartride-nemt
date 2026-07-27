@@ -16,7 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from unittest.mock import AsyncMock, patch
 
-from app.models.models import Driver, DriverStatus, Patient, User
+from app.models.models import Driver, DriverStatus, Patient, User, UserFcmToken
 
 PICKUP = {"pickup_lat": 33.7215, "pickup_lng": 73.0433}
 
@@ -431,7 +431,7 @@ async def test_status_change_pushes_to_patient_with_a_token(
         await db.execute(select(Patient).order_by(Patient.created_at.desc()).limit(1))
     ).scalar_one()
     user = (await db.execute(select(User).where(User.id == patient.user_id))).scalar_one()
-    user.fcm_token = "fcm-test-token"
+    db.add(UserFcmToken(user_id=user.id, token="fcm-test-token"))
     await db.commit()
 
     with patch("app.services.notifications.send_push", new=AsyncMock()):

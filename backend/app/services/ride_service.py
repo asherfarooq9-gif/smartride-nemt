@@ -233,7 +233,7 @@ async def update_ride_status(
 
     # Push notification to patient on status change
     try:
-        from app.services.notifications import send_push
+        from app.services.notifications import send_push_to_user
 
         patient_user = (
             await db.execute(
@@ -242,7 +242,7 @@ async def update_ride_status(
                 .where(Patient.id == ride.patient_id)
             )
         ).scalar_one_or_none()
-        if patient_user and patient_user.fcm_token:
+        if patient_user:
             labels = {
                 RideStatus.driver_assigned: (
                     "Driver Assigned",
@@ -271,15 +271,12 @@ async def update_ride_status(
             }
             if ride.status in labels:
                 title, body_text = labels[ride.status]
-                import asyncio
-
-                asyncio.create_task(
-                    send_push(
-                        fcm_token=patient_user.fcm_token,
-                        title=title,
-                        body=body_text,
-                        data={"ride_id": str(ride.id)},
-                    )
+                await send_push_to_user(
+                    db,
+                    patient_user.id,
+                    title=title,
+                    body=body_text,
+                    data={"ride_id": str(ride.id)},
                 )
 
         # A driver already en route has no other way to learn the ride was
@@ -297,16 +294,13 @@ async def update_ride_status(
                     .where(Driver.id == ride.driver_id)
                 )
             ).scalar_one_or_none()
-            if driver_user and driver_user.fcm_token:
-                import asyncio
-
-                asyncio.create_task(
-                    send_push(
-                        fcm_token=driver_user.fcm_token,
-                        title="Ride Cancelled",
-                        body=ride.cancel_reason or "This ride was cancelled.",
-                        data={"ride_id": str(ride.id)},
-                    )
+            if driver_user:
+                await send_push_to_user(
+                    db,
+                    driver_user.id,
+                    title="Ride Cancelled",
+                    body=ride.cancel_reason or "This ride was cancelled.",
+                    data={"ride_id": str(ride.id)},
                 )
     except Exception:
         # Notification failure must never block a status update, but it must
@@ -411,7 +405,7 @@ async def accept_ride(ride_id: str, driver: Driver, db: AsyncSession) -> Ride:
     # through update_ride_status. The patient never actually learned a
     # driver had accepted.
     try:
-        from app.services.notifications import send_push
+        from app.services.notifications import send_push_to_user
 
         patient_user = (
             await db.execute(
@@ -420,16 +414,13 @@ async def accept_ride(ride_id: str, driver: Driver, db: AsyncSession) -> Ride:
                 .where(Patient.id == ride.patient_id)
             )
         ).scalar_one_or_none()
-        if patient_user and patient_user.fcm_token:
-            import asyncio
-
-            asyncio.create_task(
-                send_push(
-                    fcm_token=patient_user.fcm_token,
-                    title="Driver Assigned",
-                    body="Your driver is on the way!",
-                    data={"ride_id": str(ride.id)},
-                )
+        if patient_user:
+            await send_push_to_user(
+                db,
+                patient_user.id,
+                title="Driver Assigned",
+                body="Your driver is on the way!",
+                data={"ride_id": str(ride.id)},
             )
     except Exception:
         log.warning(
