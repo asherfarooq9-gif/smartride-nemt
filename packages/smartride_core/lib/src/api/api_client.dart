@@ -60,10 +60,15 @@ class ApiClient {
 
   Future<Map<String, dynamic>> post(
     String path,
-    Map<String, dynamic> body,
-  ) async {
+    Map<String, dynamic> body, {
+    Map<String, String>? headers,
+  }) async {
     try {
-      final res = await _dio.post<dynamic>(path, data: body);
+      final res = await _dio.post<dynamic>(
+        path,
+        data: body,
+        options: headers != null ? Options(headers: headers) : null,
+      );
       return res.data as Map<String, dynamic>;
     } on DioException catch (e) {
       throw _mapError(e);

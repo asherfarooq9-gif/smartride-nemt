@@ -86,8 +86,15 @@ Future<DriverResponse> updateDriverMe(DriverUpdate update) async {
   return DriverResponse.fromJson(data);
 }
 
-Future<RideResponse> createEmergencyRide(EmergencyRideRequest req) async {
-  final data = await _c.post('/api/v1/rides/emergency', req.toJson());
+Future<RideResponse> createEmergencyRide(
+  EmergencyRideRequest req, {
+  String? idempotencyKey,
+}) async {
+  final data = await _c.post(
+    '/api/v1/rides/emergency',
+    req.toJson(),
+    headers: idempotencyKey != null ? {'Idempotency-Key': idempotencyKey} : null,
+  );
   return RideResponse.fromJson(data);
 }
 
@@ -136,8 +143,15 @@ Future<RideResponse> rateRide(String rideId, double rating, {String? comment}) a
   return RideResponse.fromJson(data);
 }
 
-Future<RideResponse> createScheduledRide(ScheduledRideRequest req) async {
-  final data = await _c.post('/api/v1/rides/scheduled', req.toJson());
+Future<RideResponse> createScheduledRide(
+  ScheduledRideRequest req, {
+  String? idempotencyKey,
+}) async {
+  final data = await _c.post(
+    '/api/v1/rides/scheduled',
+    req.toJson(),
+    headers: idempotencyKey != null ? {'Idempotency-Key': idempotencyKey} : null,
+  );
   return RideResponse.fromJson(data);
 }
 

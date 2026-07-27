@@ -61,15 +61,22 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
       return;
     }
     final dt = _selectedDateTime ?? DateTime.now().add(const Duration(hours: 2));
+    // One key for this whole submission attempt, reused across the network
+    // retry and the offline-queue retry below — the backend dedupes by this
+    // value, so a fresh key per retry would defeat the point.
+    final idempotencyKey = core.generateIdempotencyKey();
     setState(() => _submitting = true);
     try {
-      final ride = await core.createScheduledRide(core.ScheduledRideRequest(
-        pickupAddress: _addressCtrl.text.trim().isEmpty
-            ? 'Current location'
-            : _addressCtrl.text.trim(),
-        scheduledFor: dt,
-        hospitalId: _selectedHospital?.id,
-      ));
+      final ride = await core.createScheduledRide(
+        core.ScheduledRideRequest(
+          pickupAddress: _addressCtrl.text.trim().isEmpty
+              ? 'Current location'
+              : _addressCtrl.text.trim(),
+          scheduledFor: dt,
+          hospitalId: _selectedHospital?.id,
+        ),
+        idempotencyKey: idempotencyKey,
+      );
       if (!mounted) return;
       context.go('/booking-confirmed/${ride.id}');
     } on core.NetworkError {
@@ -80,6 +87,7 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
             ? 'Current location'
             : _addressCtrl.text.trim(),
         scheduledFor: dt,
+        idempotencyKey: idempotencyKey,
         hospitalId: _selectedHospital?.id,
       );
       if (!mounted) return;

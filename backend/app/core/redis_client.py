@@ -1,5 +1,5 @@
 import json as _json
-from typing import Any, Awaitable, Callable
+from typing import Any, Awaitable, Callable, Optional
 
 import redis.asyncio as aioredis
 
@@ -47,3 +47,30 @@ async def get_cached(key: str, ttl: int, loader: Callable[[], Awaitable[Any]]) -
 async def invalidate_cache(key: str) -> None:
     r = await get_redis()
     await r.delete(key)
+
+
+async def reserve_idempotency_key(key: str, ttl_seconds: int) -> bool:
+    """Atomically claim an idempotency key.
+
+    True: this call claimed it — the caller should do the real work.
+    False: another request already holds it — the caller should not repeat
+    the work (either return the stored result, or reject as a concurrent
+    duplicate if no result is stored yet).
+    """
+    r = await get_redis()
+    claimed = await r.set(f"idempotency:{key}", "pending", nx=True, ex=ttl_seconds)
+    return bool(claimed)
+
+
+async def store_idempotent_result(key: str, value: str, ttl_seconds: int) -> None:
+    r = await get_redis()
+    await r.set(f"idempotency:{key}", value, ex=ttl_seconds)
+
+
+async def get_idempotent_result(key: str) -> Optional[str]:
+    """The stored result, or None if unclaimed or still pending."""
+    r = await get_redis()
+    value = await r.get(f"idempotency:{key}")
+    if value is None or value == "pending":
+        return None
+    return value

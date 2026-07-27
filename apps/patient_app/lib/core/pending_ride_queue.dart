@@ -19,6 +19,7 @@ class PendingRideQueue {
   Future<void> enqueue({
     required String pickupAddress,
     required DateTime scheduledFor,
+    required String idempotencyKey,
     double? pickupLat,
     double? pickupLng,
     String? hospitalId,
@@ -26,6 +27,7 @@ class PendingRideQueue {
     final payload = jsonEncode({
       'pickup_address': pickupAddress,
       'scheduled_for': scheduledFor.toUtc().toIso8601String(),
+      'idempotency_key': idempotencyKey,
       if (pickupLat != null) 'pickup_lat': pickupLat,
       if (pickupLng != null) 'pickup_lng': pickupLng,
       if (hospitalId != null) 'hospital_id': hospitalId,
@@ -48,13 +50,16 @@ class PendingRideQueue {
 
     try {
       final json = jsonDecode(raw) as Map<String, dynamic>;
-      await core.createScheduledRide(core.ScheduledRideRequest(
-        pickupAddress: json['pickup_address'] as String,
-        scheduledFor: DateTime.parse(json['scheduled_for'] as String),
-        pickupLat: (json['pickup_lat'] as num?)?.toDouble(),
-        pickupLng: (json['pickup_lng'] as num?)?.toDouble(),
-        hospitalId: json['hospital_id'] as String?,
-      ));
+      await core.createScheduledRide(
+        core.ScheduledRideRequest(
+          pickupAddress: json['pickup_address'] as String,
+          scheduledFor: DateTime.parse(json['scheduled_for'] as String),
+          pickupLat: (json['pickup_lat'] as num?)?.toDouble(),
+          pickupLng: (json['pickup_lng'] as num?)?.toDouble(),
+          hospitalId: json['hospital_id'] as String?,
+        ),
+        idempotencyKey: json['idempotency_key'] as String?,
+      );
       await _clear();
     } on Exception catch (e) {
       debugPrint('Pending ride resubmit failed, staying queued: $e');

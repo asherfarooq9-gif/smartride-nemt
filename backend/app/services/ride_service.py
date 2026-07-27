@@ -404,6 +404,40 @@ async def accept_ride(ride_id: str, driver: Driver, db: AsyncSession) -> Ride:
     await db.commit()
 
     ride = (await db.execute(select(Ride).where(Ride.id == ride_id))).scalar_one()
+
+    # This was previously dead: the "Driver Assigned" label in
+    # update_ride_status's push map was never reachable for this transition,
+    # since accept_ride sets driver_assigned directly rather than going
+    # through update_ride_status. The patient never actually learned a
+    # driver had accepted.
+    try:
+        from app.services.notifications import send_push
+
+        patient_user = (
+            await db.execute(
+                select(User)
+                .join(Patient, Patient.user_id == User.id)
+                .where(Patient.id == ride.patient_id)
+            )
+        ).scalar_one_or_none()
+        if patient_user and patient_user.fcm_token:
+            import asyncio
+
+            asyncio.create_task(
+                send_push(
+                    fcm_token=patient_user.fcm_token,
+                    title="Driver Assigned",
+                    body="Your driver is on the way!",
+                    data={"ride_id": str(ride.id)},
+                )
+            )
+    except Exception:
+        log.warning(
+            "driver-assigned push notification failed for ride %s",
+            ride.id,
+            exc_info=True,
+        )
+
     return ride
 
 

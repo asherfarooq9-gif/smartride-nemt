@@ -1,14 +1,28 @@
 import csv
 import io
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query, Request
+from typing import Awaitable, Callable, Optional
+from fastapi import (
+    APIRouter,
+    Depends,
+    Header,
+    HTTPException,
+    BackgroundTasks,
+    Query,
+    Request,
+)
 from fastapi.responses import StreamingResponse
 from slowapi import Limiter
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import metrics
 from app.core.database import get_db
 from app.core.ratelimit import rate_limit_key
+from app.core.redis_client import (
+    get_idempotent_result,
+    reserve_idempotency_key,
+    store_idempotent_result,
+)
 from app.core.security import (
     get_current_user,
     require_patient,
@@ -41,6 +55,48 @@ def _to_response(ride: Ride) -> RideResponse:
     return resp
 
 
+_IDEMPOTENCY_TTL_SECONDS = 24 * 60 * 60
+
+
+async def _create_with_idempotency(
+    current_user: User,
+    idempotency_key: Optional[str],
+    db: AsyncSession,
+    create_fn: Callable[[], Awaitable[Ride]],
+) -> tuple[Ride, bool]:
+    """Run create_fn(), or return the ride an earlier identical request with
+    the same key already created. Prevents a retried/duplicated submit (a
+    common mobile-network failure mode) from double-booking a ride.
+
+    Returns (ride, was_created) — was_created is False when an existing
+    result was returned, so the caller can skip one-time side effects
+    (metrics, background dispatch) on the replay.
+    """
+    if not idempotency_key:
+        return await create_fn(), True
+
+    scoped_key = f"ride_create:{current_user.id}:{idempotency_key}"
+
+    existing_id = await get_idempotent_result(scoped_key)
+    if existing_id:
+        result = await db.execute(select(Ride).where(Ride.id == existing_id))
+        existing_ride = result.scalar_one_or_none()
+        if existing_ride:
+            return existing_ride, False
+        # Stored id no longer resolves to a row — fall through and create
+        # fresh rather than erroring the patient out over stale bookkeeping.
+
+    claimed = await reserve_idempotency_key(scoped_key, _IDEMPOTENCY_TTL_SECONDS)
+    if not claimed:
+        raise HTTPException(
+            409, "A request with this idempotency key is already being processed"
+        )
+
+    ride = await create_fn()
+    await store_idempotent_result(scoped_key, str(ride.id), _IDEMPOTENCY_TTL_SECONDS)
+    return ride, True
+
+
 async def _run_dispatch(ride_id: str, symptom_text: str) -> None:
     import logging
     from app.core.database import AsyncSessionLocal
@@ -71,13 +127,20 @@ async def create_emergency_ride(
     request: Request,
     body: EmergencyRideRequest,
     background_tasks: BackgroundTasks,
+    idempotency_key: Optional[str] = Header(default=None, alias="Idempotency-Key"),
     current_user: User = Depends(require_patient),
     db: AsyncSession = Depends(get_db),
 ):
     patient = await ride_service.get_patient_by_user(current_user, db)
-    ride = await ride_service.create_emergency_ride(patient, body, db)
-    metrics.rides_created_total.labels(ride_type="emergency").inc()
-    background_tasks.add_task(_run_dispatch, str(ride.id), body.symptom_text)
+    ride, created = await _create_with_idempotency(
+        current_user,
+        idempotency_key,
+        db,
+        lambda: ride_service.create_emergency_ride(patient, body, db),
+    )
+    if created:
+        metrics.rides_created_total.labels(ride_type="emergency").inc()
+        background_tasks.add_task(_run_dispatch, str(ride.id), body.symptom_text)
     return _to_response(ride)
 
 
@@ -86,12 +149,19 @@ async def create_emergency_ride(
 async def create_scheduled_ride(
     request: Request,
     body: ScheduledRideRequest,
+    idempotency_key: Optional[str] = Header(default=None, alias="Idempotency-Key"),
     current_user: User = Depends(require_patient),
     db: AsyncSession = Depends(get_db),
 ):
     patient = await ride_service.get_patient_by_user(current_user, db)
-    ride = await ride_service.create_scheduled_ride(patient, body, db)
-    metrics.rides_created_total.labels(ride_type="scheduled").inc()
+    ride, created = await _create_with_idempotency(
+        current_user,
+        idempotency_key,
+        db,
+        lambda: ride_service.create_scheduled_ride(patient, body, db),
+    )
+    if created:
+        metrics.rides_created_total.labels(ride_type="scheduled").inc()
     return _to_response(ride)
 
 

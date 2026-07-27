@@ -35,6 +35,7 @@ class _SubmitNotifier extends StateNotifier<AsyncValue<void>> {
           pickupLat: lat,
           pickupLng: lng,
         ),
+        idempotencyKey: core.generateIdempotencyKey(),
       );
       state = const AsyncValue.data(null);
       return ride.id;
