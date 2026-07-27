@@ -347,13 +347,16 @@ async def accept_ride(ride_id: str, driver: Driver, db: AsyncSession) -> Ride:
         metrics.ride_accept_conflicts_total.inc()
         raise HTTPException(409, "Ride already taken by another driver")
 
-    # Atomically claim the driver only if they are actually available. Without
+    # Atomically claim the driver only if they are not already on a ride. Without
     # this guard a driver already transporting another patient could accept a
     # second concurrent ride (double-booking a single vehicle onto two
-    # emergencies). If the driver is not available, roll back the ride claim.
+    # emergencies). "busy" is the only status that means "currently on a ride" —
+    # completing or cancelling a ride resets the driver to "available", and an
+    # "offline" driver accepting from the pending list is coming on duty, which
+    # is legitimate. If the driver is already busy, roll back the ride claim.
     driver_claim = await db.execute(
         update(Driver)
-        .where(and_(Driver.id == driver.id, Driver.status == DriverStatus.available))
+        .where(and_(Driver.id == driver.id, Driver.status != DriverStatus.busy))
         .values(status=DriverStatus.busy)
         .returning(Driver.id)
     )

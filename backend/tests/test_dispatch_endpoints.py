@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, patch
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.models.models import Driver
+from app.models.models import Driver, DriverStatus, Ride, RideStatus
 
 
 PICKUP = {"pickup_lat": 33.7215, "pickup_lng": 73.0433}
@@ -151,6 +151,58 @@ async def test_accept_second_driver_gets_409(
         headers={"Authorization": f"Bearer {token2}"},
     )
     assert r2.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_accept_marks_driver_busy(
+    client: AsyncClient, verified_driver_token: str, db: AsyncSession
+):
+    """Accepting a ride must claim the driver so dispatch stops offering them work."""
+    patient_token = await _register(client, "+92300730014", "patient")
+    ride_id = await _create_emergency(client, patient_token)
+
+    r = await client.post(
+        f"/api/v1/rides/{ride_id}/accept",
+        headers={"Authorization": f"Bearer {verified_driver_token}"},
+    )
+    assert r.status_code == 200
+
+    driver = (
+        await db.execute(
+            select(Driver).where(Driver.id == uuid.UUID(r.json()["driver_id"]))
+        )
+    ).scalar_one()
+    await db.refresh(driver)
+    assert driver.status == DriverStatus.busy
+
+
+@pytest.mark.asyncio
+async def test_busy_driver_cannot_accept_second_ride(
+    client: AsyncClient, verified_driver_token: str, db: AsyncSession
+):
+    """A driver already transporting a patient must not double-book onto a
+    second emergency, and the rejected ride must stay claimable by someone else."""
+    patient_token = await _register(client, "+92300730015", "patient")
+    first_ride = await _create_emergency(client, patient_token)
+    second_ride = await _create_emergency(client, patient_token)
+
+    headers = {"Authorization": f"Bearer {verified_driver_token}"}
+
+    r1 = await client.post(f"/api/v1/rides/{first_ride}/accept", headers=headers)
+    assert r1.status_code == 200
+
+    r2 = await client.post(f"/api/v1/rides/{second_ride}/accept", headers=headers)
+    assert r2.status_code == 409
+    assert "already assigned" in r2.json()["detail"]
+
+    # The failed claim must be rolled back, not left half-applied.
+    ride = (
+        await db.execute(select(Ride).where(Ride.id == uuid.UUID(second_ride)))
+    ).scalar_one()
+    await db.refresh(ride)
+    assert ride.driver_id is None
+    assert ride.status == RideStatus.pending
+    assert ride.driver_assigned_at is None
 
 
 @pytest.mark.asyncio
