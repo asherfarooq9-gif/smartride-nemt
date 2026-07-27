@@ -33,6 +33,13 @@ class Settings(BaseSettings):
     TWILIO_AUTH_TOKEN: str = ""
     TWILIO_FROM_NUMBER: str = ""
 
+    # Hospital FHIR pre-alerts
+    # Optional allow-list of hostnames the backend may POST patient pre-alerts
+    # to, e.g. ["fhir.pims.gov.pk", "fhir.shifa.com.pk"]. Empty means "any
+    # publicly routable host"; non-public addresses are refused either way.
+    # See app/core/url_guard.py.
+    FHIR_ALLOWED_HOSTS: List[str] = []
+
     # Google Maps
     GOOGLE_MAPS_API_KEY: str = ""
 

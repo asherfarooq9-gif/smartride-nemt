@@ -8,6 +8,7 @@ import logging
 from datetime import datetime, timezone
 
 from app.core.config import settings
+from app.core.url_guard import UnsafeOutboundURL, assert_safe_outbound_url
 
 log = logging.getLogger("smartride.notifications")
 
@@ -90,6 +91,9 @@ async def send_hospital_alert(*, ride, triage: dict, hospital, patient) -> None:
 
     if hospital.has_fhir and hospital.fhir_endpoint:
         try:
+            # The endpoint is admin-supplied and this request carries PHI, so it
+            # must be proven to point at a public host before it is made.
+            await assert_safe_outbound_url(hospital.fhir_endpoint)
             async with httpx.AsyncClient(timeout=10.0) as client:
                 resp = await client.post(
                     hospital.fhir_endpoint,
@@ -98,6 +102,10 @@ async def send_hospital_alert(*, ride, triage: dict, hospital, patient) -> None:
                 )
                 resp.raise_for_status()
                 return
+        except UnsafeOutboundURL as exc:
+            log.warning(
+                "FHIR pre-alert endpoint rejected, falling back to SMS: %s", exc
+            )
         except Exception as exc:
             log.warning(
                 "FHIR pre-alert failed, falling back to SMS: %s", type(exc).__name__
