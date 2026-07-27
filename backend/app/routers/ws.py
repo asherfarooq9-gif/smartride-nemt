@@ -62,6 +62,12 @@ def _valid_coords(lat: float, lng: float) -> bool:
     return -90 <= lat <= 90 and -180 <= lng <= 180
 
 
+# The mobile client sends a GPS update roughly every 5s; a much smaller floor
+# still leaves headroom for jitter/retries while stopping a buggy or
+# malicious client from flooding the DB write + Redis publish on every frame.
+_MIN_LOCATION_UPDATE_INTERVAL_SECONDS = 1.0
+
+
 # ── Driver → streams GPS ──────────────────────────────────────────────────────
 
 
@@ -86,6 +92,8 @@ async def driver_location_ws(websocket: WebSocket, ride_id: str):
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
+    last_update_at: float | None = None
+
     try:
         while True:
             data = await websocket.receive_json()
@@ -95,6 +103,16 @@ async def driver_location_ws(websocket: WebSocket, ride_id: str):
             if not _valid_coords(lat, lng):
                 await websocket.send_json({"error": "invalid coordinates"})
                 continue
+
+            now_monotonic = asyncio.get_event_loop().time()
+            if (
+                last_update_at is not None
+                and now_monotonic - last_update_at
+                < _MIN_LOCATION_UPDATE_INTERVAL_SECONDS
+            ):
+                await websocket.send_json({"error": "rate_limited"})
+                continue
+            last_update_at = now_monotonic
 
             async with AsyncSessionLocal() as db:
                 await db.execute(
