@@ -93,18 +93,21 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
 
   void _handleWsMessage(Map<String, dynamic> msg) {
     if (!mounted) return;
-    if (msg.containsKey('lat') && msg.containsKey('lng')) {
-      final lat = (msg['lat'] as num).toDouble();
-      final lng = (msg['lng'] as num).toDouble();
-      setState(() => _driverPos = LatLng(lat, lng));
-      try { _mapController.move(LatLng(lat, lng), 15); } catch (_) {}
+
+    final location = core.LocationBroadcast.tryParse(msg);
+    if (location != null) {
+      final pos = LatLng(location.lat, location.lng);
+      setState(() => _driverPos = pos);
+      try { _mapController.move(pos, 15); } catch (_) {}
       return;
     }
-    if (msg['event'] == 'ride_ended') {
+
+    final ended = core.RideEndedMessage.tryParse(msg);
+    if (ended != null) {
       _ended = true;
       _reconnectTimer?.cancel();
       _ws?.disconnect();
-      if (mounted) _showCompletionDialog(msg['status'] as String? ?? 'completed');
+      if (mounted) _showCompletionDialog(ended.status);
     }
   }
 

@@ -32,13 +32,15 @@ from app.models.models import (
     UserRole,
     UserRoleLink,
 )
+from pydantic import ValidationError
+
 from app.routers import ws as ws_module
 from app.routers.ws import (
     _receive_auth,
-    _valid_coords,
     driver_location_ws,
     ride_tracking_ws,
 )
+from app.schemas.ws_messages import DriverLocationMessage
 
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
@@ -228,7 +230,11 @@ async def test_receive_auth_extracts_the_token():
     ],
 )
 def test_valid_coords_bounds(lat, lng, expected):
-    assert _valid_coords(lat, lng) is expected
+    if expected:
+        DriverLocationMessage(lat=lat, lng=lng)
+    else:
+        with pytest.raises(ValidationError):
+            DriverLocationMessage(lat=lat, lng=lng)
 
 
 # ── driver GPS stream ────────────────────────────────────────────────────────
@@ -312,7 +318,7 @@ async def test_driver_ws_refuses_out_of_range_coordinates(use_test_db, scenario)
     with patch.object(ws_module.location_manager, "publish", publish):
         await driver_location_ws(socket, str(scenario["ride"].id))
 
-    assert socket.sent == [{"error": "invalid coordinates"}]
+    assert socket.sent == [{"error": "invalid location message"}]
     publish.assert_not_awaited()
 
 

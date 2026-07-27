@@ -9,6 +9,7 @@ import asyncio
 import json
 from datetime import datetime, timezone
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
+from pydantic import ValidationError
 from sqlalchemy import select, update
 from jose import JWTError, jwt
 
@@ -16,11 +17,25 @@ from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.core.redis_client import is_token_blocked
 from app.models.models import User, Driver, Ride, RideStatus
+from app.schemas.ws_messages import (
+    DriverLocationAck,
+    DriverLocationMessage,
+    RideEndedMessage,
+    WSErrorMessage,
+)
 from app.services.ws_manager import location_manager
 
 router = APIRouter()
 
 _AUTH_TIMEOUT_SECONDS = 5
+
+# How often the server pings an otherwise-quiet connection, and how long it
+# waits with zero activity (any inbound frame counts) before deciding the
+# peer is gone and closing. Proxies/NATs commonly drop idle WS connections
+# without a clean close frame — without this, that shows up as a socket that
+# looks open but never delivers anything again.
+_PING_INTERVAL_SECONDS = 30
+_PING_TIMEOUT_SECONDS = 90
 
 
 async def _auth_user(token: str) -> User | None:
@@ -57,11 +72,6 @@ async def _receive_auth(websocket: WebSocket) -> str | None:
         return None
 
 
-def _valid_coords(lat: float, lng: float) -> bool:
-    """#7 Reject out-of-range GPS coordinates."""
-    return -90 <= lat <= 90 and -180 <= lng <= 180
-
-
 # The mobile client sends a GPS update roughly every 5s; a much smaller floor
 # still leaves headroom for jitter/retries while stopping a buggy or
 # malicious client from flooding the DB write + Redis publish on every frame.
@@ -92,25 +102,56 @@ async def driver_location_ws(websocket: WebSocket, ride_id: str):
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
+    loop = asyncio.get_running_loop()
     last_update_at: float | None = None
+    last_activity_at = loop.time()
 
     try:
         while True:
-            data = await websocket.receive_json()
-            lat, lng = float(data["lat"]), float(data["lng"])
+            idle_for = loop.time() - last_activity_at
+            if idle_for >= _PING_TIMEOUT_SECONDS:
+                await websocket.close(code=status.WS_1000_NORMAL_CLOSURE)
+                break
 
-            # #7 Validate coordinates before persisting
-            if not _valid_coords(lat, lng):
-                await websocket.send_json({"error": "invalid coordinates"})
+            wait_timeout = max(_PING_INTERVAL_SECONDS - idle_for, 0.1)
+            try:
+                raw = await asyncio.wait_for(
+                    websocket.receive_text(), timeout=wait_timeout
+                )
+            except asyncio.TimeoutError:
+                await websocket.send_json({"type": "ping"})
                 continue
 
-            now_monotonic = asyncio.get_event_loop().time()
+            last_activity_at = loop.time()
+            try:
+                data = json.loads(raw)
+            except json.JSONDecodeError:
+                await websocket.send_json(
+                    WSErrorMessage(error="invalid json").model_dump()
+                )
+                continue
+
+            if isinstance(data, dict) and data.get("type") == "pong":
+                continue
+
+            try:
+                location = DriverLocationMessage.model_validate(data)
+            except ValidationError:
+                await websocket.send_json(
+                    WSErrorMessage(error="invalid location message").model_dump()
+                )
+                continue
+            lat, lng = location.lat, location.lng
+
+            now_monotonic = loop.time()
             if (
                 last_update_at is not None
                 and now_monotonic - last_update_at
                 < _MIN_LOCATION_UPDATE_INTERVAL_SECONDS
             ):
-                await websocket.send_json({"error": "rate_limited"})
+                await websocket.send_json(
+                    WSErrorMessage(error="rate_limited").model_dump()
+                )
                 continue
             last_update_at = now_monotonic
 
@@ -127,7 +168,9 @@ async def driver_location_ws(websocket: WebSocket, ride_id: str):
                 await db.commit()
 
             await location_manager.publish(ride_id, lat, lng)
-            await websocket.send_json({"ack": True, "lat": lat, "lng": lng})
+            await websocket.send_json(
+                DriverLocationAck(lat=lat, lng=lng).model_dump()
+            )
 
     except WebSocketDisconnect:
         pass
@@ -180,6 +223,21 @@ async def ride_tracking_ws(websocket: WebSocket, ride_id: str):
         return
 
     pubsub = await location_manager.subscribe(ride_id)
+
+    async def _ping_loop() -> None:
+        # This endpoint only pushes (patient/admin never send anything after
+        # auth), so there's no inbound frame to hang a receive-timeout
+        # heartbeat off. A plain periodic ping keeps proxies/NATs from
+        # dropping an idle connection and gives the client a liveness signal
+        # to base its own reconnect logic on.
+        try:
+            while True:
+                await asyncio.sleep(_PING_INTERVAL_SECONDS)
+                await websocket.send_json({"type": "ping"})
+        except Exception:
+            return
+
+    ping_task = asyncio.create_task(_ping_loop())
     try:
         async for message in pubsub.listen():
             if message["type"] != "message":
@@ -193,7 +251,9 @@ async def ride_tracking_ws(websocket: WebSocket, ride_id: str):
                 ).scalar_one_or_none()
             if current_status in (RideStatus.completed, RideStatus.cancelled, None):
                 ended = current_status.value if current_status else "deleted"
-                await websocket.send_json({"event": "ride_ended", "status": ended})
+                await websocket.send_json(
+                    RideEndedMessage(status=ended).model_dump()
+                )
                 break
             await websocket.send_text(message["data"])
     except WebSocketDisconnect:
@@ -201,5 +261,6 @@ async def ride_tracking_ws(websocket: WebSocket, ride_id: str):
     except Exception:
         pass
     finally:
+        ping_task.cancel()
         await pubsub.unsubscribe()
         await pubsub.aclose()

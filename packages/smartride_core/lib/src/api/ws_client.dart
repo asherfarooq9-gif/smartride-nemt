@@ -51,6 +51,12 @@ class WsClient {
       try {
         final decoded = jsonDecode(raw);
         if (decoded is Map<String, dynamic>) {
+          // Server heartbeat — answer directly, don't bother the consumer
+          // with protocol-level frames.
+          if (decoded['type'] == 'ping') {
+            send({'type': 'pong'});
+            return;
+          }
           onMessage(decoded);
         }
       } catch (_) {}

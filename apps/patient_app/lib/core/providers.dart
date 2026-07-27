@@ -322,7 +322,14 @@ class GpsStreamNotifier extends StateNotifier<bool> {
     final baseWs = core.ApiClient.instance.wsBaseUrl;
     final uri = Uri.parse('$baseWs/ws/driver/$rideId');
 
-    _ws = core.WsClient(onMessage: (_) {});
+    _ws = core.WsClient(
+      onMessage: (json) {
+        final error = core.WsErrorMessage.tryParse(json);
+        if (error != null) {
+          debugPrint('GPS stream rejected a location update: ${error.error}');
+        }
+      },
+    );
     await _ws!.connect(uri, token);
 
     const locationSettings = LocationSettings(

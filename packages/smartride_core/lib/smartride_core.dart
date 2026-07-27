@@ -12,6 +12,7 @@ export 'src/models/driver.dart';
 export 'src/models/hospital.dart';
 export 'src/models/ride.dart';
 export 'src/models/triage.dart';
+export 'src/models/ws_messages.dart';
 
 export 'src/api/api_error.dart';
 export 'src/api/api_client.dart';
