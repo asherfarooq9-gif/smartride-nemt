@@ -2,9 +2,19 @@ databases:
   - name: smartride-db
     databaseName: smartride
     user: smartride
-    plan: free
+    plan: free          # free Postgres expires 90 days after creation
 
 services:
+  # ── Redis (Celery broker + JWT blocklist + rate limiting) ───────────────────
+  # Render renamed this service type to "Key Value"; `type: redis` is still
+  # accepted. noeviction is required so queued Celery tasks are never dropped.
+  - type: redis
+    name: smartride-redis
+    plan: free
+    ipAllowList: []     # internal access only (no public connections)
+    maxmemoryPolicy: noeviction
+
+  # ── Backend API ─────────────────────────────────────────────────────────────
   - type: web
     name: smartride-backend
     runtime: docker
@@ -18,15 +28,80 @@ services:
           name: smartride-db
           property: connectionString
       - key: REDIS_URL
-        sync: false          # set manually in Render dashboard (Upstash)
+        fromService:
+          name: smartride-redis
+          type: redis
+          property: connectionString
       - key: SECRET_KEY
         generateValue: true
+      # Public URL of the triage service below. Render assigns
+      # https://<service-name>.onrender.com; update this if the name collides
+      # and Render appends a suffix. Leave blank to fall back to keyword rules.
       - key: TRIAGE_SERVICE_URL
-        value: ""            # triage AI not deployed — graceful fallback
+        value: https://smartride-triage.onrender.com
       - key: DEBUG
         value: "false"
+      # JSON list of exact origins — the admin dashboard's deployed URL, e.g.
+      # ["https://smartride-admin.vercel.app"]. Wildcards are rejected when
+      # DEBUG=false (app/core/config.py), so the service will not boot until
+      # this is set in the Render dashboard.
+      - key: ALLOWED_ORIGINS
+        sync: false
       - key: GOOGLE_MAPS_API_KEY
         value: ""
+      - key: TWILIO_ACCOUNT_SID
+        value: ""
+      - key: TWILIO_AUTH_TOKEN
+        value: ""
+      - key: TWILIO_PHONE_NUMBER
+        value: ""
+
+  # ── AI triage service ───────────────────────────────────────────────────────
+  # The Dockerfile hardcodes port 8001; Render injects $PORT, so the start
+  # command is overridden to bind it.
+  - type: web
+    name: smartride-triage
+    runtime: docker
+    dockerfilePath: ./ai-services/triage/Dockerfile
+    dockerContext: ./ai-services/triage
+    plan: free
+    healthCheckPath: /health
+    dockerCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      # No model artifact is deployed, so the service serves keyword rules
+      # (model_version="rules-v1.0"). Mount a model.onnx here to activate
+      # DistilBERT inference — see ai-services/triage/DATASET.md.
+      - key: MODEL_PATH
+        value: /app/model
+
+  # ── Celery worker (Twilio SMS + hospital alerts) ────────────────────────────
+  # NOTE: Render background workers are NOT available on the free plan. Without
+  # this service the API still works — tasks queue in Redis and simply are not
+  # consumed, and SMS is skipped entirely when Twilio is unconfigured. Delete
+  # this block to stay fully on the free tier.
+  - type: worker
+    name: smartride-celery
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: starter
+    dockerCommand: celery -A app.core.celery_app worker --loglevel=info
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: smartride-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: smartride-redis
+          type: redis
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "false"
+      - key: ALLOWED_ORIGINS
+        sync: false
       - key: TWILIO_ACCOUNT_SID
         value: ""
       - key: TWILIO_AUTH_TOKEN
