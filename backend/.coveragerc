@@ -1,0 +1,15 @@
+[run]
+source = app
+# SQLAlchemy's asyncio layer runs ORM work inside greenlets (greenlet_spawn).
+# Without this, coverage loses its trace function across every greenlet switch,
+# so every line after an `await db.execute(...)` is reported as unexecuted even
+# though the test clearly ran it. Both values are needed: greenlet for the ORM,
+# thread for the FastAPI threadpool used by sync dependencies.
+concurrency = greenlet,thread
+
+[report]
+show_missing = True
+exclude_also =
+    if TYPE_CHECKING:
+    raise NotImplementedError
+    if __name__ == .__main__.:
