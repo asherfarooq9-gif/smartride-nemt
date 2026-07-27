@@ -53,6 +53,13 @@ apps/*/.flutter-plugins-dependencies
 backend/firebase-credentials.json
 *firebase-adminsdk*.json
 
+# Trained model artifacts — hundreds of MB, rebuilt from
+# ai-services/triage/data/{train_distilbert,export_onnx}.py. Ship them via the
+# triage_model volume / object storage, never through git.
+*.onnx
+ai-services/triage/data/distilbert-hospital-routing*/
+ai-services/triage/model/
+
 # Backups / temp
 _archive/
 _flutter_tmp/

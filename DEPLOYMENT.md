@@ -113,18 +113,47 @@ cd apps/patient_app && flutter pub get && flutter test
 
 ## 6. Triage model (optional ML upgrade)
 
-The triage service ships a rule-based classifier (`model_version="rules-v1.0"`).
-To train the DistilBERT model that replaces specialty inference:
+The triage service ships a rule-based classifier (`model_version="rules-v1.0"`)
+and upgrades itself to DistilBERT (`model_version="distilbert-v1.0"`) as soon as
+a model is present at `MODEL_PATH`. The inference wiring and the rules fallback
+already exist in `model_infer.py` — nothing in the service needs editing.
+
+Train and export in a **separate environment** from the serving image: torch is
+~2GB and the service only needs `onnxruntime`. `train_distilbert.py` calls
+`Trainer(processing_class=...)`, which requires `transformers>=4.46`, whereas the
+service pins `4.42.3` — so install into a venv, not over the service's packages.
 
 ```bash
-cd ai-services/triage/data
-pip install transformers datasets scikit-learn pandas torch
-python train_distilbert.py        # saves ./distilbert-hospital-routing-final
+docker exec smartride_triage python -m venv /tmp/trainenv
+docker exec smartride_triage /tmp/trainenv/bin/pip install \
+  --index-url https://download.pytorch.org/whl/cpu torch==2.4.1
+docker exec smartride_triage /tmp/trainenv/bin/pip install \
+  'transformers==4.46.3' datasets scikit-learn pandas accelerate onnx
+
+# Train (1120 rows / 14 classes — minutes on CPU), then export.
+docker exec -w /app/data smartride_triage /tmp/trainenv/bin/python train_distilbert.py
+docker exec -w /app/data smartride_triage /tmp/trainenv/bin/python export_onnx.py
 ```
 
-Export to ONNX and mount into the `triage_model` volume (`MODEL_PATH=/app/model`),
-then wire `infer_specialty()` to the model — always passing output through
-`specialties.normalize_specialty()`. Keep the keyword rules as fallback. See
+`export_onnx.py` writes `model.onnx` + `tokenizer/` into `MODEL_PATH`
+(`/app/model`, backed by the `triage_model` volume) and refuses to export if the
+checkpoint's label count disagrees with `hospital_routing_label_map.json`.
+Restart the service to pick it up:
+
+```bash
+docker compose restart triage
+curl -s -X POST localhost:8001/triage \
+  -H 'Content-Type: application/json' \
+  -d '{"symptom_text":"crushing chest pain radiating to the left arm"}'
+# -> {"specialty":"cardiology", ..., "model_version":"distilbert-v1.0"}
+```
+
+Model output always passes through `specialties.normalize_specialty()`, so the
+service can only ever emit a value in the backend's `Specialty` enum. If the
+model file is missing or fails to load, the keyword rules take over and
+`model_version` reverts to `rules-v1.0`. Artifacts are gitignored — ship them
+via the volume or object storage. Dataset provenance and the honest accuracy
+caveat (template test set vs. hand-written holdout) are in
 `ai-services/triage/DATASET.md`.
 
 ## 7. API documentation
