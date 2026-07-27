@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-Process -Id 11620)",
+      "PowerShell(Stop-Process -Id 11620 -Force -Confirm:$false)",
+      "Bash(docker exec *)",
+      "Bash(docker compose *)",
+      "Bash(npm --version)",
+      "Bash(npm install *)",
+      "Bash(npm test *)",
+      "Bash(python -m py_compile app/services/ride_service.py app/services/emergency_dispatch.py app/core/specialties.py app/models/models.py tests/test_auth_flows.py tests/test_specialties.py)",
+      "Bash(python -c \"import yaml; d=yaml.safe_load\\(open\\('render.yaml'\\)\\); print\\('YAML valid'\\); print\\('databases:', [x['name'] for x in d['databases']]\\); print\\('services:', [\\(s['name'], s['type'], s.get\\('plan'\\)\\) for s in d['services']]\\)\")",
+      "PowerShell(git -C d:\\\\Smart_Ride_NEMT log --oneline -5)",
+      "PowerShell(git -C d:\\\\Smart_Ride_NEMT status --short)",
+      "PowerShell(docker exec smartride_backend python -m pytest -q --cov=app --cov-report=term-missing 2>&1)",
+      "PowerShell(docker exec smartride_backend python -m pytest tests/test_health.py -q 2>&1)",
+      "PowerShell(docker compose -f d:\\\\Smart_Ride_NEMT\\\\docker-compose.yml up -d backend celery_worker 2>&1)",
+      "PowerShell(docker exec smartride_backend python -m pytest tests/test_dispatch_endpoints.py -q 2>&1)",
+      "PowerShell(docker exec smartride_backend python -m pytest tests/test_ride_lifecycle.py -q 2>&1)",
+      "PowerShell(docker exec smartride_backend python -m pytest tests/test_ride_lifecycle.py -q --cov=app.routers.rides --cov-report=term-missing 2>&1)",
+      "PowerShell(docker exec smartride_backend python -m pytest tests/test_ws_endpoints.py -q 2>&1)",
+      "PowerShell(docker exec smartride_backend python -m pytest tests/test_notifications.py -q 2>&1)",
+      "PowerShell(Get-ChildItem -Recurse d:\\\\Smart_Ride_NEMT\\\\ai-services\\\\triage -File | Where-Object { $_.FullName -notmatch 'node_modules|__pycache__' } | Select-Object @{n='Path';e={$_.FullName.Replace\\('d:\\\\Smart_Ride_NEMT\\\\',''\\)}}, @{n='KB';e={[math]::Round\\($_.Length/1KB,1\\)}})",
+      "PowerShell(Get-Content d:\\\\Smart_Ride_NEMT\\\\ai-services\\\\triage\\\\data\\\\hospital_routing_label_map.json; foreach \\($f in 'train','val','test','true_holdout'\\) { $p = \"d:\\\\Smart_Ride_NEMT\\\\ai-services\\\\triage\\\\data\\\\hospital_routing_$f.csv\"; \"$f = \" + \\(\\(Get-Content $p | Measure-Object -Line\\).Lines - 1\\) + \" rows\" })",
+      "PowerShell(docker exec smartride_triage sh -c \"python -V; pip --version; df -h /  | tail -1; cat /app/requirements.txt\")",
+      "PowerShell(docker exec smartride_triage sh -c \"python -m venv /tmp/trainenv && /tmp/trainenv/bin/pip install -q --upgrade pip && /tmp/trainenv/bin/pip install --index-url https://download.pytorch.org/whl/cpu torch==2.4.1 && /tmp/trainenv/bin/pip install 'transformers==4.46.3' datasets scikit-learn pandas accelerate onnx onnxruntime==1.18.0 && echo TRAINENV_READY\" 2>&1)",
+      "PowerShell(docker exec smartride_triage sh -c \"test -x /tmp/trainenv/bin/python && /tmp/trainenv/bin/python -c 'import torch, transformers, datasets, sklearn, onnx; print\\(\\\\\"torch\\\\\", torch.__version__\\); print\\(\\\\\"transformers\\\\\", transformers.__version__\\); print\\(\\\\\"onnx\\\\\", onnx.__version__\\)' || echo NOT_READY_YET\")",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec smartride_triage sh -c 'test -x /tmp/trainenv/bin/python && /tmp/trainenv/bin/python -c \"import torch,transformers,datasets,sklearn,onnx;print\\(\\\\\"torch\\\\\",torch.__version__\\);print\\(\\\\\"transformers\\\\\",transformers.__version__\\);print\\(\\\\\"onnx\\\\\",onnx.__version__\\)\" || echo NOT_READY_YET')",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec smartride_triage sh -c 'ps aux | grep -c \"[p]ip\"; du -sh /tmp/trainenv 2>/dev/null || echo \"no venv yet\"')",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec smartride_triage python -m pytest tests -q)",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec smartride_triage sh -c 'du -sh /tmp/trainenv 2>/dev/null; /tmp/trainenv/bin/python -c \"import torch;print\\(\\\\\"torch\\\\\",torch.__version__\\)\" 2>&1 | tail -1')",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec smartride_triage sh -c '/tmp/trainenv/bin/python -c \"import transformers,datasets,sklearn,onnx;print\\(\\\\\"transformers\\\\\",transformers.__version__\\);print\\(\\\\\"onnx\\\\\",onnx.__version__\\)\" 2>&1 | tail -3')",
+      "PowerShell(docker exec smartride_backend python -m pytest -q --cov=app 2>&1)",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec smartride_triage sh -c '/tmp/trainenv/bin/python -c \"import transformers,datasets,sklearn,onnx,accelerate;print\\(\\\\\"transformers\\\\\",transformers.__version__\\);print\\(\\\\\"onnx\\\\\",onnx.__version__\\)\" 2>&1 | tail -3')",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec -w /app/data smartride_triage sh -c '/tmp/trainenv/bin/python train_distilbert.py > /tmp/train.log 2>&1; echo \"EXIT=$?\"; tail -40 /tmp/train.log')"
+    ]
+  }
+}

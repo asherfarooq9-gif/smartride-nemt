@@ -6,8 +6,9 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
-    id("com.google.gms.google-services")
-    id("com.google.firebase.crashlytics")
+    // Disabled for local dev: requires google-services.json (no Firebase project file in repo).
+    // id("com.google.gms.google-services")
+    // id("com.google.firebase.crashlytics")
 }
 
 // Release signing is driven by android/key.properties (git-ignored). When it's
