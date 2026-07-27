@@ -31,6 +31,11 @@ class SecureStorage {
   Future<void> saveActiveRole(String role) =>
       _storage.write(key: _keyRole, value: role);
 
+  /// Persist only the access token (used by the proactive refresh scheduler,
+  /// which rotates the token without touching user/role state).
+  Future<void> saveToken(String token) =>
+      _storage.write(key: _keyToken, value: token);
+
   Future<String?> readToken() => _storage.read(key: _keyToken);
   Future<String?> readUserId() => _storage.read(key: _keyUserId);
   Future<String?> readRole() => _storage.read(key: _keyRole);

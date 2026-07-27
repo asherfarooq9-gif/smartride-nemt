@@ -16,6 +16,7 @@ export 'src/models/triage.dart';
 export 'src/api/api_error.dart';
 export 'src/api/api_client.dart';
 export 'src/api/endpoints.dart';
+export 'src/api/token_refresh_scheduler.dart';
 export 'src/api/ws_client.dart';
 
 export 'src/storage/secure_storage.dart';

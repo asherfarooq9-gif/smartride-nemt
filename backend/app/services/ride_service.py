@@ -281,6 +281,33 @@ async def update_ride_status(
                         data={"ride_id": str(ride.id)},
                     )
                 )
+
+        # A driver already en route has no other way to learn the ride was
+        # pulled out from under them — patient/admin cancellation must reach
+        # them directly. Not needed when the driver cancelled it themselves.
+        if (
+            ride.status == RideStatus.cancelled
+            and role != "driver"
+            and ride.driver_id is not None
+        ):
+            driver_user = (
+                await db.execute(
+                    select(User)
+                    .join(Driver, Driver.user_id == User.id)
+                    .where(Driver.id == ride.driver_id)
+                )
+            ).scalar_one_or_none()
+            if driver_user and driver_user.fcm_token:
+                import asyncio
+
+                asyncio.create_task(
+                    send_push(
+                        fcm_token=driver_user.fcm_token,
+                        title="Ride Cancelled",
+                        body=ride.cancel_reason or "This ride was cancelled.",
+                        data={"ride_id": str(ride.id)},
+                    )
+                )
     except Exception:
         # Notification failure must never block a status update, but it must
         # be visible — a silently dead push pipeline is a production incident.

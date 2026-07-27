@@ -37,6 +37,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<String?>> {
       if (active != null && active.isNotEmpty) {
         _ref.read(activeRoleProvider.notifier).state = active;
       }
+      core.TokenRefreshScheduler.instance.start();
     }
     state = AsyncValue.data(token);
   }
@@ -50,6 +51,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<String?>> {
     );
     _ref.read(rolesProvider.notifier).state = res.roles;
     _ref.read(activeRoleProvider.notifier).state = res.activeRole;
+    core.TokenRefreshScheduler.instance.start();
   }
 
   Future<void> signIn(String phone, String password, {String? activeRole}) async {
@@ -88,6 +90,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<String?>> {
   }
 
   Future<void> signOut() async {
+    core.TokenRefreshScheduler.instance.stop();
     try {
       await core.logout();
     } catch (_) {}

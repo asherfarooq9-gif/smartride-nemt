@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/widgets.dart' show WidgetsBinding;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:go_router/go_router.dart';
+import 'package:smartride_core/smartride_core.dart';
 
 final _msgController = StreamController<RemoteMessage>.broadcast();
 Stream<RemoteMessage> get incomingMessageStream => _msgController.stream;
@@ -45,6 +47,16 @@ Future<void> initNotifications({required GoRouter router}) async {
           AndroidFlutterLocalNotificationsPlugin>()
       ?.createNotificationChannel(_androidChannel);
 
+  // Tell the backend which device to push to. Best-effort: a failure here
+  // just means this device won't receive push until the next successful
+  // registration (app relaunch or token rotation) — it must never block
+  // startup.
+  unawaited(_registerToken(messaging));
+  messaging.onTokenRefresh.listen(
+    (token) => registerFcmToken(token),
+    onError: (Object e) => debugPrint('FCM token refresh failed: $e'),
+  );
+
   // Foreground messages
   FirebaseMessaging.onMessage.listen((msg) => _showLocal(msg));
 
@@ -58,6 +70,15 @@ Future<void> initNotifications({required GoRouter router}) async {
   if (initial != null) _route(initial.data, router);
 
   FirebaseMessaging.onBackgroundMessage(firebaseBackgroundHandler);
+}
+
+Future<void> _registerToken(FirebaseMessaging messaging) async {
+  try {
+    final token = await messaging.getToken();
+    if (token != null) await registerFcmToken(token);
+  } on Exception catch (e) {
+    debugPrint('FCM token registration failed: $e');
+  }
 }
 
 void _showLocal(RemoteMessage msg) {

@@ -48,6 +48,15 @@ Future<void> logout() async {
   } catch (_) {}
 }
 
+/// Exchanges the still-valid current access token for a fresh one. The
+/// backend blocklists the old token's jti, so this must be called before
+/// expiry (proactively), not after a 401 — by then the token is already
+/// revoked and refresh is impossible.
+Future<String> refreshToken() async {
+  final data = await _c.post('/api/v1/auth/refresh', {});
+  return data['access_token'] as String;
+}
+
 Future<PatientResponse> getPatientMe() async {
   final data = await _c.get('/api/v1/patients/me');
   return PatientResponse.fromJson(data);
