@@ -18,19 +18,23 @@ class PendingRideQueue {
 
   Future<void> enqueue({
     required String pickupAddress,
+    required double pickupLat,
+    required double pickupLng,
     required DateTime scheduledFor,
     required String idempotencyKey,
-    double? pickupLat,
-    double? pickupLng,
-    String? hospitalId,
+    String? dropoffAddress,
+    double? dropoffLat,
+    double? dropoffLng,
   }) {
     final payload = jsonEncode({
       'pickup_address': pickupAddress,
+      'pickup_lat': pickupLat,
+      'pickup_lng': pickupLng,
       'scheduled_for': scheduledFor.toUtc().toIso8601String(),
       'idempotency_key': idempotencyKey,
-      if (pickupLat != null) 'pickup_lat': pickupLat,
-      if (pickupLng != null) 'pickup_lng': pickupLng,
-      if (hospitalId != null) 'hospital_id': hospitalId,
+      if (dropoffAddress != null) 'dropoff_address': dropoffAddress,
+      if (dropoffLat != null) 'dropoff_lat': dropoffLat,
+      if (dropoffLng != null) 'dropoff_lng': dropoffLng,
     });
     return core.SecureStorage.instance.saveValue(_key, payload);
   }
@@ -53,10 +57,12 @@ class PendingRideQueue {
       await core.createScheduledRide(
         core.ScheduledRideRequest(
           pickupAddress: json['pickup_address'] as String,
+          pickupLat: (json['pickup_lat'] as num).toDouble(),
+          pickupLng: (json['pickup_lng'] as num).toDouble(),
           scheduledFor: DateTime.parse(json['scheduled_for'] as String),
-          pickupLat: (json['pickup_lat'] as num?)?.toDouble(),
-          pickupLng: (json['pickup_lng'] as num?)?.toDouble(),
-          hospitalId: json['hospital_id'] as String?,
+          dropoffAddress: json['dropoff_address'] as String?,
+          dropoffLat: (json['dropoff_lat'] as num?)?.toDouble(),
+          dropoffLng: (json['dropoff_lng'] as num?)?.toDouble(),
         ),
         idempotencyKey: json['idempotency_key'] as String?,
       );

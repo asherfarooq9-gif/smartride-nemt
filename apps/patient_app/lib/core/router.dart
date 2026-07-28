@@ -15,6 +15,7 @@ import 'package:patient_app/features/rides/ride_detail_screen.dart';
 import 'package:patient_app/features/rides/live_tracking_screen.dart';
 import 'package:patient_app/features/rides/scheduled_rides_screen.dart';
 import 'package:patient_app/features/rides/schedule_trip_screen.dart';
+import 'package:patient_app/features/rides/map_picker_screen.dart';
 import 'package:patient_app/features/rides/booking_confirmed_screen.dart';
 import 'package:patient_app/features/profile/profile_screen.dart';
 import 'package:patient_app/features/settings/settings_screen.dart';
@@ -96,6 +97,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, s) => LiveTrackingScreen(rideId: s.pathParameters['id']!),
       ),
       GoRoute(path: '/book-ride', builder: (_, __) => const ScheduleTripScreen()),
+      GoRoute(path: '/map-picker', builder: (_, __) => const MapPickerScreen()),
       GoRoute(
         path: '/booking-confirmed/:id',
         builder: (_, s) =>

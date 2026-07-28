@@ -89,6 +89,9 @@ class RideResponse {
     this.hospitalId,
     this.pickupLat,
     this.pickupLng,
+    this.dropoffLat,
+    this.dropoffLng,
+    this.dropoffAddress,
     this.scheduledAt,
     this.createdAt,
     this.cancelReason,
@@ -107,6 +110,9 @@ class RideResponse {
   final String? hospitalId;
   final double? pickupLat;
   final double? pickupLng;
+  final double? dropoffLat;
+  final double? dropoffLng;
+  final String? dropoffAddress;
   final String? scheduledAt;
   final String? createdAt;
   final String? cancelReason;
@@ -133,6 +139,9 @@ class RideResponse {
         hospitalId: json['hospital_id']?.toString(),
         pickupLat: (json['pickup_lat'] as num?)?.toDouble(),
         pickupLng: (json['pickup_lng'] as num?)?.toDouble(),
+        dropoffLat: (json['dropoff_lat'] as num?)?.toDouble(),
+        dropoffLng: (json['dropoff_lng'] as num?)?.toDouble(),
+        dropoffAddress: json['dropoff_address'] as String?,
         scheduledAt: (json['scheduled_for'] ?? json['scheduled_at']) as String?,
         createdAt: (json['requested_at'] ?? json['created_at']) as String?,
         cancelReason: json['cancel_reason'] as String?,
@@ -154,6 +163,9 @@ class RideDetailResponse extends RideResponse {
     super.hospitalId,
     super.pickupLat,
     super.pickupLng,
+    super.dropoffLat,
+    super.dropoffLng,
+    super.dropoffAddress,
     super.scheduledAt,
     super.createdAt,
     super.cancelReason,
@@ -229,22 +241,32 @@ class ScheduledRideRequest {
   const ScheduledRideRequest({
     required this.pickupAddress,
     required this.scheduledFor,
-    this.pickupLat,
-    this.pickupLng,
-    this.hospitalId,
+    required this.pickupLat,
+    required this.pickupLng,
+    this.dropoffAddress,
+    this.dropoffLat,
+    this.dropoffLng,
   });
 
   final String pickupAddress;
   final DateTime scheduledFor;
-  final double? pickupLat;
-  final double? pickupLng;
-  final String? hospitalId;
+  // Required — the backend rejects a request without these (not optional
+  // there either). Get them from getCurrentPositionSafe() before building
+  // this request.
+  final double pickupLat;
+  final double pickupLng;
+  final String? dropoffAddress;
+  final double? dropoffLat;
+  final double? dropoffLng;
 
   Map<String, dynamic> toJson() => {
         'pickup_address': pickupAddress,
         'scheduled_for': scheduledFor.toUtc().toIso8601String(),
-        if (pickupLat != null) 'pickup_lat': pickupLat,
-        if (pickupLng != null) 'pickup_lng': pickupLng,
+        'pickup_lat': pickupLat,
+        'pickup_lng': pickupLng,
+        if (dropoffAddress != null) 'dropoff_address': dropoffAddress,
+        if (dropoffLat != null) 'dropoff_lat': dropoffLat,
+        if (dropoffLng != null) 'dropoff_lng': dropoffLng,
       };
 }
 
@@ -252,19 +274,22 @@ class EmergencyRideRequest {
   const EmergencyRideRequest({
     required this.pickupAddress,
     required this.symptomText,
-    this.pickupLat,
-    this.pickupLng,
+    required this.pickupLat,
+    required this.pickupLng,
   });
 
   final String pickupAddress;
   final String symptomText;
-  final double? pickupLat;
-  final double? pickupLng;
+  // Required — the backend rejects a request without these (not optional
+  // there either). Get them from getCurrentPositionSafe() before building
+  // this request.
+  final double pickupLat;
+  final double pickupLng;
 
   Map<String, dynamic> toJson() => {
         'pickup_address': pickupAddress,
         'symptom_text': symptomText,
-        if (pickupLat != null) 'pickup_lat': pickupLat,
-        if (pickupLng != null) 'pickup_lng': pickupLng,
+        'pickup_lat': pickupLat,
+        'pickup_lng': pickupLng,
       };
 }

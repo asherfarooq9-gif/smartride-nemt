@@ -13,7 +13,9 @@ class _FakeScheduleSubmitNotifier extends ScheduleSubmitNotifier {
   Future<ScheduleSubmitResult> submit({
     required String pickupAddress,
     required DateTime scheduledFor,
-    String? hospitalId,
+    String? dropoffAddress,
+    double? dropoffLat,
+    double? dropoffLng,
   }) async {
     state = const AsyncValue.loading();
     final result = nextResult ??

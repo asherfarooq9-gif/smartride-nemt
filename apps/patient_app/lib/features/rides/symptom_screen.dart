@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:patient_app/core/location.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 
 const _symptoms = [
@@ -23,17 +24,28 @@ class SymptomSubmitNotifier extends StateNotifier<AsyncValue<void>> {
   Future<String?> submit({
     required String address,
     required String symptoms,
-    double? lat,
-    double? lng,
   }) async {
     state = const AsyncValue.loading();
+
+    final position = await getCurrentPositionSafe();
+    if (position == null) {
+      state = AsyncValue.error(
+        const core.AppError(
+          'Location access is required to request emergency help. Please '
+          'enable location permission and try again, or call 1122 directly.',
+        ),
+        StackTrace.current,
+      );
+      return null;
+    }
+
     try {
       final ride = await core.createEmergencyRide(
         core.EmergencyRideRequest(
           pickupAddress: address,
           symptomText: symptoms,
-          pickupLat: lat,
-          pickupLng: lng,
+          pickupLat: position.latitude,
+          pickupLng: position.longitude,
         ),
         idempotencyKey: core.generateIdempotencyKey(),
       );

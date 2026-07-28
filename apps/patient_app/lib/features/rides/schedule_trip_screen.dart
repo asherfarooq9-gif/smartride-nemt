@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:patient_app/features/rides/schedule_submit_notifier.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 
@@ -19,19 +20,30 @@ class ScheduleTripScreen extends ConsumerStatefulWidget {
 
 class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
   final _addressCtrl = TextEditingController();
-  core.HospitalResponse? _selectedHospital;
+  final _dropoffAddressCtrl = TextEditingController();
+  double? _dropoffLat;
+  double? _dropoffLng;
   String? _selectedSpecialty;
   DateTime? _selectedDateTime;
   bool _submitting = false;
 
-  final _hospitalsProvider = FutureProvider.autoDispose<List<core.HospitalResponse>>(
-    (_) => core.getHospitals(),
-  );
-
   @override
   void dispose() {
     _addressCtrl.dispose();
+    _dropoffAddressCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickOnMap() async {
+    final result = await context.push<LatLng>('/map-picker');
+    if (result == null || !mounted) return;
+    setState(() {
+      _dropoffLat = result.latitude;
+      _dropoffLng = result.longitude;
+      _dropoffAddressCtrl.text =
+          'Pin at ${result.latitude.toStringAsFixed(5)}, '
+          '${result.longitude.toStringAsFixed(5)}';
+    });
   }
 
   Future<void> _pickDateTime() async {
@@ -68,7 +80,11 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                 ? 'Current location'
                 : _addressCtrl.text.trim(),
             scheduledFor: dt,
-            hospitalId: _selectedHospital?.id,
+            dropoffAddress: _dropoffAddressCtrl.text.trim().isEmpty
+                ? null
+                : _dropoffAddressCtrl.text.trim(),
+            dropoffLat: _dropoffLat,
+            dropoffLng: _dropoffLng,
           );
       if (!mounted) return;
       switch (result) {
@@ -97,8 +113,6 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final hospitalsAsync = ref.watch(_hospitalsProvider);
-
     return Scaffold(
       backgroundColor: core.kBackground,
       body: SafeArea(
@@ -171,18 +185,33 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                     ),
                     const SizedBox(height: core.kSpaceXL),
 
-                    // Hospital
-                    const _SectionLabel('DESTINATION'),
+                    // Destination
+                    const _SectionLabel('DESTINATION (OPTIONAL)'),
                     const SizedBox(height: core.kSpaceSM),
-                    hospitalsAsync.when(
-                      loading: () => const LinearProgressIndicator(),
-                      error: (_, __) => const Text('Could not load hospitals'),
-                      data: (hospitals) => _HospitalPicker(
-                        hospitals: hospitals,
-                        selected: _selectedHospital,
-                        onChanged: (h) =>
-                            setState(() => _selectedHospital = h),
+                    _LocationTile(
+                      icon: Icons.map_outlined,
+                      title: 'Select on map',
+                      color: core.kPatientPrimary,
+                      onTap: _pickOnMap,
+                    ),
+                    const SizedBox(height: core.kSpaceSM),
+                    TextFormField(
+                      controller: _dropoffAddressCtrl,
+                      decoration: const InputDecoration(
+                        hintText: 'Type your destination address...',
+                        prefixIcon: Icon(Icons.local_hospital_outlined),
+                        border: OutlineInputBorder(),
                       ),
+                      onChanged: (_) {
+                        // Typing over a map pin invalidates its coordinates —
+                        // don't silently send a stale lat/lng for new text.
+                        if (_dropoffLat != null) {
+                          setState(() {
+                            _dropoffLat = null;
+                            _dropoffLng = null;
+                          });
+                        }
+                      },
                     ),
                     const SizedBox(height: core.kSpaceXL),
 
@@ -355,34 +384,4 @@ class _LocationTile extends StatelessWidget {
           ),
         ),
       );
-}
-
-class _HospitalPicker extends StatelessWidget {
-  const _HospitalPicker({
-    required this.hospitals,
-    required this.selected,
-    required this.onChanged,
-  });
-  final List<core.HospitalResponse> hospitals;
-  final core.HospitalResponse? selected;
-  final ValueChanged<core.HospitalResponse?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return DropdownButtonFormField<core.HospitalResponse>(
-      initialValue: selected,
-      hint: const Text('Select destination hospital'),
-      decoration: const InputDecoration(
-        prefixIcon: Icon(Icons.local_hospital_outlined),
-        border: OutlineInputBorder(),
-      ),
-      items: hospitals
-          .map((h) => DropdownMenuItem(
-                value: h,
-                child: Text(h.name, overflow: TextOverflow.ellipsis),
-              ))
-          .toList(),
-      onChanged: onChanged,
-    );
-  }
 }

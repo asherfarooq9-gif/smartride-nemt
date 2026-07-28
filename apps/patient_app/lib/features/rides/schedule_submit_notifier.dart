@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:patient_app/core/location.dart';
 import 'package:patient_app/core/pending_ride_queue.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 
@@ -33,9 +34,23 @@ class ScheduleSubmitNotifier extends StateNotifier<AsyncValue<void>> {
   Future<ScheduleSubmitResult> submit({
     required String pickupAddress,
     required DateTime scheduledFor,
-    String? hospitalId,
+    String? dropoffAddress,
+    double? dropoffLat,
+    double? dropoffLng,
   }) async {
     state = const AsyncValue.loading();
+
+    final position = await getCurrentPositionSafe();
+    if (position == null) {
+      state = const AsyncValue.data(null);
+      return const ScheduleSubmitFailed(
+        core.AppError(
+          'Location access is required to book a ride. Please enable '
+          'location permission and try again.',
+        ),
+      );
+    }
+
     // One key for this whole submission attempt, reused across the network
     // retry and the offline-queue retry below — the backend dedupes by this
     // value, so a fresh key per retry would defeat the point.
@@ -44,8 +59,12 @@ class ScheduleSubmitNotifier extends StateNotifier<AsyncValue<void>> {
       final ride = await core.createScheduledRide(
         core.ScheduledRideRequest(
           pickupAddress: pickupAddress,
+          pickupLat: position.latitude,
+          pickupLng: position.longitude,
           scheduledFor: scheduledFor,
-          hospitalId: hospitalId,
+          dropoffAddress: dropoffAddress,
+          dropoffLat: dropoffLat,
+          dropoffLng: dropoffLng,
         ),
         idempotencyKey: idempotencyKey,
       );
@@ -56,9 +75,13 @@ class ScheduleSubmitNotifier extends StateNotifier<AsyncValue<void>> {
       // connectivity returns, so the patient doesn't lose the whole form.
       await PendingRideQueue.instance.enqueue(
         pickupAddress: pickupAddress,
+        pickupLat: position.latitude,
+        pickupLng: position.longitude,
         scheduledFor: scheduledFor,
         idempotencyKey: idempotencyKey,
-        hospitalId: hospitalId,
+        dropoffAddress: dropoffAddress,
+        dropoffLat: dropoffLat,
+        dropoffLng: dropoffLng,
       );
       state = const AsyncValue.data(null);
       return const ScheduleSubmitQueuedOffline();
