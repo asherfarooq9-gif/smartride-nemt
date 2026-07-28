@@ -207,9 +207,13 @@ class _Header extends ConsumerWidget {
         children: [
           Row(
             children: [
-              GestureDetector(
-                onTap: () => Scaffold.of(context).openDrawer(),
-                child: const Icon(Icons.menu, color: Colors.white, size: 24),
+              Semantics(
+                button: true,
+                label: 'Open menu',
+                child: GestureDetector(
+                  onTap: () => Scaffold.of(context).openDrawer(),
+                  child: const Icon(Icons.menu, color: Colors.white, size: 24),
+                ),
               ),
               const Spacer(),
               Row(
@@ -244,29 +248,40 @@ class _Header extends ConsumerWidget {
                 ],
               ),
               const Spacer(),
-              GestureDetector(
-                onTap: () => context.push('/driver/notifications'),
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    const Icon(Icons.notifications_outlined,
-                        color: Colors.white, size: 24),
-                    if (ref.watch(notificationsProvider('driver')).any((n) => !n.isRead))
-                      Positioned(
-                        right: -2,
-                        top: -2,
-                        child: Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
+              Builder(builder: (_) {
+                final hasUnread = ref
+                    .watch(notificationsProvider('driver'))
+                    .any((n) => !n.isRead);
+                return Semantics(
+                  button: true,
+                  label: hasUnread
+                      ? 'Notifications, unread notifications available'
+                      : 'Notifications',
+                  child: GestureDetector(
+                    onTap: () => context.push('/driver/notifications'),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        const Icon(Icons.notifications_outlined,
+                            color: Colors.white, size: 24),
+                        if (hasUnread)
+                          Positioned(
+                            right: -2,
+                            top: -2,
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
             ],
           ),
           const SizedBox(height: 10),

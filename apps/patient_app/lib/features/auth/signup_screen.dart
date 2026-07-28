@@ -136,6 +136,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   hint: 'Min. 8 characters',
                   obscureText: _obscure,
                   suffixIcon: IconButton(
+                    tooltip: _obscure ? 'Show password' : 'Hide password',
                     icon: Icon(
                       _obscure
                           ? Icons.visibility_outlined
@@ -410,54 +411,59 @@ class _RoleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isSelected = value == selected;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        constraints: const BoxConstraints(minHeight: kMinTapTarget),
-        padding: const EdgeInsets.symmetric(
-          horizontal: kSpaceLG,
-          vertical: kSpaceMD,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? kAuthTeal.withValues(alpha: 0.15)
-              : kDarkFieldBg,
-          borderRadius: BorderRadius.circular(kRadiusMD),
-          border: Border.all(
-            color: isSelected ? kAuthTeal : kDarkFieldBorder,
-            width: isSelected ? 1.5 : 1.0,
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: '$title. $subtitle',
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          constraints: const BoxConstraints(minHeight: kMinTapTarget),
+          padding: const EdgeInsets.symmetric(
+            horizontal: kSpaceLG,
+            vertical: kSpaceMD,
           ),
-        ),
-        child: Row(
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 22)),
-            const SizedBox(width: kSpaceLG),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.dmSans(
-                      color: isSelected ? Colors.white : Colors.white70,
-                      fontWeight: FontWeight.w600,
-                      fontSize: kFontBody,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: GoogleFonts.dmSans(
-                      color: Colors.white38,
-                      fontSize: kFontCaption,
-                    ),
-                  ),
-                ],
-              ),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? kAuthTeal.withValues(alpha: 0.15)
+                : kDarkFieldBg,
+            borderRadius: BorderRadius.circular(kRadiusMD),
+            border: Border.all(
+              color: isSelected ? kAuthTeal : kDarkFieldBorder,
+              width: isSelected ? 1.5 : 1.0,
             ),
-            if (isSelected)
-              const Icon(Icons.check_circle, color: kAuthTeal, size: 20),
-          ],
+          ),
+          child: Row(
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 22)),
+              const SizedBox(width: kSpaceLG),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.dmSans(
+                        color: isSelected ? Colors.white : Colors.white70,
+                        fontWeight: FontWeight.w600,
+                        fontSize: kFontBody,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.dmSans(
+                        color: Colors.white38,
+                        fontSize: kFontCaption,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isSelected)
+                const Icon(Icons.check_circle, color: kAuthTeal, size: 20),
+            ],
+          ),
         ),
       ),
     );

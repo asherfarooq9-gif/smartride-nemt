@@ -103,6 +103,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   hint: 'Your password',
                   obscureText: _obscure,
                   suffixIcon: IconButton(
+                    tooltip: _obscure ? 'Show password' : 'Hide password',
                     icon: Icon(
                       _obscure
                           ? Icons.visibility_outlined
@@ -188,14 +189,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         fontSize: kFontSmall,
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () => context.go('/signup'),
-                      child: Text(
-                        'Sign up',
-                        style: GoogleFonts.dmSans(
-                          color: kAuthTeal,
-                          fontSize: kFontSmall,
-                          fontWeight: FontWeight.w600,
+                    Semantics(
+                      button: true,
+                      link: true,
+                      label: 'Sign up for a new account',
+                      child: GestureDetector(
+                        onTap: () => context.go('/signup'),
+                        child: Text(
+                          'Sign up',
+                          style: GoogleFonts.dmSans(
+                            color: kAuthTeal,
+                            fontSize: kFontSmall,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
