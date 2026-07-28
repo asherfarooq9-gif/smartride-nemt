@@ -16,6 +16,9 @@ class ScheduledRideRequest(BaseModel):
     pickup_lat: float = Field(ge=-90, le=90)
     pickup_lng: float = Field(ge=-180, le=180)
     pickup_address: Optional[str] = None
+    dropoff_lat: Optional[float] = Field(default=None, ge=-90, le=90)
+    dropoff_lng: Optional[float] = Field(default=None, ge=-180, le=180)
+    dropoff_address: Optional[str] = None
     scheduled_for: datetime
 
     @field_validator("scheduled_for")
@@ -52,6 +55,9 @@ class RideResponse(BaseModel):
     pickup_lat: float
     pickup_lng: float
     pickup_address: Optional[str] = None
+    dropoff_lat: Optional[float] = None
+    dropoff_lng: Optional[float] = None
+    dropoff_address: Optional[str] = None
     scheduled_for: Optional[datetime] = None
     requested_at: datetime
     driver_assigned_at: Optional[datetime] = None

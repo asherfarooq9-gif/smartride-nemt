@@ -95,6 +95,9 @@ async def create_scheduled_ride(
         pickup_lat=body.pickup_lat,
         pickup_lng=body.pickup_lng,
         pickup_address=body.pickup_address,
+        dropoff_lat=body.dropoff_lat,
+        dropoff_lng=body.dropoff_lng,
+        dropoff_address=body.dropoff_address,
         scheduled_for=body.scheduled_for,
     )
     db.add(ride)

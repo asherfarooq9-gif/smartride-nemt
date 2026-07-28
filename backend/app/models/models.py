@@ -275,6 +275,9 @@ class Ride(Base):
     pickup_lat: Mapped[float] = mapped_column(DOUBLE_PRECISION)
     pickup_lng: Mapped[float] = mapped_column(DOUBLE_PRECISION)
     pickup_address: Mapped[Optional[str]] = mapped_column(Text)
+    dropoff_lat: Mapped[Optional[float]] = mapped_column(DOUBLE_PRECISION)
+    dropoff_lng: Mapped[Optional[float]] = mapped_column(DOUBLE_PRECISION)
+    dropoff_address: Mapped[Optional[str]] = mapped_column(Text)
     scheduled_for: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     requested_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
