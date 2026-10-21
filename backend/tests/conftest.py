@@ -43,6 +43,18 @@ def create_tables():
     asyncio.run(_run_ddl())
 
 
+@pytest.fixture(autouse=True)
+def _clear_login_lockouts():
+    """Lockout counters live in Redis and outlive a test run; tests reuse phone numbers."""
+    import redis
+
+    client = redis.Redis.from_url(os.environ["REDIS_URL"])
+    for key in client.scan_iter("login_fail:*"):
+        client.delete(key)
+    client.close()
+    yield
+
+
 @pytest_asyncio.fixture(autouse=True)
 async def _reset_redis_singleton():
     """The redis client is a module-level singleton bound to the event loop that
@@ -87,6 +99,29 @@ async def client(db: AsyncSession):
 
 
 @pytest_asyncio.fixture
+async def isolated_client():
+    """Like production: every request gets its own session and transaction.
+
+    `client` shares one session across calls, which is convenient for asserting on
+    rows but hides (and, after a database error, inherits) transaction state.
+    """
+    engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool)
+    factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+    async def _per_request():
+        async with factory() as session:
+            yield session
+
+    app.dependency_overrides[get_db] = _per_request
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        yield ac
+    app.dependency_overrides.clear()
+    await engine.dispose()
+
+
+@pytest_asyncio.fixture
 async def admin_token(db: AsyncSession) -> str:
     """Create an admin user directly in the DB (self-register is blocked via API)."""
     from app.models.models import User, UserRole, UserRoleLink
@@ -112,3 +147,34 @@ async def admin_token(db: AsyncSession) -> str:
             "active_role": "admin",
         }
     )
+
+
+@pytest_asyncio.fixture
+async def verified_driver_token(client: AsyncClient, db: AsyncSession) -> str:
+    """Register a driver through the API and mark it verified."""
+    from sqlalchemy import select
+    from app.models.models import Driver, DriverStatus
+
+    uid = uuid.uuid4().hex[:8]
+    # Phone must be digits-only to pass the registration validator.
+    digits = str(uuid.uuid4().int)[:7]
+    resp = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "phone": f"+92300{digits}",
+            "password": "pass1234",
+            "role": "driver",
+            "full_name": "T",
+            "license_no": f"DV-{uid}",
+            "vehicle_plate": f"DV-{uid[:6]}",
+            "vehicle_type": "sedan",
+        },
+    )
+    assert resp.status_code == 201, resp.text
+    driver = (
+        await db.execute(select(Driver).order_by(Driver.created_at.desc()).limit(1))
+    ).scalar_one()
+    driver.is_verified = True
+    driver.status = DriverStatus.available  # only online drivers may take rides
+    await db.commit()
+    return resp.json()["access_token"]

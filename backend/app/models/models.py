@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from decimal import Decimal
 from typing import Optional, List
 from sqlalchemy import (
     String,
@@ -12,6 +13,7 @@ from sqlalchemy import (
     Enum as SAEnum,
     JSON,
     Index,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB, DOUBLE_PRECISION
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -184,8 +186,8 @@ class Driver(Base):
         SAEnum(DriverStatus, name="driver_status", create_type=False),
         default=DriverStatus.offline,
     )
-    wallet_balance_pkr: Mapped[float] = mapped_column(
-        DOUBLE_PRECISION, default=0.0, server_default="0"
+    wallet_balance_pkr: Mapped[Decimal] = mapped_column(
+        Numeric(12, 2), default=Decimal("0"), server_default="0"
     )
     current_lat: Mapped[Optional[float]] = mapped_column(DOUBLE_PRECISION)
     current_lng: Mapped[Optional[float]] = mapped_column(DOUBLE_PRECISION)
@@ -230,6 +232,26 @@ class Hospital(Base):
 
 
 # ─── RIDE ─────────────────────────────────────────────────────────────────────
+
+
+class WalletEntry(Base):
+    """Append-only money ledger. drivers.wallet_balance_pkr is its running total."""
+
+    __tablename__ = "wallet_transactions"
+    __table_args__ = (UniqueConstraint("ride_id", "kind", name="uq_wallet_ride_kind"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    driver_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("drivers.id", ondelete="CASCADE")
+    )
+    ride_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("rides.id"))
+    kind: Mapped[str] = mapped_column(String(20))  # topup | commission | adjustment
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2))  # + credit, - debit
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
 
 class Ride(Base):

@@ -146,7 +146,7 @@ async def test_auth_user_resolves_valid_token(ws_session: AsyncSession):
 # ─────────────────────────────────────────────────────────────────────────────
 @pytest.mark.asyncio
 async def test_auth_user_rejects_wrong_secret(ws_session: AsyncSession):
-    from jose import jwt as _jwt
+    import jwt as _jwt
 
     bad_token = _jwt.encode(
         {"sub": str(uuid.uuid4()), "role": "driver"}, "wrong-secret", algorithm="HS256"

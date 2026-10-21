@@ -9,6 +9,7 @@ Or locally:
 import asyncio
 import json
 import os
+import secrets
 import uuid
 
 from sqlalchemy import text
@@ -89,6 +90,10 @@ async def seed() -> None:
             text("SELECT id FROM users WHERE phone = '+92300000001'")
         )
         if row.first() is None:
+            # Never ship a well-known password: use ADMIN_PASSWORD, or make one up.
+            admin_password = os.environ.get("ADMIN_PASSWORD") or secrets.token_urlsafe(
+                12
+            )
             await db.execute(
                 text(
                     "INSERT INTO users (id, phone, password_hash, role, is_active) "
@@ -97,10 +102,22 @@ async def seed() -> None:
                 {
                     "id": str(uuid.uuid4()),
                     "phone": "+92300000001",
-                    "pw": hash_password("admin123"),
+                    "pw": hash_password(admin_password),
                 },
             )
-            print("  Created admin user  phone=+92300000001  password=admin123")
+            # Login and require_role read user_roles, not users.role.
+            await db.execute(
+                text(
+                    "INSERT INTO user_roles (id, user_id, role) "
+                    "SELECT :rid, id, 'admin'::user_role FROM users "
+                    "WHERE phone = '+92300000001'"
+                ),
+                {"rid": str(uuid.uuid4())},
+            )
+            print(
+                f"  Created admin user  phone=+92300000001  password={admin_password}"
+            )
+            print("  Change it after first login; it is not shown again.")
         else:
             print("  Admin user already exists — skipped")
 
@@ -114,7 +131,7 @@ async def seed() -> None:
                     text(
                         "INSERT INTO hospitals (id, name, address, city, lat, lng, specialties, "
                         "ed_capacity, ed_current_load, is_active) "
-                        "VALUES (:id, :name, :address, :city, :lat, :lng, :specialties::json, "
+                        "VALUES (:id, :name, :address, :city, :lat, :lng, CAST(:specialties AS json), "
                         ":ed_capacity, :ed_current_load, :is_active)"
                     ),
                     {

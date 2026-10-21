@@ -5,8 +5,17 @@ from fastapi import HTTPException
 from sqlalchemy import select, func, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.models import Driver, User, DriverStatus
+from app.core.search import contains
+from app.models.models import Driver, Ride, RideStatus, User, DriverStatus
 from app.schemas.drivers import DriverUpdate, DriverStatusUpdate, LocationUpdate
+
+
+ACTIVE_RIDE_STATUSES = (
+    RideStatus.driver_assigned,
+    RideStatus.driver_en_route,
+    RideStatus.patient_picked_up,
+    RideStatus.arrived_at_hospital,
+)
 
 
 async def get_driver_by_user(user: User, db: AsyncSession) -> Driver:
@@ -30,6 +39,15 @@ async def update_driver_profile(
 async def update_driver_status(
     driver: Driver, body: DriverStatusUpdate, db: AsyncSession
 ) -> Driver:
+    if body.status == DriverStatus.available:
+        # Going available mid-ride would let dispatch assign a second ride.
+        on_ride = await db.execute(
+            select(Ride.id)
+            .where(Ride.driver_id == driver.id, Ride.status.in_(ACTIVE_RIDE_STATUSES))
+            .limit(1)
+        )
+        if on_ride.first() is not None:
+            raise HTTPException(409, "Finish or cancel your current ride first")
     driver.status = body.status
     await db.commit()
     await db.refresh(driver)
@@ -67,9 +85,9 @@ async def list_drivers(
     if search:
         conditions.append(
             or_(
-                Driver.full_name.ilike(f"%{search}%"),
-                User.phone.ilike(f"%{search}%"),
-                Driver.vehicle_plate.ilike(f"%{search}%"),
+                Driver.full_name.ilike(contains(search), escape="\\"),
+                User.phone.ilike(contains(search), escape="\\"),
+                Driver.vehicle_plate.ilike(contains(search), escape="\\"),
             )
         )
     if conditions:

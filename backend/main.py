@@ -3,27 +3,33 @@ SmartRide NEMT — FastAPI Backend
 Phase 1: Project scaffold with all core structure
 """
 
+import asyncio
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import Depends, FastAPI, Request, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+import asyncpg
 from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
 
 import logging
 
 from app.core.config import settings
 from app.core.database import engine
-from app.core.redis_client import ping_redis
+from app.core.redis_client import close_redis, ping_redis
 from app.core.logging import StructuredLoggingMiddleware
 from app.core.observability import init_error_tracking
-from app.core.ratelimit import rate_limit_key
+from app.core.ratelimit import make_limiter
+from app.core.security import require_metrics_access
 from app.routers import auth, patients, drivers, hospitals, rides, analytics, ws
+from app.services import dispatch_loop
+from app.services.ws_manager import location_manager
 from app.schemas.errors import ErrorResponse
 
 log = logging.getLogger("smartride")
@@ -53,11 +59,24 @@ async def lifespan(app: FastAPI):
     # Wire error tracking (no-op unless SENTRY_DSN is configured).
     init_error_tracking()
 
-    yield
+    dispatch_task = (
+        asyncio.create_task(dispatch_loop.run_forever())
+        if settings.DISPATCH_LOOP_ENABLED
+        else None
+    )
+    try:
+        yield
+    finally:
+        if dispatch_task:
+            dispatch_task.cancel()
+        # Close pooled connections so a rolling deploy does not leave them dangling.
+        await engine.dispose()
+        await location_manager.close()
+        await close_redis()
 
 
 # #2 Rate limiter shared across the app
-limiter = Limiter(key_func=rate_limit_key, default_limits=["200/minute"])
+limiter = make_limiter(default_limits=["200/minute"])
 
 app = FastAPI(
     title="SmartRide NEMT API",
@@ -66,6 +85,7 @@ app = FastAPI(
     # #8 Hide interactive docs in production
     docs_url="/docs" if settings.DEBUG else None,
     redoc_url="/redoc" if settings.DEBUG else None,
+    openapi_url="/openapi.json" if settings.DEBUG else None,
     lifespan=lifespan,
 )
 
@@ -105,7 +125,12 @@ async def add_security_headers(request: Request, call_next):
 Instrumentator(
     should_group_status_codes=True,
     should_ignore_untemplated=True,
-).instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
+).instrument(app).expose(
+    app,
+    endpoint="/metrics",
+    include_in_schema=False,
+    dependencies=[Depends(require_metrics_access)],
+)
 
 
 def _trace_id(request: Request) -> str | None:
@@ -132,6 +157,23 @@ async def http_exception_handler(request: Request, exc: HTTPException):
             detail=str(exc.detail), code="error", trace_id=_trace_id(request)
         ).model_dump(),
     )
+
+
+@app.exception_handler(DBAPIError)
+async def database_error_handler(request: Request, exc: DBAPIError):
+    """Postgres refused the *value* (e.g. a NUL byte in text, a number out of range):
+    that is the caller's input, not a server fault."""
+    cause = getattr(exc.orig, "__cause__", None)
+    if isinstance(cause, asyncpg.exceptions.DataError):
+        return JSONResponse(
+            status_code=422,
+            content=ErrorResponse(
+                detail="Invalid value in request",
+                code="validation_error",
+                trace_id=_trace_id(request),
+            ).model_dump(),
+        )
+    return await unhandled_exception_handler(request, exc)
 
 
 @app.exception_handler(Exception)

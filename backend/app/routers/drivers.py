@@ -1,9 +1,12 @@
-from typing import Optional, List
+from decimal import Decimal
+from typing import Optional
+from uuid import UUID
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import require_driver, require_admin
 from app.models.models import Driver, User
@@ -19,9 +22,9 @@ from app.schemas.drivers import (
     EarningsResponse,
     EarningsRide,
 )
-from app.models.models import Ride, RideStatus
+from app.models.models import Ride, RideStatus, WalletEntry
 from app.services import driver_service
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, update
 
 router = APIRouter()
 
@@ -169,7 +172,6 @@ _PLANS = {
     "standard": {"rides": 18, "price_pkr": 540, "per_ride_pkr": 30, "savings_pct": 33},
     "pro": {"rides": 36, "price_pkr": 900, "per_ride_pkr": 25, "savings_pct": 44},
 }
-_COMMISSION_RATE = 0.10
 
 
 @router.get("/wallet", response_model=WalletResponse)
@@ -178,60 +180,64 @@ async def get_wallet(
     db: AsyncSession = Depends(get_db),
 ):
     driver = await driver_service.get_driver_by_user(current_user, db)
-
     week_ago = datetime.now(timezone.utc) - timedelta(days=7)
-    weekly_rides = (
+
+    weekly_gross, weekly_commission = (
+        await db.execute(
+            select(
+                func.coalesce(func.sum(Ride.final_fare_pkr), 0),
+                func.coalesce(-func.sum(WalletEntry.amount), 0),
+            )
+            .select_from(Ride)
+            .outerjoin(
+                WalletEntry,
+                and_(WalletEntry.ride_id == Ride.id, WalletEntry.kind == "commission"),
+            )
+            .where(
+                Ride.driver_id == driver.id,
+                Ride.status == RideStatus.completed,
+                Ride.completed_at >= week_ago,
+            )
+        )
+    ).one()
+
+    entries = (
         (
             await db.execute(
-                select(Ride).where(
-                    and_(
-                        Ride.driver_id == driver.id,
-                        Ride.status == RideStatus.completed,
-                        Ride.completed_at >= week_ago,
-                    )
-                )
+                select(WalletEntry)
+                .where(WalletEntry.driver_id == driver.id)
+                .order_by(WalletEntry.created_at.desc())
+                .limit(10)
             )
         )
         .scalars()
         .all()
     )
 
-    weekly_gross = sum(
-        float(r.final_fare_pkr or r.estimated_fare_pkr or 0) for r in weekly_rides
-    )
-    weekly_commission = weekly_gross * _COMMISSION_RATE
-    weekly_net = weekly_gross - weekly_commission
-
-    # Build synthetic transactions from recent rides (commission deductions)
-    transactions: List[WalletTransaction] = []
-    for r in weekly_rides[:10]:
-        fare = float(r.final_fare_pkr or r.estimated_fare_pkr or 0)
-        commission = fare * _COMMISSION_RATE
-        transactions.append(
-            WalletTransaction(
-                id=str(r.id),
-                type="commission_deduction",
-                amount_pkr=-commission,
-                description=f"10% commission — {r.pickup_address[:30] if r.pickup_address else 'ride'}",
-                created_at=r.completed_at or datetime.now(timezone.utc),
-            )
-        )
-
     balance = float(driver.wallet_balance_pkr or 0)
     return WalletResponse(
         balance_pkr=balance,
-        commission_rate=_COMMISSION_RATE,
-        plan="Pay Per Ride · 10%",
+        commission_rate=settings.COMMISSION_RATE,
+        plan=f"Pay Per Ride · {settings.COMMISSION_RATE:.0%}",
         low_balance=balance < 500,
-        weekly_commission_paid=weekly_commission,
-        weekly_net_earnings=weekly_net,
-        transactions=transactions,
+        weekly_commission_paid=float(weekly_commission),
+        weekly_net_earnings=float(weekly_gross - weekly_commission),
+        transactions=[
+            WalletTransaction(
+                id=str(e.id),
+                type=e.kind,
+                amount_pkr=float(e.amount),
+                description=e.kind.replace("_", " ").title(),
+                created_at=e.created_at,
+            )
+            for e in entries
+        ],
     )
 
 
 @router.post("/{driver_id}/wallet/topup", response_model=DriverResponse)
 async def topup_wallet(
-    driver_id: str,
+    driver_id: UUID,
     body: WalletTopUpRequest,
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
@@ -253,7 +259,14 @@ async def topup_wallet(
         await db.execute(select(User).where(User.id == driver.user_id))
     ).scalar_one()
 
-    driver.wallet_balance_pkr = float(driver.wallet_balance_pkr or 0) + amount
+    # Ledger row and balance change commit together; the increment is done in SQL
+    # so concurrent top-ups cannot overwrite each other.
+    db.add(WalletEntry(driver_id=driver.id, kind="topup", amount=Decimal(str(amount))))
+    await db.execute(
+        update(Driver)
+        .where(Driver.id == driver.id)
+        .values(wallet_balance_pkr=func.coalesce(Driver.wallet_balance_pkr, 0) + amount)
+    )
     await db.commit()
     await db.refresh(driver)
     return _to_response(driver, user)
@@ -281,7 +294,7 @@ async def list_drivers(
 
 @router.patch("/{driver_id}/verify", response_model=DriverResponse)
 async def verify_driver(
-    driver_id: str,
+    driver_id: UUID,
     body: VerifyBody = VerifyBody(),
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),

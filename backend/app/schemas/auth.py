@@ -1,12 +1,12 @@
 from typing import Optional, List
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from app.models.models import UserRole
 
 
 class RegisterRequest(BaseModel):
     phone: str
-    password: str
-    full_name: str
+    password: str = Field(max_length=72)  # bcrypt ignores everything past 72 bytes
+    full_name: str = Field(max_length=100)
     # New multi-role API: one or more initial roles ("both" == ["patient","driver"]).
     roles: Optional[List[UserRole]] = None
     # Legacy single-role API (still accepted; normalised into `roles`).
@@ -14,9 +14,9 @@ class RegisterRequest(BaseModel):
     # which portal to open first; defaults to the first requested role
     active_role: Optional[UserRole] = None
     # driver-only profile fields (required if "driver" is among roles)
-    license_no: Optional[str] = None
-    vehicle_plate: Optional[str] = None
-    vehicle_type: Optional[str] = None
+    license_no: Optional[str] = Field(default=None, max_length=50)
+    vehicle_plate: Optional[str] = Field(default=None, max_length=20)
+    vehicle_type: Optional[str] = Field(default=None, max_length=50)
 
     @field_validator("phone")
     @classmethod
@@ -55,9 +55,9 @@ class RegisterRequest(BaseModel):
 
 class AddRoleRequest(BaseModel):
     role: UserRole
-    license_no: Optional[str] = None
-    vehicle_plate: Optional[str] = None
-    vehicle_type: Optional[str] = None
+    license_no: Optional[str] = Field(default=None, max_length=50)
+    vehicle_plate: Optional[str] = Field(default=None, max_length=20)
+    vehicle_type: Optional[str] = Field(default=None, max_length=50)
 
 
 class SwitchRoleRequest(BaseModel):

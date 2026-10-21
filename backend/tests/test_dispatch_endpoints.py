@@ -1,8 +1,6 @@
 """Driver dispatch endpoint tests: GET /rides/pending, POST /rides/{id}/accept."""
 
-import uuid
 import pytest
-import pytest_asyncio
 from httpx import AsyncClient
 from unittest.mock import AsyncMock, patch
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,28 +34,6 @@ async def _create_emergency(client: AsyncClient, token: str) -> str:
         )
     assert r.status_code == 201, r.text
     return r.json()["id"]
-
-
-@pytest_asyncio.fixture
-async def verified_driver_token(client: AsyncClient, db: AsyncSession) -> str:
-    uid = uuid.uuid4().hex[:8]
-    # Phone must be digits-only to pass the registration validator.
-    digits = str(uuid.uuid4().int)[:7]
-    token = await _register(
-        client,
-        f"+92300{digits}",
-        "driver",
-        license_no=f"DV-{uid}",
-        vehicle_plate=f"DV-{uid[:6]}",
-        vehicle_type="sedan",
-    )
-    result = await db.execute(
-        select(Driver).order_by(Driver.created_at.desc()).limit(1)
-    )
-    driver = result.scalar_one()
-    driver.is_verified = True
-    await db.commit()
-    return token
 
 
 @pytest.mark.asyncio

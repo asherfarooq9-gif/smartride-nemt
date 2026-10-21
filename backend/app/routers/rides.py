@@ -1,14 +1,14 @@
 import csv
 import io
+from uuid import UUID
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query, Request
 from fastapi.responses import StreamingResponse
-from slowapi import Limiter
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import metrics
 from app.core.database import get_db
-from app.core.ratelimit import rate_limit_key
+from app.core.ratelimit import make_limiter
 from app.core.security import (
     get_current_user,
     require_patient,
@@ -28,7 +28,7 @@ from app.schemas.rides import (
 from app.services import ride_service
 
 router = APIRouter()
-limiter = Limiter(key_func=rate_limit_key)
+limiter = make_limiter()
 
 
 def _to_response(ride: Ride) -> RideResponse:
@@ -108,7 +108,7 @@ async def my_rides(
 
 @router.get("/{ride_id}/detail", response_model=RideDetailResponse)
 async def get_ride_detail(
-    ride_id: str,
+    ride_id: UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -201,7 +201,7 @@ async def pending_rides(
 
 @router.post("/{ride_id}/accept", response_model=RideResponse)
 async def accept_ride(
-    ride_id: str,
+    ride_id: UUID,
     current_user: User = Depends(require_driver),
     db: AsyncSession = Depends(get_db),
 ):
@@ -215,7 +215,7 @@ async def accept_ride(
 
 @router.post("/{ride_id}/rate", response_model=RideResponse)
 async def rate_ride(
-    ride_id: str,
+    ride_id: UUID,
     body: RateRideRequest,
     current_user: User = Depends(require_patient),
     db: AsyncSession = Depends(get_db),
@@ -237,7 +237,7 @@ async def rate_ride(
 
 @router.patch("/{ride_id}/status", response_model=RideResponse)
 async def update_ride_status(
-    ride_id: str,
+    ride_id: UUID,
     body: RideStatusUpdate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -275,6 +275,11 @@ async def update_ride_status(
 
 
 # ── Admin endpoints ───────────────────────────────────────────────────────────
+def _csv_safe(value: str) -> str:
+    """Spreadsheets run cells that start with = + - @ (or tab/CR) as formulas."""
+    return "'" + value if value[:1] in ("=", "+", "-", "@", "\t", "\r") else value
+
+
 # NOTE: /export.csv must be registered BEFORE /{ride_id} to prevent route shadowing.
 
 
@@ -322,7 +327,7 @@ async def export_rides_csv(
                         str(r.id),
                         r.ride_type.value,
                         r.status.value,
-                        r.pickup_address or "",
+                        _csv_safe(r.pickup_address or ""),
                         r.requested_at.isoformat() if r.requested_at else "",
                         r.completed_at.isoformat() if r.completed_at else "",
                         r.cancelled_at.isoformat() if r.cancelled_at else "",
@@ -347,7 +352,7 @@ async def export_rides_csv(
 
 @router.get("/{ride_id}", response_model=RideResponse)
 async def get_ride(
-    ride_id: str,
+    ride_id: UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):

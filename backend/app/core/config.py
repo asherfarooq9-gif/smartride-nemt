@@ -54,6 +54,27 @@ class Settings(BaseSettings):
     # The wildcard is only acceptable for local development (DEBUG=True).
     ALLOWED_ORIGINS: List[str] = ["*"]
     EMERGENCY_PIPELINE_TARGET_SECONDS: float = 60.0
+    # Credential-guessing defence and absolute session lifetime
+    # Per client IP; sign-in also has the per-account lockout below.
+    LOGIN_RATE_LIMIT: str = "10/minute"
+    REGISTER_RATE_LIMIT: str = "5/minute"
+    LOGIN_MAX_FAILURES: int = 5
+    LOGIN_LOCK_SECONDS: int = 900
+    SESSION_MAX_DAYS: int = 30
+    # Bearer token Prometheus must send to /metrics (open without it only in DEBUG)
+    METRICS_TOKEN: str = ""
+    # Drivers farther than this from the pickup are not considered for dispatch
+    DRIVER_SEARCH_RADIUS_KM: float = 50.0
+    # Fares (flat base + per km) and the platform's share of each fare
+    FARE_BASE_PKR: float = 200.0
+    FARE_PER_KM_PKR: float = 40.0
+    COMMISSION_RATE: float = 0.10
+    # Dispatch retry loop (app/services/dispatch_loop.py)
+    DISPATCH_LOOP_ENABLED: bool = True
+    DISPATCH_LOOP_INTERVAL_SECONDS: float = 15.0
+    DISPATCH_RETRY_AFTER_SECONDS: int = 30
+    DISPATCH_MAX_AGE_SECONDS: int = 900
+    SCHEDULED_DISPATCH_LEAD_MINUTES: int = 30
     LOG_LEVEL: str = "INFO"
 
     @model_validator(mode="after")

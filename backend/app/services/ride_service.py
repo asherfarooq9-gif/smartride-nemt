@@ -5,10 +5,15 @@ from typing import Optional
 
 from fastapi import HTTPException
 from sqlalchemy import select, func, and_, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core import metrics
+from app.core.search import contains
+from app.services.fare import commission_for, fare_for
+from app.services.hospital_matching import haversine_km
+from app.services.notifications import notify_user
 
 from app.models.models import (
     Ride,
@@ -19,6 +24,8 @@ from app.models.models import (
     RideType,
     RideStatus,
     DriverStatus,
+    Hospital,
+    WalletEntry,
 )
 from app.schemas.rides import (
     EmergencyRideRequest,
@@ -44,12 +51,51 @@ def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
 
+TERMINAL_STATUSES = (RideStatus.completed, RideStatus.cancelled)
+
 DRIVER_TRANSITIONS = {
     RideStatus.driver_assigned: RideStatus.driver_en_route,
     RideStatus.driver_en_route: RideStatus.patient_picked_up,
     RideStatus.patient_picked_up: RideStatus.arrived_at_hospital,
     RideStatus.arrived_at_hospital: RideStatus.completed,
 }
+
+
+async def ride_fare(db: AsyncSession, ride: Ride):
+    """Fare for pickup -> hospital; just the base fare while no hospital is set."""
+    km = 0.0
+    if ride.hospital_id is not None:
+        hospital = (
+            await db.execute(select(Hospital).where(Hospital.id == ride.hospital_id))
+        ).scalar_one_or_none()
+        if hospital is not None:
+            km = haversine_km(
+                ride.pickup_lat, ride.pickup_lng, hospital.lat, hospital.lng
+            )
+    return fare_for(km)
+
+
+async def charge_commission(db: AsyncSession, ride: Ride, driver_id) -> bool:
+    """Debit the driver's commission for a completed ride, exactly once.
+
+    The ledger row and the balance change share the caller's transaction; the
+    (ride_id, kind) unique key makes a repeat a no-op instead of a double charge.
+    """
+    amount = -commission_for(ride.final_fare_pkr)
+    inserted = await db.execute(
+        pg_insert(WalletEntry)
+        .values(driver_id=driver_id, ride_id=ride.id, kind="commission", amount=amount)
+        .on_conflict_do_nothing(constraint="uq_wallet_ride_kind")
+        .returning(WalletEntry.id)
+    )
+    if inserted.first() is None:
+        return False
+    await db.execute(
+        update(Driver)
+        .where(Driver.id == driver_id)
+        .values(wallet_balance_pkr=Driver.wallet_balance_pkr + amount)
+    )
+    return True
 
 
 async def get_patient_by_user(user: User, db: AsyncSession) -> Patient:
@@ -178,14 +224,27 @@ async def update_ride_status(
 ) -> Ride:
     new_status = body.status
 
+    if new_status == RideStatus.cancelled and ride.status in TERMINAL_STATUSES:
+        raise HTTPException(400, f"Cannot cancel a {ride.status.value} ride")
+
     if role == "driver":
         if ride.driver_id != driver.id:
             raise HTTPException(403, "Not your ride")
         allowed_next = DRIVER_TRANSITIONS.get(ride.status)
         if new_status == RideStatus.cancelled:
-            ride.status = RideStatus.cancelled
-            ride.cancelled_at = datetime.now(timezone.utc)
-            driver.status = DriverStatus.available
+            if ride.status in (RideStatus.driver_assigned, RideStatus.driver_en_route):
+                # Patient not on board yet: return the ride to the queue (the
+                # dispatch loop re-places it) and take this driver offline so
+                # they are not handed the same ride straight back.
+                ride.status = RideStatus.pending
+                ride.driver_id = None
+                ride.driver_assigned_at = None
+                ride.hospital_id = None
+                driver.status = DriverStatus.offline
+            else:
+                ride.status = RideStatus.cancelled
+                ride.cancelled_at = datetime.now(timezone.utc)
+                driver.status = DriverStatus.available
         elif new_status != allowed_next:
             raise HTTPException(
                 400, f"Cannot transition from {ride.status} to {new_status}"
@@ -200,6 +259,8 @@ async def update_ride_status(
             elif new_status == RideStatus.completed:
                 ride.completed_at = now
                 driver.status = DriverStatus.available
+                ride.final_fare_pkr = await ride_fare(db, ride)
+                await charge_commission(db, ride, driver.id)
 
     elif role == "admin":
         if new_status != RideStatus.cancelled:
@@ -219,11 +280,22 @@ async def update_ride_status(
             raise HTTPException(403, "Not your ride")
         if new_status != RideStatus.cancelled:
             raise HTTPException(400, "Patient can only cancel rides")
-        if ride.status not in (RideStatus.pending, RideStatus.driver_assigned):
+        # Until the patient is on board they may change their mind.
+        if ride.status not in (
+            RideStatus.pending,
+            RideStatus.driver_assigned,
+            RideStatus.driver_en_route,
+        ):
             raise HTTPException(400, "Cannot cancel ride in current state")
         ride.status = RideStatus.cancelled
         ride.cancelled_at = datetime.now(timezone.utc)
         ride.cancel_reason = body.cancel_reason or "Cancelled by patient"
+        if ride.driver_id is not None:
+            assigned_driver = (
+                await db.execute(select(Driver).where(Driver.id == ride.driver_id))
+            ).scalar_one_or_none()
+            if assigned_driver:
+                assigned_driver.status = DriverStatus.available
 
     else:
         raise HTTPException(403, "Forbidden")
@@ -232,59 +304,39 @@ async def update_ride_status(
     await db.refresh(ride)
 
     # Push notification to patient on status change
-    try:
-        from app.services.notifications import send_push
-
-        patient_user = (
-            await db.execute(
-                select(User)
-                .join(Patient, Patient.user_id == User.id)
-                .where(Patient.id == ride.patient_id)
-            )
-        ).scalar_one_or_none()
-        if patient_user and patient_user.fcm_token:
-            labels = {
-                RideStatus.driver_assigned: (
-                    "Driver Assigned",
-                    "Your driver is on the way!",
-                ),
-                RideStatus.driver_en_route: (
-                    "Driver En Route",
-                    "Your driver is heading to you.",
-                ),
-                RideStatus.patient_picked_up: (
-                    "Picked Up",
-                    "You're on the way to the hospital.",
-                ),
-                RideStatus.arrived_at_hospital: (
-                    "Arrived",
-                    "You have arrived at the hospital.",
-                ),
-                RideStatus.completed: (
-                    "Ride Complete",
-                    "Your ride has been completed.",
-                ),
-                RideStatus.cancelled: (
-                    "Ride Cancelled",
-                    ride.cancel_reason or "Your ride was cancelled.",
-                ),
-            }
-            if ride.status in labels:
-                title, body_text = labels[ride.status]
-                import asyncio
-
-                asyncio.create_task(
-                    send_push(
-                        fcm_token=patient_user.fcm_token,
-                        title=title,
-                        body=body_text,
-                        data={"ride_id": str(ride.id)},
-                    )
-                )
-    except Exception:
-        # Notification failure must never block a status update, but it must
-        # be visible — a silently dead push pipeline is a production incident.
-        log.warning("push notification failed for ride %s", ride.id, exc_info=True)
+    labels = {
+        RideStatus.driver_assigned: ("Driver Assigned", "Your driver is on the way!"),
+        RideStatus.driver_en_route: (
+            "Driver En Route",
+            "Your driver is heading to you.",
+        ),
+        RideStatus.patient_picked_up: (
+            "Picked Up",
+            "You're on the way to the hospital.",
+        ),
+        RideStatus.arrived_at_hospital: (
+            "Arrived",
+            "You have arrived at the hospital.",
+        ),
+        RideStatus.completed: ("Ride Complete", "Your ride has been completed."),
+        RideStatus.cancelled: (
+            "Ride Cancelled",
+            ride.cancel_reason or "Your ride was cancelled.",
+        ),
+        RideStatus.pending: (
+            "Finding another driver",
+            "Your driver cancelled. We are finding you another one.",
+        ),
+    }
+    if ride.status in labels:
+        title, body_text = labels[ride.status]
+        await notify_user(
+            db,
+            patient_id=ride.patient_id,
+            title=title,
+            body=body_text,
+            data={"ride_id": str(ride.id)},
+        )
 
     return ride
 
@@ -319,6 +371,26 @@ async def get_pending_rides(driver: Driver, db: AsyncSession) -> list[Ride]:
 
 async def accept_ride(ride_id: str, driver: Driver, db: AsyncSession) -> Ride:
     """Atomically assign a driver to a ride; raises 409 if already taken."""
+    requester_user_id = (
+        await db.execute(
+            select(Patient.user_id)
+            .join(Ride, Ride.patient_id == Patient.id)
+            .where(Ride.id == ride_id)
+        )
+    ).scalar_one_or_none()
+    if requester_user_id == driver.user_id:
+        raise HTTPException(403, "You cannot accept your own ride")
+
+    # Claim the driver first: only an available driver may take a ride, and two
+    # simultaneous accepts by one driver cannot both succeed.
+    claimed = await db.execute(
+        update(Driver)
+        .where(Driver.id == driver.id, Driver.status == DriverStatus.available)
+        .values(status=DriverStatus.busy)
+    )
+    if claimed.rowcount != 1:
+        raise HTTPException(409, "Go online and finish your current ride first")
+
     result = await db.execute(
         update(Ride)
         .where(
@@ -338,6 +410,7 @@ async def accept_ride(ride_id: str, driver: Driver, db: AsyncSession) -> Ride:
     assigned_id = result.scalar_one_or_none()
 
     if assigned_id is None:
+        await db.rollback()  # releases the driver claimed above
         # Either ride doesn't exist or was already taken
         check = (
             await db.execute(select(Ride).where(Ride.id == ride_id))
@@ -347,7 +420,6 @@ async def accept_ride(ride_id: str, driver: Driver, db: AsyncSession) -> Ride:
         metrics.ride_accept_conflicts_total.inc()
         raise HTTPException(409, "Ride already taken by another driver")
 
-    driver.status = DriverStatus.busy
     await db.commit()
 
     ride = (await db.execute(select(Ride).where(Ride.id == ride_id))).scalar_one()
@@ -374,7 +446,7 @@ async def list_rides_admin(
         except ValueError:
             pass
     if search:
-        conditions.append(Ride.pickup_address.ilike(f"%{search}%"))
+        conditions.append(Ride.pickup_address.ilike(contains(search), escape="\\"))
 
     base_q = select(Ride)
     if conditions:

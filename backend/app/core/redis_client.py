@@ -15,9 +15,33 @@ async def get_redis() -> aioredis.Redis:
     return _redis
 
 
+async def close_redis() -> None:
+    global _redis
+    if _redis is not None:
+        await _redis.aclose()
+        _redis = None
+
+
 async def block_token(jti: str, ttl_seconds: int) -> None:
     r = await get_redis()
     await r.setex(f"blocklist:{jti}", ttl_seconds, "1")
+
+
+async def login_failures(phone: str) -> int:
+    r = await get_redis()
+    return int(await r.get(f"login_fail:{phone}") or 0)
+
+
+async def count_login_failure(phone: str, lock_seconds: int) -> None:
+    r = await get_redis()
+    key = f"login_fail:{phone}"
+    if await r.incr(key) == 1:
+        await r.expire(key, lock_seconds)
+
+
+async def clear_login_failures(phone: str) -> None:
+    r = await get_redis()
+    await r.delete(f"login_fail:{phone}")
 
 
 async def is_token_blocked(jti: str) -> bool:

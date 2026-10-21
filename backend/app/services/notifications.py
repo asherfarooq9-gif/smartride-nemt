@@ -3,6 +3,7 @@ Notification service: Twilio SMS + HL7 FHIR R4 hospital pre-alerts + FCM push.
 Falls back gracefully when credentials are absent.
 """
 
+import asyncio
 import httpx
 import logging
 from datetime import datetime, timezone
@@ -10,6 +11,27 @@ from datetime import datetime, timezone
 from app.core.config import settings
 
 log = logging.getLogger("smartride.notifications")
+
+TWILIO_TIMEOUT_SECONDS = 10
+_fcm_credentials = None
+
+
+def _fcm_access_token() -> str:
+    """Blocking: reads the key file once, refreshes only when the token expires."""
+    import google.auth.transport.requests
+    import google.oauth2.service_account
+
+    global _fcm_credentials
+    if _fcm_credentials is None:
+        _fcm_credentials = (
+            google.oauth2.service_account.Credentials.from_service_account_file(
+                settings.FIREBASE_CREDENTIALS_PATH,
+                scopes=["https://www.googleapis.com/auth/firebase.messaging"],
+            )
+        )
+    if not _fcm_credentials.valid:
+        _fcm_credentials.refresh(google.auth.transport.requests.Request())
+    return _fcm_credentials.token
 
 
 async def send_push(
@@ -20,17 +42,7 @@ async def send_push(
         log.debug("FCM no-op (no project_id or token)")
         return
     try:
-        import google.auth.transport.requests
-        import google.oauth2.service_account
-
-        credentials = (
-            google.oauth2.service_account.Credentials.from_service_account_file(
-                settings.FIREBASE_CREDENTIALS_PATH,
-                scopes=["https://www.googleapis.com/auth/firebase.messaging"],
-            )
-        )
-        credentials.refresh(google.auth.transport.requests.Request())
-        token = credentials.token
+        token = await asyncio.to_thread(_fcm_access_token)
         url = f"https://fcm.googleapis.com/v1/projects/{settings.FIREBASE_PROJECT_ID}/messages:send"
         payload: dict = {
             "message": {
@@ -49,6 +61,45 @@ async def send_push(
         log.warning("FCM push failed: %s", exc)
 
 
+_pending_pushes: set[asyncio.Task] = set()
+
+
+async def notify_user(
+    db,
+    *,
+    title: str,
+    body: str,
+    data: dict | None = None,
+    user_id=None,
+    patient_id=None,
+) -> None:
+    """Fire-and-forget push to a user (by user id, or by patient profile id).
+
+    Never raises: a failed notification must not fail the request that caused it.
+    """
+    from sqlalchemy import select
+
+    from app.models.models import Patient, User
+
+    try:
+        query = select(User.fcm_token)
+        if patient_id is not None:
+            query = query.join(Patient, Patient.user_id == User.id).where(
+                Patient.id == patient_id
+            )
+        else:
+            query = query.where(User.id == user_id)
+        token = (await db.execute(query)).scalar_one_or_none()
+        if token:
+            task = asyncio.create_task(
+                send_push(fcm_token=token, title=title, body=body, data=data)
+            )
+            _pending_pushes.add(task)  # keep a reference so it is not garbage-collected
+            task.add_done_callback(_pending_pushes.discard)
+    except Exception:
+        log.warning("push lookup failed", exc_info=True)
+
+
 def _mask_phone(phone: str) -> str:
     """Show only the last 3 digits so logs never carry a full PHI phone number."""
     if not phone or len(phone) < 4:
@@ -63,10 +114,13 @@ def _send_sms(to: str, body: str) -> None:
         log.info("SMS no-op (Twilio unconfigured) to %s", _mask_phone(to))
         return
     try:
+        from twilio.http.http_client import TwilioHttpClient
         from twilio.rest import Client
 
         msg = Client(
-            settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN
+            settings.TWILIO_ACCOUNT_SID,
+            settings.TWILIO_AUTH_TOKEN,
+            http_client=TwilioHttpClient(timeout=TWILIO_TIMEOUT_SECONDS),
         ).messages.create(body=body, from_=settings.TWILIO_FROM_NUMBER, to=to)
         log.info("SMS sent sid=%s to %s", msg.sid, _mask_phone(to))
     except Exception as exc:
@@ -82,7 +136,7 @@ async def send_family_sms(*, patient, ride, driver, hospital_name: str) -> None:
         f"Driver: {driver.full_name} ({driver.vehicle_plate}). "
         f"Ride ID: {ride.id}"
     )
-    _send_sms(patient.emergency_contact_phone, body)
+    await asyncio.to_thread(_send_sms, patient.emergency_contact_phone, body)
 
 
 async def send_hospital_alert(*, ride, triage: dict, hospital, patient) -> None:
@@ -111,7 +165,7 @@ async def send_hospital_alert(*, ride, triage: dict, hospital, patient) -> None:
         f"Severity: {triage.get('severity', '?')} | "
         f"Ride: {ride.id}"
     )
-    _send_sms(hospital.coordinator_phone, body)
+    await asyncio.to_thread(_send_sms, hospital.coordinator_phone, body)
 
 
 def _build_fhir_bundle(*, ride, triage: dict, patient) -> dict:

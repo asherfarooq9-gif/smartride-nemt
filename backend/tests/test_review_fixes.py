@@ -122,6 +122,7 @@ async def test_multirole_user_can_cancel_own_ride_from_driver_portal(
         headers=_auth(token),
     )
     assert r.status_code == 200, r.text
+    token = r.json()["access_token"]  # the old token is revoked once roles change
 
     from unittest.mock import AsyncMock, patch
 
