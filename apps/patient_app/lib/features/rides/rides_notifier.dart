@@ -1,4 +1,6 @@
 ﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart' show protected;
+import 'package:patient_app/core/providers.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 
 final ridesProvider =
@@ -8,11 +10,18 @@ final ridesProvider =
 
 class RidesNotifier extends AsyncNotifier<core.RideListResponse> {
   @override
-  Future<core.RideListResponse> build() => core.getMyRides();
+  Future<core.RideListResponse> build() {
+    // Rebuild (and drop the previous account's rides) when the session changes.
+    ref.watch(sessionTokenProvider);
+    return fetchRides();
+  }
+
+  @protected
+  Future<core.RideListResponse> fetchRides() => core.getMyRides();
 
   Future<void> refresh() async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => core.getMyRides());
+    state = await AsyncValue.guard(fetchRides);
   }
 }
 

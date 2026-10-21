@@ -50,7 +50,12 @@ class _DispatchingScreenState extends State<DispatchingScreen>
           context.go('/tracking/${widget.rideId}');
         } else if (ride.status == core.RideStatus.cancelled) {
           _pollTimer?.cancel();
-          if (mounted) context.go('/');
+          // Nobody could take the ride (the server gives up after a while):
+          // say so and offer 1122 instead of dropping back to the home screen.
+          if (mounted) {
+            context.go('/');
+            context.push('/no-drivers');
+          }
         }
       } on Exception {
         if (!mounted) return;

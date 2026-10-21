@@ -38,9 +38,10 @@ class DashboardState {
 }
 
 final dashboardProvider =
-    StateNotifierProvider<DashboardNotifier, DashboardState>(
-  (ref) => DashboardNotifier(ref),
-);
+    StateNotifierProvider<DashboardNotifier, DashboardState>((ref) {
+  ref.watch(sessionTokenProvider);
+  return DashboardNotifier(ref);
+});
 
 class DashboardNotifier extends StateNotifier<DashboardState> {
   DashboardNotifier(this._ref) : super(const DashboardState()) {
@@ -49,15 +50,21 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
 
   final Ref _ref;
 
+  /// Rides this driver passed on; they stay hidden on later refreshes.
+  final _declined = <String>{};
+
   Future<void> refresh() async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final driver = await core.getDriverMe();
-      final rides = await core.getDriverPendingRides();
-      final earnings = await core.getDriverEarnings();
+      final (driver, rides, earnings) = await (
+        core.getDriverMe(),
+        core.getDriverPendingRides(),
+        core.getDriverEarnings(),
+      ).wait;
       state = DashboardState(
         driver: driver,
-        pendingRides: rides,
+        pendingRides:
+            rides.where((r) => !_declined.contains(r.id.toString())).toList(),
         todayEarningsPkr: _calcTodayEarnings(earnings),
         isLoading: false,
       );
@@ -70,6 +77,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
   }
 
   void declineRide(String rideId) {
+    _declined.add(rideId);
     state = state.copyWith(
       pendingRides: state.pendingRides
           .where((r) => r.id.toString() != rideId)

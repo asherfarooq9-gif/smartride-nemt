@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:patient_app/core/location.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 
 const _specialties = [
@@ -53,16 +54,23 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
   }
 
   Future<void> _submit() async {
-    if (_addressCtrl.text.trim().isEmpty && _selectedDateTime == null) {
+    final dt = _selectedDateTime;
+    if (dt == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all required fields')),
+        const SnackBar(content: Text('Please choose a date and time')),
       );
       return;
     }
-    final dt = _selectedDateTime ?? DateTime.now().add(const Duration(hours: 2));
     setState(() => _submitting = true);
     try {
+      final position = await ref.read(locationReaderProvider)();
+      if (position == null) {
+        throw const core.AppError(
+            'We need your location to book a pickup. Turn on location and try again.');
+      }
       final ride = await core.createScheduledRide(core.ScheduledRideRequest(
+        pickupLat: position.latitude,
+        pickupLng: position.longitude,
         pickupAddress: _addressCtrl.text.trim().isEmpty
             ? 'Current location'
             : _addressCtrl.text.trim(),

@@ -4,6 +4,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/widgets.dart' show WidgetsBinding;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:go_router/go_router.dart';
+import 'package:smartride_core/smartride_core.dart' as core;
 
 final _msgController = StreamController<RemoteMessage>.broadcast();
 Stream<RemoteMessage> get incomingMessageStream => _msgController.stream;
@@ -24,12 +25,34 @@ Future<void> firebaseBackgroundHandler(RemoteMessage message) async {
   _showLocal(message);
 }
 
+/// Tell the backend which device to push to. Call after signing in; does
+/// nothing when Firebase is not configured (local builds, web).
+Future<void> registerPushToken() async {
+  try {
+    final token = await FirebaseMessaging.instance.getToken();
+    if (token != null) await core.registerFcmToken(token);
+  } on Object {
+    // Firebase unavailable: the app works, just without push.
+  }
+}
+
+/// Invalidate this device's token on sign-out so the next person to sign in
+/// here cannot receive the previous account's ride notifications.
+Future<void> forgetPushToken() async {
+  try {
+    await FirebaseMessaging.instance.deleteToken();
+  } on Object {
+    // Firebase unavailable: nothing to forget.
+  }
+}
+
 Future<void> initNotifications({required GoRouter router}) async {
   await Firebase.initializeApp();
 
   final messaging = FirebaseMessaging.instance;
 
   await messaging.requestPermission(alert: true, badge: true, sound: true);
+  messaging.onTokenRefresh.listen((token) => core.registerFcmToken(token));
 
   await _localNotifications.initialize(
     const InitializationSettings(

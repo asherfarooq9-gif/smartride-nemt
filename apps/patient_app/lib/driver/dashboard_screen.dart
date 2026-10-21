@@ -108,7 +108,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           ),
                         ),
                       ),
-                      if (dash.isLoading)
+                      // Spinner only for the first load: a background refresh must not
+                      // blank the list under the driver's finger.
+                      if (dash.isLoading && dash.driver == null)
                         const SliverFillRemaining(
                           child: core.LoadingState(message: 'Refreshing...'),
                         )

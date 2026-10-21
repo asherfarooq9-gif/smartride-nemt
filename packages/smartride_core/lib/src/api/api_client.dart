@@ -1,4 +1,6 @@
-﻿import 'package:dio/dio.dart';
+import 'dart:convert';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kReleaseMode, kIsWeb;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../storage/secure_storage.dart';
@@ -34,10 +36,16 @@ class ApiClient {
         headers: {'Content-Type': 'application/json'},
       ),
     );
-    _dio.interceptors.add(_AuthInterceptor());
+    _dio.interceptors.add(AuthInterceptor());
   }
 
   static final ApiClient instance = ApiClient._();
+
+  /// Called when an authenticated request is rejected with 401 (expired or
+  /// revoked token). The app registers a handler that signs the user out;
+  /// without it the stored token is cleared but the UI still believes it is
+  /// signed in and every later request silently fails.
+  static void Function()? onUnauthorized;
 
   late final Dio _dio;
 
@@ -123,7 +131,8 @@ class ApiClient {
       final detail = (e.response?.data is Map)
           ? (e.response!.data as Map)['detail']?.toString()
           : null;
-      return AppError(detail ?? 'Conflict — this action could not be completed.',
+      return AppError(
+          detail ?? 'Conflict — this action could not be completed.',
           statusCode: 409);
     }
 
@@ -144,23 +153,86 @@ class ApiClient {
   }
 }
 
-class _AuthInterceptor extends Interceptor {
+/// When a JWT expires, read from its (unverified) payload; null if unreadable.
+DateTime? jwtExpiry(String token) {
+  try {
+    final parts = token.split('.');
+    if (parts.length != 3) return null;
+    final payload = jsonDecode(
+      utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+    );
+    final exp = payload is Map ? payload['exp'] : null;
+    return exp is num
+        ? DateTime.fromMillisecondsSinceEpoch(exp.toInt() * 1000)
+        : null;
+  } on FormatException {
+    return null;
+  }
+}
+
+/// Attaches the stored bearer token (renewing it shortly before it expires) and
+/// ends the session when the server rejects it.
+class AuthInterceptor extends Interceptor {
+  AuthInterceptor({Dio Function(String baseUrl)? refreshClient})
+      : _refreshClient =
+            refreshClient ?? ((url) => Dio(BaseOptions(baseUrl: url)));
+
+  /// The server only renews tokens that are still valid, so renew with margin.
+  static const _renewWithin = Duration(minutes: 10);
+
+  final Dio Function(String baseUrl) _refreshClient;
+  Future<String?>? _renewing; // one renewal shared by concurrent requests
+
   @override
   Future<void> onRequest(
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    final token = await SecureStorage.instance.readToken();
+    var token = await SecureStorage.instance.readToken();
+    if (token != null && _expiresSoon(token)) {
+      token = await (_renewing ??= _renew(options.baseUrl, token)
+              .whenComplete(() => _renewing = null)) ??
+          token;
+    }
     if (token != null) {
       options.headers['Authorization'] = 'Bearer $token';
     }
     handler.next(options);
   }
 
+  bool _expiresSoon(String token) {
+    final expiry = jwtExpiry(token);
+    return expiry != null && expiry.difference(DateTime.now()) < _renewWithin;
+  }
+
+  /// Returns the new token, or null when the server refused (the original
+  /// request then goes out and its 401 ends the session).
+  Future<String?> _renew(String baseUrl, String token) async {
+    try {
+      final res = await _refreshClient(baseUrl).post<Map<String, dynamic>>(
+        '/api/v1/auth/refresh',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      final renewed = res.data?['access_token'] as String?;
+      if (renewed != null) await SecureStorage.instance.saveToken(renewed);
+      return renewed;
+    } on DioException {
+      return null;
+    }
+  }
+
   @override
-  void onError(DioException err, ErrorInterceptorHandler handler) {
-    if (err.response?.statusCode == 401) {
-      SecureStorage.instance.clear();
+  Future<void> onError(
+    DioException err,
+    ErrorInterceptorHandler handler,
+  ) async {
+    // Only a request that carried a token can mean "session expired"; a 401
+    // from /auth/login just means wrong credentials.
+    final carriedToken =
+        err.requestOptions.headers.containsKey('Authorization');
+    if (err.response?.statusCode == 401 && carriedToken) {
+      await SecureStorage.instance.clear();
+      ApiClient.onUnauthorized?.call();
     }
     handler.next(err);
   }

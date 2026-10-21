@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
+import 'package:patient_app/core/location.dart';
 import 'package:patient_app/core/notifications.dart';
 
 // ── Role state (drives which portal is shown) ──────────────────────────────────
@@ -21,12 +22,43 @@ final authProvider =
   (ref) => AuthNotifier(ref),
 );
 
+/// Token of the signed-in session, or null when signed out.
+///
+/// User-scoped providers (rides, dashboard, notifications, saved places, GPS)
+/// watch this so they are rebuilt, and drop the previous account's data,
+/// whenever the account changes.
+final sessionTokenProvider =
+    Provider<String?>((ref) => ref.watch(authProvider).valueOrNull);
+
 class AuthNotifier extends StateNotifier<AsyncValue<String?>> {
   AuthNotifier(this._ref) : super(const AsyncValue.loading()) {
+    core.ApiClient.onUnauthorized = _onSessionExpired;
     _init();
   }
 
   final Ref _ref;
+
+  @override
+  void dispose() {
+    if (core.ApiClient.onUnauthorized == _onSessionExpired) {
+      core.ApiClient.onUnauthorized = null;
+    }
+    super.dispose();
+  }
+
+  /// An authenticated request was rejected (token expired or revoked): the
+  /// interceptor already cleared storage, so end the session in the UI too and
+  /// let the router send the user back to the welcome screen.
+  void _onSessionExpired() {
+    if (state.valueOrNull == null) return; // signed out, or mid sign-in
+    _resetSession();
+  }
+
+  void _resetSession() {
+    _ref.read(rolesProvider.notifier).state = const [];
+    _ref.read(activeRoleProvider.notifier).state = 'patient';
+    state = const AsyncValue.data(null);
+  }
 
   Future<void> _init() async {
     final token = await core.SecureStorage.instance.readToken();
@@ -39,6 +71,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<String?>> {
       }
     }
     state = AsyncValue.data(token);
+    if (token != null) unawaited(registerPushToken());
   }
 
   Future<void> _persist(core.TokenResponse res) async {
@@ -50,6 +83,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<String?>> {
     );
     _ref.read(rolesProvider.notifier).state = res.roles;
     _ref.read(activeRoleProvider.notifier).state = res.activeRole;
+    unawaited(registerPushToken());
   }
 
   Future<void> signIn(String phone, String password, {String? activeRole}) async {
@@ -92,9 +126,8 @@ class AuthNotifier extends StateNotifier<AsyncValue<String?>> {
       await core.logout();
     } catch (_) {}
     await core.SecureStorage.instance.clear();
-    _ref.read(rolesProvider.notifier).state = const [];
-    _ref.read(activeRoleProvider.notifier).state = 'patient';
-    state = const AsyncValue.data(null);
+    unawaited(forgetPushToken());
+    _resetSession();
   }
 }
 
@@ -172,9 +205,10 @@ final _defaultPlaces = [
 ];
 
 final savedPlacesProvider =
-    StateNotifierProvider<SavedPlacesNotifier, List<SavedPlace>>(
-  (ref) => SavedPlacesNotifier(),
-);
+    StateNotifierProvider<SavedPlacesNotifier, List<SavedPlace>>((ref) {
+  ref.watch(sessionTokenProvider);
+  return SavedPlacesNotifier();
+});
 
 class SavedPlacesNotifier extends StateNotifier<List<SavedPlace>> {
   SavedPlacesNotifier() : super(const []) {
@@ -244,9 +278,10 @@ class AppNotification {
 }
 
 final notificationsProvider = StateNotifierProvider.family<
-    NotificationsNotifier, List<AppNotification>, String>(
-  (ref, portal) => NotificationsNotifier(portal),
-);
+    NotificationsNotifier, List<AppNotification>, String>((ref, portal) {
+  ref.watch(sessionTokenProvider);
+  return NotificationsNotifier(portal);
+});
 
 /// Maps the raw FCM message stream into displayable [AppNotification]s.
 /// Kept separate so the notifier can be driven by a fake stream in tests.
@@ -291,10 +326,10 @@ class NotificationsNotifier extends StateNotifier<List<AppNotification>> {
 
 // ── GPS Stream (driver portal) ──────────────────────────────────────────────────
 
-final gpsStreamProvider =
-    StateNotifierProvider<GpsStreamNotifier, bool>(
-  (ref) => GpsStreamNotifier(ref),
-);
+final gpsStreamProvider = StateNotifierProvider<GpsStreamNotifier, bool>((ref) {
+  ref.watch(sessionTokenProvider);
+  return GpsStreamNotifier(ref);
+});
 
 class GpsStreamNotifier extends StateNotifier<bool> {
   GpsStreamNotifier(Ref ref) : super(false);
@@ -322,14 +357,10 @@ class GpsStreamNotifier extends StateNotifier<bool> {
     _ws = core.WsClient(onMessage: (_) {});
     await _ws!.connect(uri, token);
 
-    const locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.high,
-      distanceFilter: 10,
-    );
-
     DateTime? lastRest;
 
-    _posSub = Geolocator.getPositionStream(locationSettings: locationSettings)
+    _posSub = Geolocator.getPositionStream(
+            locationSettings: driverTrackingSettings())
         .listen((pos) {
       _ws?.send({'lat': pos.latitude, 'lng': pos.longitude});
 

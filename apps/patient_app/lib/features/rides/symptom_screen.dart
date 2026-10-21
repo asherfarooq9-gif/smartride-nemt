@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:patient_app/core/location.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 
 const _symptoms = [
@@ -23,8 +24,8 @@ class _SubmitNotifier extends StateNotifier<AsyncValue<void>> {
   Future<String?> submit({
     required String address,
     required String symptoms,
-    double? lat,
-    double? lng,
+    required double lat,
+    required double lng,
   }) async {
     state = const AsyncValue.loading();
     try {
@@ -74,9 +75,18 @@ class _SymptomScreenState extends ConsumerState<SymptomScreen> {
         ? _detailsCtrl.text.trim()
         : [_selected.join(', '), if (_detailsCtrl.text.trim().isNotEmpty) _detailsCtrl.text.trim()].join('. ');
 
+    final position = await ref.read(locationReaderProvider)();
+    if (!mounted) return;
+    if (position == null) {
+      _askForLocation();
+      return;
+    }
+
     final rideId = await ref.read(_submitProvider.notifier).submit(
           address: _addressCtrl.text.trim().isEmpty ? 'Current location' : _addressCtrl.text.trim(),
           symptoms: symptomText,
+          lat: position.latitude,
+          lng: position.longitude,
         );
     if (!mounted) return;
     if (rideId != null) {
@@ -88,6 +98,19 @@ class _SymptomScreenState extends ConsumerState<SymptomScreen> {
         backgroundColor: core.kError,
       ));
     }
+  }
+
+  void _askForLocation() {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: const Text(
+          'We need your location to send help. Turn on location and try again.'),
+      backgroundColor: core.kError,
+      action: SnackBarAction(
+        label: 'Enable',
+        textColor: Colors.white,
+        onPressed: () => context.push('/permissions'),
+      ),
+    ));
   }
 
   @override

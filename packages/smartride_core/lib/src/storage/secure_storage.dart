@@ -2,8 +2,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 const _keyToken = 'smartride_jwt';
 const _keyUserId = 'smartride_user_id';
-const _keyRole = 'smartride_role';        // active role
-const _keyRoles = 'smartride_roles';      // CSV of all held roles
+const _keyRole = 'smartride_role'; // active role
+const _keyRoles = 'smartride_roles'; // CSV of all held roles
 
 class SecureStorage {
   SecureStorage._();
@@ -26,6 +26,10 @@ class SecureStorage {
       _storage.write(key: _keyRoles, value: roles.join(',')),
     ]);
   }
+
+  /// Replace only the access token (used by token refresh).
+  Future<void> saveToken(String token) =>
+      _storage.write(key: _keyToken, value: token);
 
   /// Persist only the active role (used on portal switch).
   Future<void> saveActiveRole(String role) =>

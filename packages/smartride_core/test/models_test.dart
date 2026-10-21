@@ -68,6 +68,21 @@ void main() {
       final json = req.toJson();
       expect(json['pickup_address'], '10 Downing St');
       expect(json['pickup_lat'], 51.5);
+      expect(json['pickup_lng'], -0.12);
+    });
+  });
+
+  group('ScheduledRideRequest', () {
+    test('always sends coordinates the backend requires', () {
+      final json = ScheduledRideRequest(
+        pickupAddress: 'Home',
+        scheduledFor: DateTime.utc(2030, 1, 2, 9),
+        pickupLat: 33.7,
+        pickupLng: 73.0,
+      ).toJson();
+      expect(json['pickup_lat'], 33.7);
+      expect(json['pickup_lng'], 73.0);
+      expect(json['scheduled_for'], '2030-01-02T09:00:00.000Z');
     });
   });
 }
