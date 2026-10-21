@@ -8,5 +8,8 @@ rule_files:
 scrape_configs:
   - job_name: smartride-backend
     metrics_path: /metrics
+    # Production: /metrics requires METRICS_TOKEN. Uncomment and mount the token file:
+    # authorization:
+    #   credentials_file: /etc/prometheus/metrics_token
     static_configs:
       - targets: ["backend:8000"]

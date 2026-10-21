@@ -58,3 +58,6 @@ _archive/
 _flutter_tmp/
 _serveerr.txt
 *.tsbuildinfo
+
+# Local agent tooling state
+.claude-flow/

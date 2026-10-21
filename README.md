@@ -11,12 +11,13 @@ cp .env.example .env          # Windows: copy .env.example .env
 # 2. Build and start all services (first run takes ~5 min)
 docker compose up --build -d
 
-# 3. Seed admin user + demo hospitals
-docker exec smartride_backend python seed.py
+# 3. Seed admin user + demo hospitals. Pass ADMIN_PASSWORD to choose the admin
+#    password; otherwise a random one is generated and printed once.
+docker exec -e ADMIN_PASSWORD=choose-a-strong-one smartride_backend python seed.py
 
 # 4. Open the admin dashboard
 #    http://localhost:3000
-#    Login: phone=+92300000001  password=admin123
+#    Login: phone=+92300000001  password=<the ADMIN_PASSWORD you set / the one printed>
 ```
 
 ### Common commands
@@ -39,7 +40,7 @@ make clean         # stop + remove volumes (fresh start)
 | Triage AI | http://localhost:8001/docs | Symptom → specialty classifier |
 | Admin Dashboard | http://localhost:3000 | Next.js control panel |
 | PostgreSQL | localhost:5432 | Primary database (PostGIS) |
-| Redis | localhost:6379 | Cache + Celery broker |
+| Redis | localhost:6379 | Cache, token blocklist, pub/sub |
 
 ## Architecture
 

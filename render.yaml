@@ -25,11 +25,15 @@ services:
         value: ""            # triage AI not deployed — graceful fallback
       - key: DEBUG
         value: "false"
+      - key: ALLOWED_ORIGINS
+        sync: false          # JSON list, e.g. ["https://admin.example.com"]; the app refuses to boot with "*" when DEBUG=false
+      - key: FORWARDED_ALLOW_IPS
+        value: "*"           # Render's proxy is the only peer; lets uvicorn read X-Forwarded-For so rate limits key on the real client IP
       - key: GOOGLE_MAPS_API_KEY
         value: ""
       - key: TWILIO_ACCOUNT_SID
         value: ""
       - key: TWILIO_AUTH_TOKEN
         value: ""
-      - key: TWILIO_PHONE_NUMBER
+      - key: TWILIO_FROM_NUMBER
         value: ""

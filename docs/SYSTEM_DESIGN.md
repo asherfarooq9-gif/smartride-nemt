@@ -83,9 +83,9 @@ SmartRide is an AI-powered NEMT platform that automates the full emergency trans
 │   └──────────┬──────────────────────────────────────────────┘  │
 │              │                                                  │
 │   ┌──────────▼──────────┐    ┌─────────────────────────────┐   │
-│   │  AI Triage Service  │    │   Celery Worker             │   │
-│   │  (Port 8001)        │    │   (SMS + Hospital Alerts)   │   │
-│   └─────────────────────┘    └─────────────────────────────┘   │
+│   │  AI Triage Service  │                                      │
+│   │  (Port 8001)        │                                      │
+│   └─────────────────────┘                                      │
 └──────────────────────────────────────────────────────────────┬──┘
                                                                │
 ┌──────────────────────────────────────────────────────────────▼──┐
@@ -106,7 +106,6 @@ SmartRide is an AI-powered NEMT platform that automates the full emergency trans
 | **Flutter App** | Patient & driver portals; GPS streaming; real-time tracking |
 | **FastAPI Backend** | REST API; business logic; auth; WebSocket gateway |
 | **AI Triage Service** | Symptom classification; specialty prediction; severity scoring |
-| **Celery Worker** | Async SMS dispatch; hospital FHIR pre-alerts |
 | **PostgreSQL** | Persistent storage: users, rides, hospitals, analytics |
 | **Redis** | JWT revocation blocklist; hospital list cache; location pub/sub |
 | **Next.js Admin** | Hospital management; driver verification; analytics dashboard |
@@ -124,7 +123,7 @@ SmartRide is an AI-powered NEMT platform that automates the full emergency trans
 | Database driver | asyncpg | High-performance PostgreSQL async driver |
 | Auth | python-jose + bcrypt | JWT tokens + secure password hashing |
 | Cache / Pub-Sub | Redis (aioredis) | Token blocklist, hospital cache, WebSocket location |
-| Task Queue | Celery + Redis | Async notifications without blocking request cycle |
+| Background work | FastAPI BackgroundTasks | Dispatch and notifications without blocking the request |
 | Rate Limiting | slowapi | Per-endpoint rate limits (auth: 5–10/min) |
 | Validation | Pydantic v2 | Request/response schemas with field-level constraints |
 
@@ -167,8 +166,7 @@ backend/
 │   │   ├── database.py      # Async SQLAlchemy engine + session factory
 │   │   ├── security.py      # JWT + bcrypt + role-based deps
 │   │   ├── redis_client.py  # Async Redis: blocklist, cache, pub/sub
-│   │   ├── logging.py       # Structured JSON logging + trace IDs
-│   │   └── celery_app.py    # Celery broker configuration
+│   │   └── logging.py       # Structured JSON logging + trace IDs
 │   ├── models/
 │   │   └── models.py        # SQLAlchemy ORM models (10 tables)
 │   ├── schemas/
@@ -826,7 +824,6 @@ Services:
   redis      ← Redis 7 (port 6379)
   backend    ← FastAPI (port 8000)
   triage     ← AI triage FastAPI (port 8001)
-  celery_worker ← Celery background tasks (no external port)
   admin_dashboard ← Next.js (port 3000)
 ```
 

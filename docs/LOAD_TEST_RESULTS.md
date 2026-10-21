@@ -97,3 +97,26 @@ profile.)
 
 - Per-user rate limiting (NAT'd mobile users share IPs; per-IP alone can throttle
   legitimate users).
+
+
+## Test 5 — Query plans on a large dataset (2026-10-21)
+
+Postgres 16, database seeded with 20 000 patients, 5 000 drivers and 381 040 rides
+(40 of them pending), then `ANALYZE`d. `EXPLAIN (ANALYZE)` on the queries the
+dispatch loop and the most-used endpoints run:
+
+| Query | Plan | Execution |
+|---|---|---|
+| Dispatch loop: oldest stale pending emergency rides | index scan on `idx_rides_status`, tiny sort | 0.16 ms |
+| A busy patient's ride history, newest first | index scan on `idx_rides_requested_at` (stops after 20 rows) | 0.06 ms |
+| "Does this driver have an active ride?" | index scan on `idx_rides_status` | 0.09 ms |
+| Driver candidates near a pickup (bounding box) | bitmap scan on `idx_drivers_status`, 1 281 rows | 0.76 ms |
+
+**Conclusion:** the existing indexes are enough at this size. I prototyped a partial
+index on pending rides, a `(patient_id, requested_at)` index and a `(driver_id, status)`
+index; the planner ignored the first and third, and the second saved 0.01 ms, so none
+of them were kept. Revisit when the rides table is an order of magnitude larger or
+`EXPLAIN` shows a sequential scan.
+
+Not measured here: HTTP-level throughput (`backend/loadtest.py`, `scripts/soak_test.py`
+need a running stack; re-run them before launch against the production topology).

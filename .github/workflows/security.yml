@@ -3,8 +3,13 @@ name: Security Scan
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   schedule:
     - cron: "0 6 * * 1"  # every Monday 06:00 UTC
+
+permissions:
+  contents: read
 
 jobs:
   python-audit:
@@ -23,9 +28,44 @@ jobs:
 
       - name: Audit Python dependencies
         run: |
-          cd backend
-          pip-audit -r requirements.txt --format=json -o /tmp/pip-audit.json || true
-          pip-audit -r requirements.txt
+          pip-audit -r backend/requirements.txt --format=json -o /tmp/pip-audit.json || true
+          pip-audit -r backend/requirements.txt
+          pip-audit -r ai-services/triage/requirements.txt
+
+  node-audit:
+    name: Admin Dashboard Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Fail on high or critical advisories in production dependencies
+        working-directory: admin-dashboard
+        run: |
+          npm ci --legacy-peer-deps --ignore-scripts
+          npm audit --omit=dev --audit-level=high
+
+  image-scan:
+    name: Container Image Scan (Trivy)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image:
+          - { name: backend, context: backend }
+          - { name: triage, context: ai-services/triage }
+          - { name: admin, context: admin-dashboard }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build ${{ matrix.image.name }}
+        run: docker build -t scan-${{ matrix.image.name }} ${{ matrix.image.context }}
+      - name: Scan for fixable high/critical vulnerabilities
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: scan-${{ matrix.image.name }}
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
 
       - name: Upload audit report
         uses: actions/upload-artifact@v4
