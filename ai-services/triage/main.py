@@ -5,7 +5,7 @@ Phase 3: Replace infer_specialty() with fine-tuned DistilBERT ONNX model
 """
 import time
 from fastapi import FastAPI
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import re
 
 app = FastAPI(title="SmartRide Triage Service", version="1.0.0")
@@ -35,26 +35,46 @@ SPECIALTY_RULES = [
 ]
 
 
+def _compile(keywords: list[str]) -> re.Pattern:
+    """Whole-word match with simple inflections.
+
+    Plain substring tests matched "ear" inside "early", "nearby" and "year".
+    Whitespace inside a phrase matches any run of whitespace.
+    """
+    alternatives = "|".join(
+        r"\s+".join(re.escape(word) for word in kw.split()) for kw in keywords
+    )
+    return re.compile(r"\b(?:" + alternatives + r")(?:s|es|ed|ing)?\b")
+
+
+def _normalise(text: str) -> str:
+    # Mobile keyboards type U+2019 where the keyword lists use an ASCII apostrophe.
+    return text.lower().replace("\u2019", "'").replace("\u2018", "'")
+
+
+SEVERITY_5_PATTERN = _compile(SEVERITY_5_KEYWORDS)
+SPECIALTY_PATTERNS = [(_compile(kws), specialty) for kws, specialty in SPECIALTY_RULES]
+
+
 def infer_specialty(text: str) -> tuple[str, float]:
     """
     Rule-based specialty inference.
     REPLACE this function body with ONNX DistilBERT call in Phase 3.
     """
-    text_lower = text.lower()
+    text_lower = _normalise(text)
 
-    for keywords, specialty in SPECIALTY_RULES:
-        if any(kw in text_lower for kw in keywords):
+    for pattern, specialty in SPECIALTY_PATTERNS:
+        if pattern.search(text_lower):
             return specialty, 0.78
 
     return "general_emergency", 0.60
 
 
 def compute_severity(text: str, specialty: str) -> tuple[str, bool]:
-    text_lower = text.lower()
-
-    for kw in SEVERITY_5_KEYWORDS:
-        if kw in text_lower:
-            return "5", True
+    # Negation ("no chest pain") is deliberately not handled: over-triaging a
+    # negated symptom costs a faster ambulance, missing a real one costs a life.
+    if SEVERITY_5_PATTERN.search(_normalise(text)):
+        return "5", True
 
     severity_map = {
         "cardiology": "4",
@@ -66,7 +86,8 @@ def compute_severity(text: str, specialty: str) -> tuple[str, bool]:
 
 
 class TriageRequest(BaseModel):
-    text: str
+    # 2000 matches the backend's symptom_text limit.
+    text: str = Field(min_length=1, max_length=2000)
 
 
 class TriageResponse(BaseModel):
