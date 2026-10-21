@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { api, type DashboardSummary as Summary, type Ride } from '@/lib/api'
 import StatCard from '@/components/ui/StatCard'
 import StatusBadge from '@/components/ui/StatusBadge'
@@ -13,7 +13,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
-  async function load() {
+  const load = useCallback(async () => {
     try {
       const [summary, rides] = await Promise.all([
         api.summary(),
@@ -27,13 +27,17 @@ export default function DashboardPage() {
       setLoading(false)
       setRefreshing(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
-    load()
+    // First load on the next tick (not synchronously in the effect), then every 30 s.
+    const first = setTimeout(load, 0)
     const interval = setInterval(load, 30_000)
-    return () => clearInterval(interval)
-  }, [])
+    return () => {
+      clearTimeout(first)
+      clearInterval(interval)
+    }
+  }, [load])
 
   function handleRefresh() {
     setRefreshing(true)

@@ -41,7 +41,12 @@ export default function DriversPage() {
     return () => clearTimeout(t)
   }, [searchInput])
 
-  useEffect(() => { load() }, [load])
+  // Start the request on the next tick (not synchronously in the effect) and drop
+  // it if the filters change again first.
+  useEffect(() => {
+    const t = setTimeout(load, 0)
+    return () => clearTimeout(t)
+  }, [load])
 
   async function verify(id: string, verified: boolean) {
     setVerifying(id)
@@ -80,6 +85,7 @@ export default function DriversPage() {
         <div className="flex items-center gap-2">
           <Filter size={14} className="text-gray-400" />
           <select
+            aria-label="Filter by status"
             value={statusFilter}
             onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
             className="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
@@ -88,6 +94,7 @@ export default function DriversPage() {
             {STATUS_OPTS.filter(Boolean).map(s => <option key={s} value={s}>{s}</option>)}
           </select>
           <select
+            aria-label="Filter by verification"
             value={verifiedFilter}
             onChange={e => { setVerifiedFilter(e.target.value); setPage(1) }}
             className="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/20"

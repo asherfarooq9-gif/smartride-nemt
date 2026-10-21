@@ -23,7 +23,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       ...(options.headers ?? {}),
     },
   })
-  if (res.status === 401) {
+  // A 401 from /auth/login means wrong credentials, not an expired session: the
+  // form must show the server's message instead of reloading the page.
+  if (res.status === 401 && !path.endsWith('/auth/login')) {
     clearToken()
     if (typeof window !== 'undefined') window.location.href = '/login'
     throw new Error('Session expired. Please sign in again.')

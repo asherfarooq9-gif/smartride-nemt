@@ -54,7 +54,12 @@ export default function RidesPage() {
     return () => clearTimeout(t)
   }, [searchInput])
 
-  useEffect(() => { load() }, [load])
+  // Start the request on the next tick (not synchronously in the effect) and drop
+  // it if the filters change again first.
+  useEffect(() => {
+    const t = setTimeout(load, 0)
+    return () => clearTimeout(t)
+  }, [load])
 
   async function openDetail(id: string) {
     setModalLoading(true)
@@ -98,6 +103,7 @@ export default function RidesPage() {
         <div className="flex items-center gap-2">
           <Filter size={14} className="text-gray-400" />
           <select
+            aria-label="Filter by status"
             value={statusFilter}
             onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
             className="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
@@ -108,6 +114,7 @@ export default function RidesPage() {
             ))}
           </select>
           <select
+            aria-label="Filter by ride type"
             value={typeFilter}
             onChange={e => { setTypeFilter(e.target.value); setPage(1) }}
             className="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"

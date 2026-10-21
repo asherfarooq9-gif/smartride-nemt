@@ -58,7 +58,12 @@ export default function HospitalsPage() {
     }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  // Start the request on the next tick (not synchronously in the effect) and drop
+  // it if the filters change again first.
+  useEffect(() => {
+    const t = setTimeout(load, 0)
+    return () => clearTimeout(t)
+  }, [load])
 
   function openDetail(h: Hospital) {
     setSelected(h)
@@ -138,8 +143,9 @@ export default function HospitalsPage() {
           <div className="grid grid-cols-2 gap-4">
             {(['name', 'address', 'city'] as const).map(f => (
               <div key={f} className={f === 'address' ? 'col-span-2' : ''}>
-                <label className="block text-xs font-medium text-gray-500 mb-1 capitalize">{f}</label>
+                <label htmlFor={`new-hospital-${f}`} className="block text-xs font-medium text-gray-500 mb-1 capitalize">{f}</label>
                 <input
+                  id={`new-hospital-${f}`}
                   value={(form[f] as string) ?? ''}
                   onChange={e => setForm(p => ({ ...p, [f]: e.target.value }))}
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
@@ -148,8 +154,9 @@ export default function HospitalsPage() {
             ))}
             {(['lat', 'lng', 'ed_capacity'] as const).map(f => (
               <div key={f}>
-                <label className="block text-xs font-medium text-gray-500 mb-1">{f === 'ed_capacity' ? 'ED Capacity' : f.toUpperCase()}</label>
+                <label htmlFor={`new-hospital-${f}`} className="block text-xs font-medium text-gray-500 mb-1">{f === 'ed_capacity' ? 'ED Capacity' : f.toUpperCase()}</label>
                 <input
+                  id={`new-hospital-${f}`}
                   type="number" step="any"
                   value={(form[f] as number) ?? ''}
                   onChange={e => setForm(p => ({ ...p, [f]: parseFloat(e.target.value) || 0 }))}
@@ -159,8 +166,9 @@ export default function HospitalsPage() {
             ))}
             {(['phone', 'coordinator_phone'] as const).map(f => (
               <div key={f}>
-                <label className="block text-xs font-medium text-gray-500 mb-1">{f === 'phone' ? 'Phone' : 'Coordinator Phone'}</label>
+                <label htmlFor={`new-hospital-${f}`} className="block text-xs font-medium text-gray-500 mb-1">{f === 'phone' ? 'Phone' : 'Coordinator Phone'}</label>
                 <input
+                  id={`new-hospital-${f}`}
                   value={(form[f] as string) ?? ''}
                   onChange={e => setForm(p => ({ ...p, [f]: e.target.value }))}
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"

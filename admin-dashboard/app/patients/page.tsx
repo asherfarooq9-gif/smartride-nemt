@@ -35,7 +35,12 @@ export default function PatientsPage() {
     return () => clearTimeout(t)
   }, [searchInput])
 
-  useEffect(() => { load() }, [load])
+  // Start the request on the next tick (not synchronously in the effect) and drop
+  // it if the filters change again first.
+  useEffect(() => {
+    const t = setTimeout(load, 0)
+    return () => clearTimeout(t)
+  }, [load])
 
   const pages = Math.ceil(total / 20)
 

@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { api, type ForecastResponse } from '@/lib/api'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -8,16 +8,17 @@ import {
 import { RefreshCw, Download, BarChart2, TrendingUp, Database } from 'lucide-react'
 
 const CITIES = ['Islamabad', 'Rawalpindi']
+const DEFAULT_CITY = CITIES[0]
 
 export default function AnalyticsPage() {
-  const [city, setCity] = useState('Islamabad')
+  const [city, setCity] = useState(DEFAULT_CITY)
   const [forecast, setForecast] = useState<ForecastResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [snapshotMsg, setSnapshotMsg] = useState('')
   const [activeTab, setActiveTab] = useState<'forecast' | 'volume'>('forecast')
 
-  async function loadForecast(c = city) {
+  const loadForecast = useCallback(async (c: string) => {
     setLoading(true)
     setError('')
     try {
@@ -28,7 +29,7 @@ export default function AnalyticsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   async function writeSnapshot() {
     try {
@@ -45,7 +46,10 @@ export default function AnalyticsPage() {
     loadForecast(c)
   }
 
-  useEffect(() => { loadForecast() }, [])
+  useEffect(() => {
+    const t = setTimeout(() => loadForecast(DEFAULT_CITY), 0)
+    return () => clearTimeout(t)
+  }, [loadForecast])
 
   const chartData = forecast?.forecast.map(f => ({
     time: new Date(f.hour).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -75,7 +79,7 @@ export default function AnalyticsPage() {
             ))}
           </div>
           <button
-            onClick={() => loadForecast()}
+            onClick={() => loadForecast(city)}
             disabled={loading}
             className="flex items-center gap-2 text-sm bg-white border border-gray-200 hover:border-gray-300 px-4 py-2 rounded-xl shadow-sm transition disabled:opacity-50"
           >
