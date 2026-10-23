@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/widgets.dart' show WidgetsBinding;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:go_router/go_router.dart';
@@ -25,14 +26,47 @@ Future<void> firebaseBackgroundHandler(RemoteMessage message) async {
   _showLocal(message);
 }
 
+const _registerRetryDelays = [
+  Duration(seconds: 2),
+  Duration(seconds: 10),
+  Duration(seconds: 30),
+];
+
 /// Tell the backend which device to push to. Call after signing in; does
 /// nothing when Firebase is not configured (local builds, web).
 Future<void> registerPushToken() async {
+  String? token;
   try {
-    final token = await FirebaseMessaging.instance.getToken();
-    if (token != null) await core.registerFcmToken(token);
-  } on Object {
+    token = await FirebaseMessaging.instance.getToken();
+  } on Object catch (e, st) {
     // Firebase unavailable: the app works, just without push.
+    core.ErrorReporter.report('Push token unavailable', e, st);
+    return;
+  }
+  if (token != null) await registerTokenWithRetry(token);
+}
+
+/// Registers [token] with the backend, retrying transient failures (offline,
+/// 5xx) a few times. A token the server never receives means silent missed
+/// ride notifications, so a final failure is reported rather than dropped.
+@visibleForTesting
+Future<void> registerTokenWithRetry(
+  String token, {
+  Future<void> Function(String) register = core.registerFcmToken,
+  List<Duration> delays = _registerRetryDelays,
+}) async {
+  for (var attempt = 0;; attempt++) {
+    try {
+      await register(token);
+      return;
+    } on core.AppError catch (e, st) {
+      if (e.statusCode == 401) return; // signed out: nothing to register for
+      if (e.isPermanent || attempt >= delays.length) {
+        core.ErrorReporter.report('Push token registration failed', e, st);
+        return;
+      }
+      await Future<void>.delayed(delays[attempt]);
+    }
   }
 }
 
@@ -41,8 +75,9 @@ Future<void> registerPushToken() async {
 Future<void> forgetPushToken() async {
   try {
     await FirebaseMessaging.instance.deleteToken();
-  } on Object {
+  } on Object catch (e, st) {
     // Firebase unavailable: nothing to forget.
+    core.ErrorReporter.report('Push token could not be deleted', e, st);
   }
 }
 
@@ -52,7 +87,7 @@ Future<void> initNotifications({required GoRouter router}) async {
   final messaging = FirebaseMessaging.instance;
 
   await messaging.requestPermission(alert: true, badge: true, sound: true);
-  messaging.onTokenRefresh.listen((token) => core.registerFcmToken(token));
+  messaging.onTokenRefresh.listen((token) => registerTokenWithRetry(token));
 
   await _localNotifications.initialize(
     const InitializationSettings(

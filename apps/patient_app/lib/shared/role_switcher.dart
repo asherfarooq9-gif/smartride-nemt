@@ -158,7 +158,7 @@ class PortalDrawer extends ConsumerWidget {
   Future<void> _switch(
       BuildContext context, WidgetRef ref, String role, String home) async {
     // Edge case: warn if a ride is being driven (GPS streaming) before leaving.
-    if (ref.read(gpsStreamProvider)) {
+    if (ref.read(gpsStreamProvider).isActive) {
       final leave = await showDialog<bool>(
         context: context,
         builder: (_) => AlertDialog(
@@ -178,10 +178,27 @@ class PortalDrawer extends ConsumerWidget {
       );
       if (leave != true) return;
     }
-    await ref.read(authProvider.notifier).switchActiveRole(role);
+    try {
+      await ref.read(authProvider.notifier).switchActiveRole(role);
+    } on core.AppError catch (e) {
+      if (context.mounted) _showSwitchError(context, e.message);
+      return;
+    } on Exception catch (e, st) {
+      core.ErrorReporter.report('Switching portal failed', e, st);
+      if (context.mounted) {
+        _showSwitchError(context, 'Could not switch portals. Please try again.');
+      }
+      return;
+    }
     if (context.mounted) {
       Navigator.pop(context);
       context.go(home);
     }
+  }
+
+  void _showSwitchError(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: core.kError),
+    );
   }
 }

@@ -46,17 +46,21 @@ class _AddRoleScreenState extends ConsumerState<AddRoleScreen> {
           );
       if (!mounted) return;
       context.go(_isDriver ? '/driver' : '/');
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e is AppError ? e.message : 'Could not add role'),
-          backgroundColor: kError,
-        ),
-      );
+    } on AppError catch (e) {
+      _showError(e.message);
+    } on Exception catch (e, st) {
+      ErrorReporter.report('Adding a role failed', e, st);
+      _showError('Could not add this role. Please try again.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: kError),
+    );
   }
 
   @override

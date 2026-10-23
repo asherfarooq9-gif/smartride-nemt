@@ -2,7 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 import 'package:patient_app/core/providers.dart';
 
-enum AcceptResult { success, alreadyTaken, error }
+/// [successWithoutTracking]: the ride is accepted but location sharing could
+/// not start, so the driver must be told the patient cannot see them.
+enum AcceptResult { success, successWithoutTracking, alreadyTaken, error }
 
 class DashboardState {
   const DashboardState({
@@ -103,17 +105,22 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
   Future<AcceptResult> acceptRide(String rideId) async {
     try {
       await core.acceptRide(rideId);
-      await _ref.read(gpsStreamProvider.notifier).startStreaming(rideId);
-      return AcceptResult.success;
-    } catch (e) {
-      if (e is core.AppError && e.statusCode == 409) {
-        return AcceptResult.alreadyTaken;
-      }
-      state = state.copyWith(
-        error: e is core.AppError ? e.message : 'Failed to accept ride',
-      );
+    } on core.AppError catch (e) {
+      if (e.statusCode == 409) return AcceptResult.alreadyTaken;
+      state = state.copyWith(error: e.message);
+      return AcceptResult.error;
+    } on Exception catch (e, st) {
+      core.ErrorReporter.report('Accepting a ride failed', e, st);
+      state = state.copyWith(error: 'Failed to accept ride');
       return AcceptResult.error;
     }
+    final tracking =
+        await _ref.read(gpsStreamProvider.notifier).startStreaming(rideId);
+    final isSharing = tracking == GpsStartResult.started ||
+        tracking == GpsStartResult.alreadyStreaming;
+    return isSharing
+        ? AcceptResult.success
+        : AcceptResult.successWithoutTracking;
   }
 
   double _calcTodayEarnings(Map<String, dynamic> data) {

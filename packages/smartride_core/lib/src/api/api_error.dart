@@ -8,6 +8,13 @@
   bool get isNotFound => statusCode == 404;
   bool get isServerError => statusCode != null && statusCode! >= 500;
 
+  /// A 4xx that retrying cannot fix (bad request, forbidden, not found).
+  /// Timeouts and rate limits are transient and excluded.
+  bool get isPermanent {
+    final code = statusCode;
+    return code != null && code >= 400 && code < 500 && code != 408 && code != 429;
+  }
+
   @override
   String toString() => 'AppError($statusCode): $message';
 }

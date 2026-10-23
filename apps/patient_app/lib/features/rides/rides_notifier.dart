@@ -19,9 +19,14 @@ class RidesNotifier extends AsyncNotifier<core.RideListResponse> {
   @protected
   Future<core.RideListResponse> fetchRides() => core.getMyRides();
 
+  /// Reloads without blanking the list: the previous rides stay on screen
+  /// while loading, and are kept if the reload fails.
   Future<void> refresh() async {
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(fetchRides);
+    final previous = state;
+    state = const AsyncValue<core.RideListResponse>.loading()
+        .copyWithPrevious(previous);
+    final next = await AsyncValue.guard(fetchRides);
+    state = next.hasError ? next.copyWithPrevious(previous) : next;
   }
 }
 

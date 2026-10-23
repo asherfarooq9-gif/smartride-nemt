@@ -36,6 +36,8 @@ void main() {
       child: MaterialApp.router(routerConfig: router),
     ));
 
+    await tester.tap(find.text('Chest Pain'));
+    await tester.pump();
     await tester.ensureVisible(find.text('Send for Help'));
     await tester.tap(find.text('Send for Help'));
     await tester.pumpAndSettle();

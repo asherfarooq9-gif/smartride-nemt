@@ -1,8 +1,10 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show kReleaseMode, kIsWeb;
+import 'package:flutter/foundation.dart'
+    show kReleaseMode, kIsWeb, visibleForTesting;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../diagnostics/error_reporter.dart';
 import '../storage/secure_storage.dart';
 import 'api_error.dart';
 
@@ -12,22 +14,14 @@ class ApiClient {
     String? envUrl;
     try {
       envUrl = dotenv.isInitialized ? dotenv.env['API_BASE_URL'] : null;
-    } catch (_) {
+    } on Object {
       envUrl = null;
     }
-    // Platform-correct default: 10.0.2.2 is the Android-emulator alias for the
-    // host and is UNREACHABLE from a desktop browser, so web must use localhost.
-    const defaultUrl =
-        kIsWeb ? 'http://localhost:8000' : 'http://10.0.2.2:8000';
-    final baseUrl = (envUrl != null && envUrl.isNotEmpty) ? envUrl : defaultUrl;
-    if (kReleaseMode &&
-        !kIsWeb &&
-        !baseUrl.startsWith('https://') &&
-        !baseUrl.startsWith('http://127.') &&
-        !baseUrl.startsWith('http://10.0.2.2')) {
-      throw StateError(
-          'API_BASE_URL must use HTTPS in release builds. Got: $baseUrl');
-    }
+    final baseUrl = resolveApiBaseUrl(
+      envUrl: envUrl,
+      isRelease: kReleaseMode,
+      isWeb: kIsWeb,
+    );
     _dio = Dio(
       BaseOptions(
         baseUrl: baseUrl,
@@ -38,6 +32,9 @@ class ApiClient {
     );
     _dio.interceptors.add(AuthInterceptor());
   }
+
+  @visibleForTesting
+  ApiClient.withDio(Dio dio) : _dio = dio;
 
   static final ApiClient instance = ApiClient._();
 
@@ -57,100 +54,159 @@ class ApiClient {
   Future<Map<String, dynamic>> get(
     String path, {
     Map<String, dynamic>? queryParams,
-  }) async {
-    try {
-      final res = await _dio.get<dynamic>(path, queryParameters: queryParams);
-      return res.data as Map<String, dynamic>;
-    } on DioException catch (e) {
-      throw _mapError(e);
-    }
-  }
+  }) =>
+      _send(path, () => _dio.get<dynamic>(path, queryParameters: queryParams));
 
+  /// [headers] are merged into the request (e.g. an `Idempotency-Key`).
   Future<Map<String, dynamic>> post(
     String path,
-    Map<String, dynamic> body,
-  ) async {
-    try {
-      final res = await _dio.post<dynamic>(path, data: body);
-      return res.data as Map<String, dynamic>;
-    } on DioException catch (e) {
-      throw _mapError(e);
-    }
-  }
+    Map<String, dynamic> body, {
+    Map<String, String>? headers,
+  }) =>
+      _send(
+        path,
+        () => _dio.post<dynamic>(
+          path,
+          data: body,
+          options: headers == null ? null : Options(headers: headers),
+        ),
+      );
 
   Future<Map<String, dynamic>> patch(
     String path,
     Map<String, dynamic> body,
+  ) =>
+      _send(path, () => _dio.patch<dynamic>(path, data: body));
+
+  Future<Map<String, dynamic>> _send(
+    String path,
+    Future<Response<dynamic>> Function() request,
   ) async {
     try {
-      final res = await _dio.patch<dynamic>(path, data: body);
-      return res.data as Map<String, dynamic>;
+      return _asObject(path, await request());
     } on DioException catch (e) {
       throw _mapError(e);
     }
   }
 
+  /// The API only speaks JSON objects. Anything else is a server/proxy fault:
+  /// report it with the path for diagnosis and show the patient a plain message.
+  Map<String, dynamic> _asObject(String path, Response<dynamic> res) {
+    final data = res.data;
+    if (data is Map<String, dynamic>) return data;
+    if (data == null && res.statusCode == 204) return const {};
+    ErrorReporter.report(
+      'Unexpected response body from $path (${data.runtimeType})',
+      StateError('Expected a JSON object, got ${data.runtimeType}'),
+    );
+    throw AppError(
+      'We got an unexpected reply from the server. Please try again.',
+      statusCode: res.statusCode,
+    );
+  }
+
   AppError _mapError(DioException e) {
-    if (e.response?.statusCode == 401) {
-      // Read the backend detail first — login failures return "Invalid credentials"
-      // which should NOT be shown as "Session expired".
-      final detail = (e.response?.data is Map)
-          ? (e.response!.data as Map)['detail']?.toString()
-          : null;
+    final status = e.response?.statusCode;
+    final detail = _detailOf(e.response?.data);
+
+    if (status == 401) {
+      // Login failures return "Invalid credentials", which must NOT be shown
+      // as "Session expired".
+      final lower = detail?.toLowerCase() ?? '';
       if (detail != null &&
-          !detail.toLowerCase().contains('expired') &&
-          !detail.toLowerCase().contains('invalid or expired')) {
+          !lower.contains('expired') &&
+          !lower.contains('invalid or expired')) {
         return AppError(detail, statusCode: 401);
       }
       return const AuthExpiredError();
     }
 
-    switch (e.type) {
+    if (status == null) return _transportError(e.type);
+    if (status >= 500) {
+      return AppError(
+        'Our service is having trouble right now. Please try again in a moment.',
+        statusCode: status,
+      );
+    }
+    return AppError(detail ?? _clientErrorText(status), statusCode: status);
+  }
+
+  AppError _transportError(DioExceptionType type) {
+    switch (type) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
         return const AppError(
-          'Could not reach the server. Please check your internet connection and try again.',
-          statusCode: null,
+          'The server is taking too long to respond. Please check your '
+          'connection and try again.',
         );
       case DioExceptionType.connectionError:
         return const AppError(
-          'Unable to connect to server. Make sure the backend is running.',
-          statusCode: null,
+          'No internet connection. Please check your connection and try again.',
         );
       case DioExceptionType.badCertificate:
-        return const AppError(
-          'Secure connection failed. Please contact support.',
-          statusCode: null,
-        );
+        return const AppError('Secure connection failed. Please contact support.');
       default:
-        break;
+        return const AppError('Something went wrong. Please try again.');
     }
-
-    if (e.response?.statusCode == 409) {
-      final detail = (e.response?.data is Map)
-          ? (e.response!.data as Map)['detail']?.toString()
-          : null;
-      return AppError(
-          detail ?? 'Conflict — this action could not be completed.',
-          statusCode: 409);
-    }
-
-    if (e.response?.statusCode == 403) {
-      final detail = (e.response?.data is Map)
-          ? (e.response!.data as Map)['detail']?.toString()
-          : null;
-      return AppError(detail ?? 'You do not have permission to do this.',
-          statusCode: 403);
-    }
-
-    final msg = (e.response?.data is Map)
-        ? (e.response!.data as Map)['detail']?.toString() ??
-            e.message ??
-            'Something went wrong. Please try again.'
-        : e.message ?? 'Something went wrong. Please try again.';
-    return AppError(msg, statusCode: e.response?.statusCode);
   }
+
+  String _clientErrorText(int status) => switch (status) {
+        403 => 'You do not have permission to do this.',
+        404 => 'We could not find what you asked for.',
+        408 => 'The request timed out. Please try again.',
+        409 => 'This action could not be completed. Please refresh and try again.',
+        429 => 'Too many attempts. Please wait a moment and try again.',
+        _ => 'Please check the details you entered and try again.',
+      };
+
+  /// Plain-text reason from a FastAPI error body. `detail` is a string for
+  /// HTTPException and a list of `{loc, msg}` items for 422 validation errors.
+  String? _detailOf(Object? body) {
+    if (body is! Map) return null;
+    final detail = body['detail'];
+    if (detail is String) return detail.isEmpty ? null : detail;
+    if (detail is List) {
+      final lines = detail.map(_validationLine).whereType<String>().toSet();
+      return lines.isEmpty ? null : lines.join('. ');
+    }
+    return null;
+  }
+
+  String? _validationLine(Object? item) {
+    if (item is! Map) return null;
+    final msg = item['msg'];
+    if (msg is! String || msg.isEmpty) return null;
+    final text = msg.replaceFirst(RegExp(r'^Value error, '), '');
+    final loc = item['loc'];
+    final lastLoc = loc is List && loc.isNotEmpty ? loc.last : null;
+    final field =
+        lastLoc is String && lastLoc.isNotEmpty ? lastLoc.replaceAll('_', ' ') : null;
+    return field == null ? text : '${field[0].toUpperCase()}${field.substring(1)}: $text';
+  }
+}
+
+/// Picks the API base URL. A release build must be configured with an https
+/// URL: silently falling back to the emulator alias would ship an app that
+/// cannot reach any server (or sends health data over cleartext).
+String resolveApiBaseUrl({
+  required String? envUrl,
+  required bool isRelease,
+  required bool isWeb,
+}) {
+  final configured = envUrl?.trim() ?? '';
+  if (isRelease && !isWeb) {
+    if (!configured.startsWith('https://')) {
+      throw StateError(
+        'API_BASE_URL must be set to an https:// URL in release builds.',
+      );
+    }
+    return configured;
+  }
+  if (configured.isNotEmpty) return configured;
+  // 10.0.2.2 is the Android-emulator alias for the host and is unreachable
+  // from a desktop browser, so web must use localhost.
+  return isWeb ? 'http://localhost:8000' : 'http://10.0.2.2:8000';
 }
 
 /// When a JWT expires, read from its (unverified) payload; null if unreadable.
@@ -216,7 +272,10 @@ class AuthInterceptor extends Interceptor {
       final renewed = res.data?['access_token'] as String?;
       if (renewed != null) await SecureStorage.instance.saveToken(renewed);
       return renewed;
-    } on DioException {
+    } on DioException catch (e, st) {
+      // Not fatal: the original request goes out and decides the session's
+      // fate, but a failing renewal is worth knowing about.
+      ErrorReporter.report('Token renewal failed', e, st);
       return null;
     }
   }
@@ -228,11 +287,16 @@ class AuthInterceptor extends Interceptor {
   ) async {
     // Only a request that carried a token can mean "session expired"; a 401
     // from /auth/login just means wrong credentials.
-    final carriedToken =
-        err.requestOptions.headers.containsKey('Authorization');
-    if (err.response?.statusCode == 401 && carriedToken) {
-      await SecureStorage.instance.clear();
-      ApiClient.onUnauthorized?.call();
+    final sentHeader = err.requestOptions.headers['Authorization'];
+    if (err.response?.statusCode == 401 && sentHeader is String) {
+      // A slow request that was sent before the user signed out and back in
+      // must not end the new session: only act if the token it carried is
+      // still the one stored.
+      final current = await SecureStorage.instance.readToken();
+      if (current != null && sentHeader == 'Bearer $current') {
+        await SecureStorage.instance.clearAuth();
+        ApiClient.onUnauthorized?.call();
+      }
     }
     handler.next(err);
   }

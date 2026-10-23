@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
+import 'package:patient_app/core/date_format.dart';
 import 'package:patient_app/features/rides/rides_notifier.dart';
 
 final _rideDetailProvider = FutureProvider.autoDispose
@@ -17,29 +18,7 @@ class RideDetailScreen extends ConsumerWidget {
   Future<void> _confirmCancel(BuildContext context, WidgetRef ref) async {
     final reason = await showDialog<String>(
       context: context,
-      builder: (ctx) {
-        final ctrl = TextEditingController();
-        return AlertDialog(
-          title: const Text('Cancel Ride'),
-          content: TextField(
-            controller: ctrl,
-            decoration: const InputDecoration(
-              hintText: 'Reason (optional)',
-            ),
-            autofocus: true,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Keep Ride'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-              child: const Text('Cancel Ride'),
-            ),
-          ],
-        );
-      },
+      builder: (_) => const _CancelReasonDialog(),
     );
     if (reason == null || !context.mounted) return;
     try {
@@ -54,10 +33,16 @@ class RideDetailScreen extends ConsumerWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Ride cancelled')),
       );
-    } catch (e) {
+    } on core.AppError catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.message)));
+    } on Exception catch (e, st) {
+      core.ErrorReporter.report('Cancelling a ride failed', e, st);
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e is core.AppError ? e.message : 'Failed to cancel')),
+        const SnackBar(
+            content: Text('Could not cancel the ride. Please try again.')),
       );
     }
   }
@@ -72,7 +57,7 @@ class RideDetailScreen extends ConsumerWidget {
         loading: () => const core.LoadingState(),
         error: (e, _) => core.ErrorState(
           message: e is core.AppError ? e.message : 'Failed to load ride',
-          onRetry: () => ref.refresh(_rideDetailProvider(rideId)),
+          onRetry: () => ref.invalidate(_rideDetailProvider(rideId)),
         ),
         data: (ride) => SingleChildScrollView(
           padding: const EdgeInsets.all(core.kSpaceLG),
@@ -95,7 +80,7 @@ class RideDetailScreen extends ConsumerWidget {
               if (ride.createdAt != null)
                 _InfoCard(
                   title: 'Requested',
-                  value: ride.createdAt!,
+                  value: formatIsoDateTime(ride.createdAt!),
                   icon: Icons.access_time,
                 ),
               if (ride.driver != null) ...[
@@ -145,6 +130,46 @@ class RideDetailScreen extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Owns its text controller so it is disposed with the dialog.
+class _CancelReasonDialog extends StatefulWidget {
+  const _CancelReasonDialog();
+
+  @override
+  State<_CancelReasonDialog> createState() => _CancelReasonDialogState();
+}
+
+class _CancelReasonDialogState extends State<_CancelReasonDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Cancel Ride'),
+      content: TextField(
+        controller: _controller,
+        decoration: const InputDecoration(hintText: 'Reason (optional)'),
+        autofocus: true,
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Keep Ride'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, _controller.text.trim()),
+          child: const Text('Cancel Ride'),
+        ),
+      ],
     );
   }
 }

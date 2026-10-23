@@ -176,6 +176,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     if (!mounted) return;
     if (result == AcceptResult.success) {
       context.push('/driver/ride/$rideId');
+    } else if (result == AcceptResult.successWithoutTracking) {
+      context.push('/driver/ride/$rideId');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ride accepted, but location sharing is off. '
+              'Allow location access so the patient can see you.'),
+          duration: Duration(seconds: 8),
+        ),
+      );
     } else if (result == AcceptResult.alreadyTaken) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

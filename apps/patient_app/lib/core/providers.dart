@@ -61,17 +61,30 @@ class AuthNotifier extends StateNotifier<AsyncValue<String?>> {
   }
 
   Future<void> _init() async {
-    final token = await core.SecureStorage.instance.readToken();
-    if (token != null) {
-      final roles = await core.SecureStorage.instance.readRoles();
-      final active = await core.SecureStorage.instance.readRole();
+    final token = await _restoreSession();
+    state = AsyncValue.data(token);
+    if (token != null) unawaited(registerPushToken());
+  }
+
+  /// A storage failure must never leave the app on the loading screen: treat
+  /// it as signed out so the user can log in again.
+  Future<String?> _restoreSession() async {
+    final storage = core.SecureStorage.instance;
+    try {
+      final token = await storage.readToken();
+      if (token == null) return null;
+      final roles = await storage.readRoles();
+      final active = await storage.readRole();
       if (roles.isNotEmpty) _ref.read(rolesProvider.notifier).state = roles;
       if (active != null && active.isNotEmpty) {
         _ref.read(activeRoleProvider.notifier).state = active;
       }
+      return token;
+    } on Exception catch (e, st) {
+      core.ErrorReporter.report('Could not restore the saved session', e, st);
+      await storage.clear();
+      return null;
     }
-    state = AsyncValue.data(token);
-    if (token != null) unawaited(registerPushToken());
   }
 
   Future<void> _persist(core.TokenResponse res) async {
@@ -121,13 +134,23 @@ class AuthNotifier extends StateNotifier<AsyncValue<String?>> {
     await switchActiveRole(req.role);
   }
 
+  /// Clears local state first so sign-out is instant and works offline, then
+  /// tells the server in the background (using the token read beforehand).
   Future<void> signOut() async {
-    try {
-      await core.logout();
-    } catch (_) {}
-    await core.SecureStorage.instance.clear();
+    final storage = core.SecureStorage.instance;
+    final token = await storage.readToken();
+    await storage.clear();
     unawaited(forgetPushToken());
     _resetSession();
+    if (token != null) unawaited(_logoutOnServer(token));
+  }
+
+  Future<void> _logoutOnServer(String token) async {
+    try {
+      await core.logout(token: token);
+    } on core.AppError catch (e, st) {
+      core.ErrorReporter.report('Server logout failed', e, st);
+    }
   }
 }
 
@@ -198,12 +221,6 @@ class SavedPlace {
       );
 }
 
-final _defaultPlaces = [
-  const SavedPlace(id: 'default_home', label: 'Home', address: 'H-13, Street 4, Islamabad', iconType: 'home'),
-  const SavedPlace(id: 'default_work', label: 'Work', address: 'Blue Area, Jinnah Avenue, Islamabad', iconType: 'work'),
-  const SavedPlace(id: 'default_hospital', label: 'Favourite Hospital', address: 'Pakistan Institute of Medical Sciences, G-8, Islamabad', iconType: 'hospital'),
-];
-
 final savedPlacesProvider =
     StateNotifierProvider<SavedPlacesNotifier, List<SavedPlace>>((ref) {
   ref.watch(sessionTokenProvider);
@@ -218,17 +235,16 @@ class SavedPlacesNotifier extends StateNotifier<List<SavedPlace>> {
   Future<void> _load() async {
     final raw =
         await core.SecureStorage.instance.readValue(_kSavedPlacesKey);
-    if (raw == null || raw.isEmpty) {
-      state = List.from(_defaultPlaces);
-      return;
-    }
+    if (!mounted || raw == null || raw.isEmpty) return;
     try {
       final list = jsonDecode(raw) as List<dynamic>;
       state = list
           .map((m) => SavedPlace.fromMap(m as Map<String, dynamic>))
           .toList();
-    } catch (_) {
-      state = List.from(_defaultPlaces);
+    } on Object catch (e, st) {
+      // Malformed JSON or a wrong shape (TypeError): leave the stored value
+      // untouched, it may still be recoverable.
+      core.ErrorReporter.report('Saved places are unreadable', e, st);
     }
   }
 
@@ -326,68 +342,135 @@ class NotificationsNotifier extends StateNotifier<List<AppNotification>> {
 
 // ── GPS Stream (driver portal) ──────────────────────────────────────────────────
 
-final gpsStreamProvider = StateNotifierProvider<GpsStreamNotifier, bool>((ref) {
+enum GpsStreamStatus {
+  /// Not sharing location.
+  idle,
+
+  /// Starting up, or connecting for the first time.
+  starting,
+
+  /// Location is reaching the server.
+  live,
+
+  /// Sharing was started but the connection or GPS signal is interrupted.
+  degraded,
+}
+
+extension GpsStreamStatusX on GpsStreamStatus {
+  bool get isActive => this != GpsStreamStatus.idle;
+}
+
+enum GpsStartResult { started, alreadyStreaming, permissionDenied, notSignedIn, cancelled }
+
+final gpsStreamProvider =
+    StateNotifierProvider<GpsStreamNotifier, GpsStreamStatus>((ref) {
   ref.watch(sessionTokenProvider);
-  return GpsStreamNotifier(ref);
+  return GpsStreamNotifier();
 });
 
-class GpsStreamNotifier extends StateNotifier<bool> {
-  GpsStreamNotifier(Ref ref) : super(false);
+class GpsStreamNotifier extends StateNotifier<GpsStreamStatus> {
+  GpsStreamNotifier() : super(GpsStreamStatus.idle);
+
+  static const _restInterval = Duration(seconds: 5);
+
   StreamSubscription<Position>? _posSub;
   core.WsClient? _ws;
+  DateTime? _lastRest;
+  bool _isRestFailing = false;
 
-  Future<void> startStreaming(String rideId) async {
-    if (state) return;
+  Future<GpsStartResult> startStreaming(String rideId) async {
+    if (state.isActive) return GpsStartResult.alreadyStreaming;
+    state = GpsStreamStatus.starting; // before any await: blocks a second call
 
+    if (!await _hasLocationPermission()) {
+      _setIfActive(GpsStreamStatus.idle);
+      return GpsStartResult.permissionDenied;
+    }
+    final token = await core.SecureStorage.instance.readToken();
+    if (token == null) {
+      _setIfActive(GpsStreamStatus.idle);
+      return GpsStartResult.notSignedIn;
+    }
+    if (state != GpsStreamStatus.starting) return GpsStartResult.cancelled;
+
+    final uri = Uri.parse('${core.ApiClient.instance.wsBaseUrl}/ws/driver/$rideId');
+    final ws = core.WsClient(
+      onMessage: (_) {},
+      onConnected: () => _setIfActive(GpsStreamStatus.live),
+      onDisconnected: () => _setIfActive(GpsStreamStatus.degraded),
+      onError: _onSocketError,
+    );
+    _ws = ws;
+    _posSub = Geolocator.getPositionStream(
+      locationSettings: driverTrackingSettings(),
+    ).listen(_onPosition, onError: _onPositionError);
+    await ws.connect(uri, token);
+    return GpsStartResult.started;
+  }
+
+  Future<bool> _hasLocationPermission() async {
     var permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
     }
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
-      return;
-    }
+    return permission != LocationPermission.denied &&
+        permission != LocationPermission.deniedForever;
+  }
 
-    final token = await core.SecureStorage.instance.readToken();
-    if (token == null) return;
+  void _setIfActive(GpsStreamStatus next) {
+    if (mounted && state.isActive) state = next;
+  }
 
-    final baseWs = core.ApiClient.instance.wsBaseUrl;
-    final uri = Uri.parse('$baseWs/ws/driver/$rideId');
+  void _onSocketError(Object error) {
+    if (error is FormatException) return; // bad frame; the link itself is fine
+    if (state == GpsStreamStatus.starting) _setIfActive(GpsStreamStatus.degraded);
+  }
 
-    _ws = core.WsClient(onMessage: (_) {});
-    await _ws!.connect(uri, token);
+  void _onPositionError(Object error, StackTrace stack) {
+    core.ErrorReporter.report('Driver position stream failed', error, stack);
+    _setIfActive(GpsStreamStatus.degraded);
+  }
 
-    DateTime? lastRest;
+  void _onPosition(Position pos) {
+    _ws?.send({'lat': pos.latitude, 'lng': pos.longitude});
 
-    _posSub = Geolocator.getPositionStream(
-            locationSettings: driverTrackingSettings())
-        .listen((pos) {
-      _ws?.send({'lat': pos.latitude, 'lng': pos.longitude});
+    final now = DateTime.now();
+    final last = _lastRest;
+    if (last != null && now.difference(last) < _restInterval) return;
+    _lastRest = now;
+    unawaited(_postLocation(pos));
+  }
 
-      final now = DateTime.now();
-      if (lastRest == null ||
-          now.difference(lastRest!) >= const Duration(seconds: 5)) {
-        lastRest = now;
-        core.updateDriverLocation(pos.latitude, pos.longitude)
-            .catchError((_) {});
+  /// REST fallback so the backend keeps a fresh location even if the socket
+  /// is down. Reports only the first failure of a streak, not every 5 seconds.
+  Future<void> _postLocation(Position pos) async {
+    try {
+      await core.updateDriverLocation(pos.latitude, pos.longitude);
+      _isRestFailing = false;
+    } on core.AppError catch (e, st) {
+      if (!_isRestFailing) {
+        core.ErrorReporter.report('Driver location update failed', e, st);
       }
-    });
-
-    state = true;
+      _isRestFailing = true;
+    }
   }
 
   Future<void> stopStreaming() async {
-    await _posSub?.cancel();
-    await _ws?.disconnect();
+    if (mounted) state = GpsStreamStatus.idle;
+    final sub = _posSub;
+    final ws = _ws;
     _posSub = null;
     _ws = null;
-    state = false;
+    _lastRest = null;
+    _isRestFailing = false;
+    await sub?.cancel();
+    await ws?.disconnect();
   }
 
   @override
   void dispose() {
-    _posSub?.cancel();
-    _ws?.disconnect();
+    unawaited(_posSub?.cancel());
+    unawaited(_ws?.disconnect());
     super.dispose();
   }
 }

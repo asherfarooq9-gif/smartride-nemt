@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:smartride_core/smartride_core.dart' show ErrorReporter;
 
 /// The device's current position, or null when location services are off or
 /// permission is denied. Never throws: callers decide how to explain it.
@@ -26,7 +27,10 @@ Future<Position?> currentPositionOrNull() async {
   } on TimeoutException {
     // A fix did not arrive in time; a recent one is still good enough to dispatch.
     return Geolocator.getLastKnownPosition();
-  } catch (_) {
+  } on Exception catch (e, st) {
+    // Plugin/platform failure: callers treat null as "no location" and tell
+    // the user, but the cause must not vanish.
+    ErrorReporter.report('Could not read the device location', e, st);
     return null;
   }
 }

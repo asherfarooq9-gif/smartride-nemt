@@ -138,11 +138,42 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const DriverHistoryScreen(),
       ),
     ],
-    errorBuilder: (_, state) => Scaffold(
-      body: Center(child: Text('Page not found: ${state.error}')),
-    ),
+    errorBuilder: (context, _) => const _PageNotFound(),
   );
 });
+
+/// Plain, actionable text only: the routing exception is for developers.
+class _PageNotFound extends StatelessWidget {
+  const _PageNotFound();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'We could not find that page.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () => context.go('/'),
+                  child: const Text('Go to home'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _AuthListenable extends ChangeNotifier {
   _AuthListenable(Ref ref) {

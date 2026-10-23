@@ -42,10 +42,15 @@ Future<TokenResponse> addRole(AddRoleRequest req) async {
   return TokenResponse.fromJson(data);
 }
 
-Future<void> logout() async {
-  try {
-    await _c.post('/api/v1/auth/logout', {});
-  } catch (_) {}
+/// Ends the session on the server. Pass [token] when local credentials were
+/// already cleared, so the request still authenticates. Throws [AppError]; the
+/// caller decides whether a failed logout matters.
+Future<void> logout({String? token}) async {
+  await _c.post(
+    '/api/v1/auth/logout',
+    {},
+    headers: token == null ? null : {'Authorization': 'Bearer $token'},
+  );
 }
 
 Future<PatientResponse> getPatientMe() async {
@@ -77,8 +82,18 @@ Future<DriverResponse> updateDriverMe(DriverUpdate update) async {
   return DriverResponse.fromJson(data);
 }
 
-Future<RideResponse> createEmergencyRide(EmergencyRideRequest req) async {
-  final data = await _c.post('/api/v1/rides/emergency', req.toJson());
+/// [idempotencyKey] lets the server collapse a double submit (double tap,
+/// retry after a timeout) into one ride.
+Future<RideResponse> createEmergencyRide(
+  EmergencyRideRequest req, {
+  String? idempotencyKey,
+}) async {
+  final data = await _c.post(
+    '/api/v1/rides/emergency',
+    req.toJson(),
+    headers:
+        idempotencyKey == null ? null : {'Idempotency-Key': idempotencyKey},
+  );
   return RideResponse.fromJson(data);
 }
 
@@ -142,10 +157,9 @@ Future<Map<String, dynamic>> getDriverEarnings() async {
   return _c.get('/api/v1/drivers/earnings');
 }
 
+/// Throws [AppError] on failure so callers can retry or report it.
 Future<void> registerFcmToken(String token) async {
-  try {
-    await _c.post('/api/v1/auth/fcm-token', {'fcm_token': token});
-  } catch (_) {}
+  await _c.post('/api/v1/auth/fcm-token', {'fcm_token': token});
 }
 
 Future<Map<String, dynamic>> getDriverWallet() async {
