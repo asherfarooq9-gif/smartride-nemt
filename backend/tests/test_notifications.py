@@ -56,7 +56,7 @@ async def test_sms_is_skipped_without_twilio_credentials():
 async def test_hospital_alert_falls_back_to_sms_when_fhir_fails():
     hospital = SimpleNamespace(
         has_fhir=True,
-        fhir_endpoint="http://fhir.invalid/bundle",
+        fhir_endpoint="https://fhir.invalid/bundle",
         coordinator_phone="+923009998888",
     )
     sent = []
@@ -74,7 +74,9 @@ async def test_hospital_alert_falls_back_to_sms_when_fhir_fails():
 
     with (
         patch.object(notifications.httpx, "AsyncClient", FailingClient),
-        patch.object(notifications, "_send_sms", lambda to, body: sent.append(to)),
+        patch.object(
+            notifications, "_send_sms", lambda to, body: sent.append(to) or True
+        ),
     ):
         await notifications.send_hospital_alert(
             ride=RIDE,

@@ -5,6 +5,7 @@ import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.engine import make_url
 from sqlalchemy.pool import NullPool
 
 TEST_DATABASE_URL = os.getenv(
@@ -12,8 +13,21 @@ TEST_DATABASE_URL = os.getenv(
     "postgresql+asyncpg://smartride:password@localhost:5432/smartride_test",
 )
 
+
+def _require_test_database(url: str) -> None:
+    """The suite runs drop_all(); refuse to touch any database not named *_test."""
+    database = make_url(url).database or ""
+    if not database.endswith("_test"):
+        raise RuntimeError(
+            f"Refusing to run tests: TEST_DATABASE_URL database {database!r} must end "
+            "with '_test' because the suite drops and recreates every table in it."
+        )
+
+
+_require_test_database(TEST_DATABASE_URL)
+
 os.environ.setdefault("DATABASE_URL", TEST_DATABASE_URL)
-os.environ.setdefault("SECRET_KEY", "test-secret-key-32-chars-long!!")
+os.environ.setdefault("SECRET_KEY", "test-secret-key-for-pytest-only-0123456789")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
 os.environ.setdefault("TRIAGE_SERVICE_URL", "http://localhost:8001")
 os.environ.setdefault("ALLOWED_ORIGINS", '["http://localhost:3000"]')

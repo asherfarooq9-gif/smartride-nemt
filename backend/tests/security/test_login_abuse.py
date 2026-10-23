@@ -67,7 +67,10 @@ async def test_lock_expires_with_its_redis_key(client):
     for _ in range(settings.LOGIN_MAX_FAILURES):
         await _login(client, phone, "wrong-password")
     redis = await get_redis()
-    assert 0 < await redis.ttl(f"login_fail:{phone}") <= settings.LOGIN_LOCK_SECONDS
+    keys = [k async for k in redis.scan_iter(f"login_fail:*{phone}*")]
+    assert len(keys) == 2  # the (phone, ip) streak and the per-phone ceiling
+    for key in keys:
+        assert 0 < await redis.ttl(key) <= settings.LOGIN_LOCK_SECONDS
 
 
 async def test_a_session_cannot_be_refreshed_forever(client):

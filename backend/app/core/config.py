@@ -3,6 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List, Literal
 
 _INSECURE_SECRET = "change_me_to_a_32_char_random_string_here"
+_MIN_SECRET_LENGTH = 32
 
 
 class Settings(BaseSettings):
@@ -57,7 +58,11 @@ class Settings(BaseSettings):
     # Credential-guessing defence and absolute session lifetime
     # Off only for end-to-end test runs, which sign up and in from one IP.
     RATE_LIMITS_ENABLED: bool = True
+    # Failures per (phone, client IP) before that IP is locked out ...
     LOGIN_MAX_FAILURES: int = 5
+    # ... and per phone across all IPs, so guessing from many IPs is still bounded
+    # without letting one stranger lock the real owner out.
+    LOGIN_PHONE_MAX_FAILURES: int = 25
     LOGIN_LOCK_SECONDS: int = 900
     SESSION_MAX_DAYS: int = 30
     # Bearer token Prometheus must send to /metrics (open without it only in DEBUG)
@@ -82,6 +87,11 @@ class Settings(BaseSettings):
             if self.SECRET_KEY == _INSECURE_SECRET:
                 raise ValueError(
                     "SECRET_KEY must be set to a random value in production (DEBUG=False)"
+                )
+            if len(self.SECRET_KEY) < _MIN_SECRET_LENGTH:
+                raise ValueError(
+                    f"SECRET_KEY must be at least {_MIN_SECRET_LENGTH} characters "
+                    "in production (DEBUG=False)"
                 )
             if "*" in self.ALLOWED_ORIGINS:
                 raise ValueError(

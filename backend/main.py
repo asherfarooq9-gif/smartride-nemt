@@ -6,10 +6,11 @@ Phase 1: Project scaffold with all core structure
 import asyncio
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, Request, HTTPException
+from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -35,6 +36,18 @@ from app.schemas.errors import ErrorResponse
 log = logging.getLogger("smartride")
 
 _WEAK_SECRET = "change_me_to_a_32_char_random_string_here"
+
+
+async def _stop_task(task: asyncio.Task, name: str) -> None:
+    """Cancel a background task and wait for it so shutdown never leaves it half-run.
+
+    gather() hands the task's CancelledError back as a value, while a cancellation
+    aimed at this coroutine itself still propagates.
+    """
+    task.cancel()
+    (result,) = await asyncio.gather(task, return_exceptions=True)
+    if isinstance(result, Exception):
+        log.error("%s crashed before shutdown", name, exc_info=result)
 
 
 @asynccontextmanager
@@ -68,7 +81,7 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         if dispatch_task:
-            dispatch_task.cancel()
+            await _stop_task(dispatch_task, "dispatch loop")
         # Close pooled connections so a rolling deploy does not leave them dangling.
         await engine.dispose()
         await location_manager.close()
@@ -107,18 +120,21 @@ app.add_middleware(
 app.add_middleware(StructuredLoggingMiddleware)
 
 
+_SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    # Force HTTPS for a year incl. subdomains — PHI must never travel cleartext.
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+    # This is a JSON API; deny powerful browser features outright.
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+}
+
+
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    # Force HTTPS for a year incl. subdomains — PHI must never travel cleartext.
-    response.headers["Strict-Transport-Security"] = (
-        "max-age=31536000; includeSubDomains"
-    )
-    # This is a JSON API; deny powerful browser features outright.
-    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers.update(_SECURITY_HEADERS)
     return response
 
 
@@ -139,23 +155,38 @@ def _trace_id(request: Request) -> str | None:
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    first = exc.errors()[0] if exc.errors() else {}
-    msg = first.get("msg", "Validation error")
+    # `detail` stays the first message (clients read it); `errors` adds the field
+    # location of every problem so a form can highlight the right inputs.
+    problems = [
+        {
+            "loc": list(err.get("loc", ())),
+            "msg": err.get("msg", ""),
+            "type": err.get("type", ""),
+        }
+        for err in exc.errors()
+    ]
+    msg = problems[0]["msg"] if problems else "Validation error"
     return JSONResponse(
         status_code=422,
-        content=ErrorResponse(
-            detail=msg, code="validation_error", trace_id=_trace_id(request)
-        ).model_dump(),
+        content={
+            **ErrorResponse(
+                detail=msg, code="validation_error", trace_id=_trace_id(request)
+            ).model_dump(),
+            "errors": problems,
+        },
     )
 
 
-@app.exception_handler(HTTPException)
-async def http_exception_handler(request: Request, exc: HTTPException):
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    # Registered for Starlette's class so router-level 404/405 share the envelope.
+    # exc.headers carries WWW-Authenticate (401), Retry-After and Allow (405).
     return JSONResponse(
         status_code=exc.status_code,
         content=ErrorResponse(
             detail=str(exc.detail), code="error", trace_id=_trace_id(request)
         ).model_dump(),
+        headers=exc.headers,
     )
 
 
@@ -184,12 +215,27 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     # trace_id so support can correlate — but never leak the internal detail.
     trace_id = _trace_id(request)
     log.exception("Unhandled exception trace_id=%s path=%s", trace_id, request.url.path)
+    # This handler runs in Starlette's outermost layer, outside the CORS and
+    # security-header middleware, so a 500 must carry those headers itself or a
+    # browser reports an opaque CORS failure instead of the real error.
     return JSONResponse(
         status_code=500,
         content=ErrorResponse(
             detail="Internal server error", code="internal_error", trace_id=trace_id
         ).model_dump(),
+        headers={**_SECURITY_HEADERS, **_cors_headers(request)},
     )
+
+
+def _cors_headers(request: Request) -> dict[str, str]:
+    origin = request.headers.get("origin")
+    if not origin:
+        return {}
+    if "*" in settings.ALLOWED_ORIGINS:
+        return {"Access-Control-Allow-Origin": "*"}
+    if origin in settings.ALLOWED_ORIGINS:
+        return {"Access-Control-Allow-Origin": origin, "Vary": "Origin"}
+    return {}
 
 
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
@@ -217,10 +263,12 @@ async def ready():
             await conn.execute(text("SELECT 1"))
             db_ok = True
     except Exception:
+        log.warning("Readiness: database check failed", exc_info=True)
         db_ok = False
     try:
         redis_ok = await ping_redis()
     except Exception:
+        log.warning("Readiness: redis check failed", exc_info=True)
         redis_ok = False
     status_code = 200 if (db_ok and redis_ok) else 503
     return JSONResponse(

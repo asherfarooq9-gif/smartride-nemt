@@ -65,8 +65,8 @@ class SwitchRoleRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    phone: str
-    password: str
+    phone: str = Field(max_length=32)
+    password: str = Field(max_length=128)
     active_role: Optional[UserRole] = None
 
 

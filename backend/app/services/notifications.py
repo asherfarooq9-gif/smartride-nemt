@@ -7,12 +7,18 @@ import asyncio
 import httpx
 import logging
 from datetime import datetime, timezone
+from urllib.parse import urlsplit
 
 from app.core.config import settings
+from app.core.safe_url import UnsafeUrlError, resolve_public_ip
 
 log = logging.getLogger("smartride.notifications")
 
 TWILIO_TIMEOUT_SECONDS = 10
+# A pre-alert is only useful in seconds; a slow hospital endpoint must not hold
+# the dispatch pipeline (the SMS fallback takes over).
+FHIR_TIMEOUT = httpx.Timeout(5.0, connect=3.0)
+_FHIR_DEFAULT_PORTS = {"https": 443, "http": 80}
 _fcm_credentials = None
 
 
@@ -107,12 +113,13 @@ def _mask_phone(phone: str) -> str:
     return f"***{phone[-3:]}"
 
 
-def _send_sms(to: str, body: str) -> None:
+def _send_sms(to: str, body: str) -> bool:
+    """True only if Twilio accepted the message."""
     # PHI discipline: never log the message body (carries patient name /
     # hospital / location) or the full recipient number.
     if not settings.TWILIO_ACCOUNT_SID:
         log.info("SMS no-op (Twilio unconfigured) to %s", _mask_phone(to))
-        return
+        return False
     try:
         from twilio.http.http_client import TwilioHttpClient
         from twilio.rest import Client
@@ -139,33 +146,71 @@ async def send_family_sms(*, patient, ride, driver, hospital_name: str) -> None:
     await asyncio.to_thread(_send_sms, patient.emergency_contact_phone, body)
 
 
-async def send_hospital_alert(*, ride, triage: dict, hospital, patient) -> None:
+async def _post_fhir_bundle(endpoint: str, bundle: dict) -> None:
+    """POST to a hospital-supplied URL without letting it reach internal services.
+
+    The hostname is resolved here, every answer must be a public address, and the
+    connection goes to that exact IP (TLS still verifies the original hostname via
+    SNI), so DNS cannot change its answer between check and use. Redirects are
+    never followed and environment proxies are ignored.
+    """
+    parts = urlsplit(endpoint)
+    if parts.scheme not in _FHIR_DEFAULT_PORTS or not parts.hostname:
+        raise UnsafeUrlError("FHIR endpoint must be an http(s) URL")
+    host = parts.hostname
+    port = parts.port or _FHIR_DEFAULT_PORTS[parts.scheme]
+    ip = await resolve_public_ip(host, port)
+    ip_host = f"[{ip}]" if ":" in ip else ip
+    pinned_url = parts._replace(netloc=f"{ip_host}:{port}").geturl()
+    host_header = host if parts.port is None else f"{host}:{parts.port}"
+    async with httpx.AsyncClient(
+        timeout=FHIR_TIMEOUT, follow_redirects=False, trust_env=False
+    ) as client:
+        resp = await client.post(
+            pinned_url,
+            json=bundle,
+            headers={"Content-Type": "application/fhir+json", "Host": host_header},
+            extensions={"sni_hostname": host},
+        )
+        resp.raise_for_status()
+
+
+async def send_hospital_alert(*, ride, triage: dict, hospital, patient) -> bool:
+    """Pre-alert the hospital over FHIR, else by SMS. True if either channel delivered.
+
+    Callers should record a False result: nobody at the hospital was told.
+    """
+    ride_id = getattr(ride, "id", None)
     fhir_bundle = _build_fhir_bundle(ride=ride, triage=triage, patient=patient)
 
     if hospital.has_fhir and hospital.fhir_endpoint:
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.post(
-                    hospital.fhir_endpoint,
-                    json=fhir_bundle,
-                    headers={"Content-Type": "application/fhir+json"},
-                )
-                resp.raise_for_status()
-                return
+            await _post_fhir_bundle(hospital.fhir_endpoint, fhir_bundle)
+            return True
         except Exception as exc:
             log.warning(
-                "FHIR pre-alert failed, falling back to SMS: %s", type(exc).__name__
+                "FHIR pre-alert failed ride_id=%s, falling back to SMS: %s",
+                ride_id,
+                type(exc).__name__,
             )
 
     if not hospital.coordinator_phone:
-        return
+        log.error(
+            "Hospital pre-alert NOT delivered ride_id=%s: FHIR unavailable and no "
+            "coordinator phone",
+            ride_id,
+        )
+        return False
     body = (
         f"SmartRide Pre-Alert: Patient en route. "
         f"Specialty: {triage.get('specialty', 'unknown')} | "
         f"Severity: {triage.get('severity', '?')} | "
         f"Ride: {ride.id}"
     )
-    await asyncio.to_thread(_send_sms, hospital.coordinator_phone, body)
+    sent = await asyncio.to_thread(_send_sms, hospital.coordinator_phone, body)
+    if not sent:
+        log.error("Hospital pre-alert NOT delivered ride_id=%s: SMS failed", ride_id)
+    return bool(sent)
 
 
 def _build_fhir_bundle(*, ride, triage: dict, patient) -> dict:

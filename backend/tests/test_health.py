@@ -8,7 +8,7 @@ os.environ.setdefault(
         "postgresql+asyncpg://smartride:password@localhost:5432/smartride_test",
     ),
 )
-os.environ.setdefault("SECRET_KEY", "test-secret-key-32-chars-long!!")
+os.environ.setdefault("SECRET_KEY", "test-secret-key-for-pytest-only-0123456789")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
 
 

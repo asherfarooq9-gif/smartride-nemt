@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 from math import ceil
 
@@ -5,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
+from slowapi.util import get_remote_address
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
@@ -24,7 +26,7 @@ from app.core.redis_client import (
     block_token,
     clear_login_failures,
     count_login_failure,
-    login_failures,
+    is_login_locked,
 )
 from app.models.models import User, Patient, Driver, UserRole, UserRoleLink
 from app.schemas.auth import (
@@ -37,6 +39,8 @@ from app.schemas.auth import (
     MeResponse,
 )
 from fastapi.security import HTTPAuthorizationCredentials
+
+log = logging.getLogger("smartride.auth")
 
 router = APIRouter()
 limiter = make_limiter()
@@ -66,18 +70,23 @@ async def _reissue(
     """Swap the presented token for one carrying the new roles; the old one stops working."""
     payload = decode_token(credentials.credentials)
     auth_time = int(payload.get("auth_time") or payload.get("iat") or 0) or None
-    await _revoke(credentials)
+    await _revoke(credentials)  # failure is logged; the old token then lapses at exp
     return _make_token(user, roles, active, auth_time)
 
 
-async def _revoke(credentials: HTTPAuthorizationCredentials) -> None:
-    """Blocklist the presented token for the rest of its lifetime."""
+async def _revoke(credentials: HTTPAuthorizationCredentials) -> bool:
+    """Blocklist the presented token for the rest of its lifetime.
+
+    Returns False if it could not be blocklisted (undecodable token, or Redis
+    down); block_token has already logged the Redis case.
+    """
     try:
         payload = decode_token(credentials.credentials)
     except jwt.PyJWTError:
-        return
+        log.warning("Revoke skipped: presented token could not be decoded")
+        return False
     remaining = max(1, ceil(payload["exp"] - datetime.now(timezone.utc).timestamp()))
-    await block_token(payload["jti"], remaining)
+    return await block_token(payload["jti"], remaining)
 
 
 async def _held_roles(db: AsyncSession, user_id) -> list[str]:
@@ -174,7 +183,8 @@ async def register(
 async def login(
     request: Request, body: LoginRequest, db: AsyncSession = Depends(get_db)
 ):
-    if await login_failures(body.phone) >= settings.LOGIN_MAX_FAILURES:
+    client_ip = get_remote_address(request)
+    if await is_login_locked(body.phone, client_ip):
         raise HTTPException(
             status_code=429, detail="Too many failed attempts. Try again later."
         )
@@ -184,9 +194,9 @@ async def login(
         body.password, user.password_hash if user else DUMMY_PASSWORD_HASH
     )
     if not user or not password_ok:
-        await count_login_failure(body.phone, settings.LOGIN_LOCK_SECONDS)
+        await count_login_failure(body.phone, client_ip, settings.LOGIN_LOCK_SECONDS)
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    await clear_login_failures(body.phone)
+    await clear_login_failures(body.phone, client_ip)
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account disabled")
 
@@ -341,7 +351,11 @@ async def logout(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     _user: User = Depends(get_current_user),
 ):
-    await _revoke(credentials)
+    if not await _revoke(credentials):
+        # Say so: a silent 204 would leave the client believing the token is dead.
+        raise HTTPException(
+            status_code=503, detail="Could not sign out. Please try again."
+        )
 
 
 @router.post("/refresh", response_model=RefreshResponse)

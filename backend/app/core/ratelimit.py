@@ -7,7 +7,10 @@ for unauthenticated traffic (login/register) — where per-IP is actually what y
 want for credential-stuffing protection.
 """
 
+import logging
+
 import jwt
+from prometheus_client import Counter
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from starlette.requests import Request
@@ -15,17 +18,53 @@ from starlette.requests import Request
 from app.core.config import settings
 from app.core.security import decode_token
 
+log = logging.getLogger("smartride.ratelimit")
 
-def make_limiter(**kwargs) -> Limiter:
+RATE_LIMIT_STORAGE_TIMEOUT_SECONDS = 2.0
+
+rate_limit_fallback_total = Counter(
+    "smartride_rate_limit_fallback_total",
+    "Times the rate limiter lost Redis and fell back to per-process memory.",
+)
+
+
+class _ObservedLimiter(Limiter):
+    """Limiter that reports, once per outage, when it drops to in-memory counters.
+
+    While degraded each worker counts separately (N workers allow N times the
+    limit); that is the accepted trade for keeping requests flowing.
+    """
+
+    def _check_request_limit(self, request, endpoint_func, in_middleware=True):
+        was_degraded = bool(getattr(self, "_storage_dead", False))
+        try:
+            super()._check_request_limit(request, endpoint_func, in_middleware)
+        finally:
+            is_degraded = bool(getattr(self, "_storage_dead", False))
+            if is_degraded and not was_degraded:
+                rate_limit_fallback_total.inc()
+                log.error(
+                    "Rate-limit Redis unreachable: using per-process in-memory counters"
+                )
+            elif was_degraded and not is_degraded:
+                log.info("Rate-limit Redis recovered: back to shared counters")
+
+
+def make_limiter(storage_uri: str | None = None, **kwargs) -> Limiter:
     """Limiter whose counters live in Redis, shared by every worker and instance.
 
     The in-memory default gives each process its own bucket, so N workers allow
     N times the limit and a restart resets it. If Redis is unreachable slowapi
-    falls back to per-process memory instead of failing requests.
+    falls back to per-process memory instead of failing requests (logged and
+    counted by _ObservedLimiter).
     """
-    return Limiter(
+    return _ObservedLimiter(
         key_func=rate_limit_key,
-        storage_uri=settings.REDIS_URL,
+        storage_uri=storage_uri or settings.REDIS_URL,
+        storage_options={
+            "socket_timeout": RATE_LIMIT_STORAGE_TIMEOUT_SECONDS,
+            "socket_connect_timeout": RATE_LIMIT_STORAGE_TIMEOUT_SECONDS,
+        },
         in_memory_fallback_enabled=True,
         enabled=settings.RATE_LIMITS_ENABLED,
         **kwargs,

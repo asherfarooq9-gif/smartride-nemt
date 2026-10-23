@@ -1,33 +1,24 @@
-import ipaddress
 from typing import Optional, List
-from urllib.parse import urlsplit
 from datetime import datetime
 from uuid import UUID
 from pydantic import BaseModel, Field, field_validator
 
+from app.core.safe_url import UnsafeUrlError, check_public_hostname_url
+
 
 def _public_https_url(value: Optional[str]) -> Optional[str]:
-    """The server POSTs patient data to this URL, so it must be public HTTPS.
-
-    Blocks IP literals in private, loopback and link-local ranges and obvious
-    internal hostnames. A hostname that merely resolves to a private address is
-    not caught here (no DNS lookups at validation time).
+    """The server POSTs patient data to this URL, so it must be an https URL with a
+    real DNS name. IP literals in any notation (dotted, integer, hex, octal, IPv6)
+    and internal names are refused here; the address the name resolves to is
+    checked again at send time (app.core.safe_url.resolve_public_ip), which is what
+    catches names like 127.0.0.1.nip.io.
     """
     if not value:
         return value
-    parts = urlsplit(value)
-    host = parts.hostname
-    if parts.scheme != "https" or not host:
-        raise ValueError("fhir_endpoint must be an https URL")
-    if host == "localhost" or host.endswith((".local", ".internal", ".localhost")):
-        raise ValueError("fhir_endpoint must be a public host")
     try:
-        ip = ipaddress.ip_address(host)
-    except ValueError:
-        return value
-    if not ip.is_global:
-        raise ValueError("fhir_endpoint must be a public host")
-    return value
+        return check_public_hostname_url(value, schemes=("https",))
+    except UnsafeUrlError as exc:
+        raise ValueError(f"fhir_endpoint rejected: {exc}") from exc
 
 
 class HospitalResponse(BaseModel):
