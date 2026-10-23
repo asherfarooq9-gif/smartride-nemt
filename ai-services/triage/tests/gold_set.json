@@ -1,0 +1,1034 @@
+[
+ {
+  "text": "my father is clutching his chest and sweating, severe chest pain",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "cardiology"
+ },
+ {
+  "text": "he collapsed at the bus stop and is not responding",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "she is gasping for air and her lips are turning blue",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "baby is not breathing please hurry",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "pediatrics"
+ },
+ {
+  "text": "my husband cant breathe, he has asthma",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "pulmonology"
+ },
+ {
+  "text": "mother's face is drooping on one side and her speech is slurred",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "neurology"
+ },
+ {
+  "text": "he had a seizure and is still shaking",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "neurology"
+ },
+ {
+  "text": "child swallowed rat poison",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "pediatrics"
+ },
+ {
+  "text": "i took a whole strip of tablets, i want to end my life",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "psychiatry"
+ },
+ {
+  "text": "road accident, the driver is bleeding from the head",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "bike skidded and he hit his head on the road, now vomiting",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "neurology"
+ },
+ {
+  "text": "pregnant woman bleeding heavily",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "obstetrics"
+ },
+ {
+  "text": "my wife's water broke and the baby is coming",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "obstetrics"
+ },
+ {
+  "text": "elderly man fell from the roof and is unconscious",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "neurology"
+ },
+ {
+  "text": "he was electrocuted by a live wire",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "a snake bit my brother in the field",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "she is vomiting blood",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "gastroenterology"
+ },
+ {
+  "text": "he stabbed himself in the stomach",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "gastroenterology"
+ },
+ {
+  "text": "gunshot wound to the leg",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "drowned in the canal, just pulled out",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "allergic reaction after the injection, throat swelling",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "ent"
+ },
+ {
+  "text": "anaphylaxis after eating peanuts",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "unconscious after taking sleeping pills, overdose",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "neurology"
+ },
+ {
+  "text": "my son is choking on a piece of food",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "he cannot speak and his right arm is weak, maybe a stroke",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "neurology"
+ },
+ {
+  "text": "heart attack, left arm pain and sweating",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "cardiology"
+ },
+ {
+  "text": "heavy bleeding after delivery",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "obstetrics"
+ },
+ {
+  "text": "she passed out in the kitchen",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "neurology"
+ },
+ {
+  "text": "kid had fits for 5 minutes",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "pediatrics"
+ },
+ {
+  "text": "found him hanging from the ceiling fan, we cut him down",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "house fire, she inhaled a lot of smoke and is suffocating",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "fainted twice today and my chest feels tight",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "cardiology"
+ },
+ {
+  "text": "patient is dying please send an ambulance",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "he keeps losing blood from a deep cut on his arm",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "pain in my chest spreading to my jaw",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "cardiology"
+ },
+ {
+  "text": "toddler turned blue after falling in the water tank",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "pediatrics"
+ },
+ {
+  "text": "very short of breath and cannot speak full sentences",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "pulmonology"
+ },
+ {
+  "text": "she is non responsive after the fall",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "my uncle's speech is slurred and he is confused",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "neurology"
+ },
+ {
+  "text": "severe asthma, wheezing and he can not breathe",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "pulmonology"
+ },
+ {
+  "text": "sugar was very low and now he is unresponsive",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "acid attack on her face",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "building collapse, a man is trapped under the rubble",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "he drank pesticide",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "baby born at home and is not crying",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "pediatrics"
+ },
+ {
+  "text": "bleeding wont stop after tooth extraction",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "burnt badly in a gas cylinder blast",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "he is shaking and foaming at the mouth",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "unable to wake my grandmother",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "My dad CAN’T BREATHE!!!",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "pulmonology"
+ },
+ {
+  "text": "she cant breath properly",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "pulmonology"
+ },
+ {
+  "text": "hes chocking on a sweet",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "man got shot outside the mosque",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "she is fitting on the floor and unconcious",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "neurology"
+ },
+ {
+  "text": "my brother is having a heart attack",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "cardiology"
+ },
+ {
+  "text": "stabbing pain in my chest since morning",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "cardiology"
+ },
+ {
+  "text": "child chest pain",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "pediatrics"
+ },
+ {
+  "text": "pregnant, broken arm and heavy bleeding",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "obstetrics"
+ },
+ {
+  "text": "suicidal thoughts for weeks",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "psychiatry"
+ },
+ {
+  "text": "he says he wants to kill himself",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "psychiatry"
+ },
+ {
+  "text": "took an overdose of insulin",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "worst headache of my life, sudden",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": "neurology"
+ },
+ {
+  "text": "car crash on the motorway, two people injured",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "she is bleeding severely from her leg",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "hit by a truck while crossing",
+  "lang": "en",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "child has a high fever since two days",
+  "lang": "en",
+  "min_severity": 4,
+  "specialty": "pediatrics"
+ },
+ {
+  "text": "baby has vomiting and diarrhea",
+  "lang": "en",
+  "min_severity": 4,
+  "specialty": "pediatrics"
+ },
+ {
+  "text": "burn on his hand from hot oil",
+  "lang": "en",
+  "min_severity": 4,
+  "specialty": "dermatology"
+ },
+ {
+  "text": "asthma, wheezing at night",
+  "lang": "en",
+  "min_severity": 4,
+  "specialty": "pulmonology"
+ },
+ {
+  "text": "pregnant and having contractions every 5 minutes",
+  "lang": "en",
+  "min_severity": 4,
+  "specialty": "obstetrics"
+ },
+ {
+  "text": "pregnant, broken arm",
+  "lang": "en",
+  "min_severity": 4,
+  "specialty": "obstetrics"
+ },
+ {
+  "text": "hearing voices and very agitated",
+  "lang": "en",
+  "min_severity": 4,
+  "specialty": "psychiatry"
+ },
+ {
+  "text": "open fracture, bone sticking out of the leg",
+  "lang": "en",
+  "min_severity": 4,
+  "specialty": "orthopedics"
+ },
+ {
+  "text": "dog bite on the leg",
+  "lang": "en",
+  "min_severity": 4,
+  "specialty": null
+ },
+ {
+  "text": "high blood pressure and a headache",
+  "lang": "en",
+  "min_severity": 4,
+  "specialty": "cardiology"
+ },
+ {
+  "text": "severe stomach pain since morning",
+  "lang": "en",
+  "min_severity": 4,
+  "specialty": "gastroenterology"
+ },
+ {
+  "text": "cant walk after falling off a bike",
+  "lang": "en",
+  "min_severity": 4,
+  "specialty": null
+ },
+ {
+  "text": "blood in urine",
+  "lang": "en",
+  "min_severity": 4,
+  "specialty": "nephrology"
+ },
+ {
+  "text": "severe pain in the kidney area",
+  "lang": "en",
+  "min_severity": 4,
+  "specialty": "nephrology"
+ },
+ {
+  "text": "sudden vision loss in the left eye",
+  "lang": "en",
+  "min_severity": 4,
+  "specialty": "ophthalmology"
+ },
+ {
+  "text": "diabetic with very high sugar and confused",
+  "lang": "en",
+  "min_severity": 4,
+  "specialty": null
+ },
+ {
+  "text": "dehydrated from diarrhoea for 3 days",
+  "lang": "en",
+  "min_severity": 4,
+  "specialty": "gastroenterology"
+ },
+ {
+  "text": "swollen face after eating shrimp, allergic reaction",
+  "lang": "en",
+  "min_severity": 4,
+  "specialty": null
+ },
+ {
+  "text": "newborn not feeding well",
+  "lang": "en",
+  "min_severity": 4,
+  "specialty": "pediatrics"
+ },
+ {
+  "text": "6 year old with fever and rash",
+  "lang": "en",
+  "min_severity": 4,
+  "specialty": "pediatrics"
+ },
+ {
+  "text": "bleeding from a cut finger",
+  "lang": "en",
+  "min_severity": 4,
+  "specialty": null
+ },
+ {
+  "text": "my 3 year old has a cough and is very sleepy",
+  "lang": "en",
+  "min_severity": 4,
+  "specialty": "pediatrics"
+ },
+ {
+  "text": "needs transport to dialysis",
+  "lang": "en",
+  "min_severity": 3,
+  "specialty": "nephrology"
+ },
+ {
+  "text": "knee joint pain",
+  "lang": "en",
+  "min_severity": 3,
+  "specialty": "orthopedics"
+ },
+ {
+  "text": "stomach ache",
+  "lang": "en",
+  "min_severity": 3,
+  "specialty": "gastroenterology"
+ },
+ {
+  "text": "cancer patient going to a chemo appointment",
+  "lang": "en",
+  "min_severity": 3,
+  "specialty": "oncology"
+ },
+ {
+  "text": "feeling very low and depressed",
+  "lang": "en",
+  "min_severity": 3,
+  "specialty": "psychiatry"
+ },
+ {
+  "text": "needs help moving my mother, she has a swollen ankle",
+  "lang": "en",
+  "min_severity": 3,
+  "specialty": null
+ },
+ {
+  "text": "ambulance please",
+  "lang": "en",
+  "min_severity": 3,
+  "specialty": null
+ },
+ {
+  "text": "mild skin rash",
+  "lang": "en",
+  "min_severity": 2,
+  "specialty": "dermatology"
+ },
+ {
+  "text": "ear infection",
+  "lang": "en",
+  "min_severity": 2,
+  "specialty": "ent"
+ },
+ {
+  "text": "eye irritation",
+  "lang": "en",
+  "min_severity": 2,
+  "specialty": "ophthalmology"
+ },
+ {
+  "text": "mere walid ko seenay mein dard ho raha hai",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": "cardiology"
+ },
+ {
+  "text": "meri maa ko saans nahi aa rahi",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": "pulmonology"
+ },
+ {
+  "text": "bhai behosh ho gaya hai",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": "neurology"
+ },
+ {
+  "text": "dil ka daura para hai",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": "cardiology"
+ },
+ {
+  "text": "khoon beh raha hai rukk nahi raha",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "us ne khudkushi ki koshish ki",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": "psychiatry"
+ },
+ {
+  "text": "bachay ko mirgi ka daura para",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": "pediatrics"
+ },
+ {
+  "text": "abbu ka munh tedha ho gaya aur zuban larkhara rahi hai",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": "neurology"
+ },
+ {
+  "text": "gari ka accident ho gaya hai, sar se khoon beh raha hai",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "saanp ne kaat liya hai",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "bhabhi ka pani toot gaya hai delivery ka dard shuru",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": "obstetrics"
+ },
+ {
+  "text": "bete ne zehar kha liya",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "bohat khoon beh gaya hai chot lagne se",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "meri behan hosh me nahi hai",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "bacha neela par gaya hai",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": "pediatrics"
+ },
+ {
+  "text": "dadi ko falij ka attack hua",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": "neurology"
+ },
+ {
+  "text": "uski saans ruk gayi",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": "pulmonology"
+ },
+ {
+  "text": "chhat se gir gaya aur behosh hai",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": "neurology"
+ },
+ {
+  "text": "current lag gaya hai",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "goli lagi hai",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "doob gaya tha pani se nikala hai",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "dam ghut raha hai",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "saans lene mein bohat takleef",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": "pulmonology"
+ },
+ {
+  "text": "seene me bhaari pan aur pasina",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": "cardiology"
+ },
+ {
+  "text": "mujhe seene mein jakran mehsoos ho rahi hai",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": "cardiology"
+ },
+ {
+  "text": "ammi ko hosh nahi aa raha",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "bachay ne phenyl pi liya",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": "pediatrics"
+ },
+ {
+  "text": "bache ne mitti ka tel pi liya",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": "pediatrics"
+ },
+ {
+  "text": "khoon ki ulti aa rahi hai",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": "gastroenterology"
+ },
+ {
+  "text": "mujhe marna hai, mai khudkushi karunga",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": "psychiatry"
+ },
+ {
+  "text": "ghar me aag lag gayi, bohat jal gaya hai",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "mirgi ke jhatke aa rahe hain",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": "neurology"
+ },
+ {
+  "text": "sar par chot lagi hai gir kar",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": "neurology"
+ },
+ {
+  "text": "pait me chaku laga hai",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": "gastroenterology"
+ },
+ {
+  "text": "uska dil band ho gaya",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": "cardiology"
+ },
+ {
+  "text": "meri biwi ko labour pain hai aur khoon aa raha hai",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": "obstetrics"
+ },
+ {
+  "text": "bachay ko bukhar aur daura para",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": "pediatrics"
+ },
+ {
+  "text": "haath pair nahi hil rahe",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "SAANS NAHI AA RAHI!!",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": "pulmonology"
+ },
+ {
+  "text": "seenay me dard aur pasina aa raha hai",
+  "lang": "roman_urdu",
+  "min_severity": 5,
+  "specialty": "cardiology"
+ },
+ {
+  "text": "bachay ko tez bukhar hai",
+  "lang": "roman_urdu",
+  "min_severity": 4,
+  "specialty": "pediatrics"
+ },
+ {
+  "text": "dama ka masla hai, saans phool rahi hai",
+  "lang": "roman_urdu",
+  "min_severity": 4,
+  "specialty": "pulmonology"
+ },
+ {
+  "text": "pait me bohat dard hai",
+  "lang": "roman_urdu",
+  "min_severity": 4,
+  "specialty": "gastroenterology"
+ },
+ {
+  "text": "ulti aur dast lagatar",
+  "lang": "roman_urdu",
+  "min_severity": 4,
+  "specialty": "gastroenterology"
+ },
+ {
+  "text": "kutte ne kata hai",
+  "lang": "roman_urdu",
+  "min_severity": 4,
+  "specialty": null
+ },
+ {
+  "text": "hamila hai aur dard shuru ho gaya",
+  "lang": "roman_urdu",
+  "min_severity": 4,
+  "specialty": "obstetrics"
+ },
+ {
+  "text": "gurde ka dard bohat shadeed hai",
+  "lang": "roman_urdu",
+  "min_severity": 4,
+  "specialty": "nephrology"
+ },
+ {
+  "text": "bazu toot gaya hai",
+  "lang": "roman_urdu",
+  "min_severity": 3,
+  "specialty": "orthopedics"
+ },
+ {
+  "text": "haddi toot gayi hai",
+  "lang": "roman_urdu",
+  "min_severity": 3,
+  "specialty": "orthopedics"
+ },
+ {
+  "text": "ghabrahat aur anxiety",
+  "lang": "roman_urdu",
+  "min_severity": 3,
+  "specialty": "psychiatry"
+ },
+ {
+  "text": "mujhe hospital le jana hai",
+  "lang": "roman_urdu",
+  "min_severity": 3,
+  "specialty": null
+ },
+ {
+  "text": "aankh me chot lagi hai",
+  "lang": "roman_urdu",
+  "min_severity": 2,
+  "specialty": "ophthalmology"
+ },
+ {
+  "text": "kaan me dard",
+  "lang": "roman_urdu",
+  "min_severity": 2,
+  "specialty": "ent"
+ },
+ {
+  "text": "میری ماں کو سانس نہیں آرہی",
+  "lang": "urdu",
+  "min_severity": 5,
+  "specialty": "pulmonology"
+ },
+ {
+  "text": "ابو کے سینے میں درد ہے",
+  "lang": "urdu",
+  "min_severity": 5,
+  "specialty": "cardiology"
+ },
+ {
+  "text": "بچہ بیہوش ہو گیا ہے",
+  "lang": "urdu",
+  "min_severity": 5,
+  "specialty": "pediatrics"
+ },
+ {
+  "text": "اسے دل کا دورہ پڑا ہے",
+  "lang": "urdu",
+  "min_severity": 5,
+  "specialty": "cardiology"
+ },
+ {
+  "text": "خون بہہ رہا ہے رک نہیں رہا",
+  "lang": "urdu",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "اس نے خودکشی کی کوشش کی",
+  "lang": "urdu",
+  "min_severity": 5,
+  "specialty": "psychiatry"
+ },
+ {
+  "text": "بچے کو مرگی کا دورہ پڑا",
+  "lang": "urdu",
+  "min_severity": 5,
+  "specialty": "pediatrics"
+ },
+ {
+  "text": "دادی کا منہ ٹیڑھا ہو گیا ہے اور فالج لگتا ہے",
+  "lang": "urdu",
+  "min_severity": 5,
+  "specialty": "neurology"
+ },
+ {
+  "text": "حادثہ ہو گیا ہے، سر پر چوٹ لگی ہے",
+  "lang": "urdu",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "سانپ نے کاٹ لیا",
+  "lang": "urdu",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "بیوی کا پانی ٹوٹ گیا ہے",
+  "lang": "urdu",
+  "min_severity": 5,
+  "specialty": "obstetrics"
+ },
+ {
+  "text": "بچے نے زہر پی لیا",
+  "lang": "urdu",
+  "min_severity": 5,
+  "specialty": "pediatrics"
+ },
+ {
+  "text": "ہوش نہیں آ رہا",
+  "lang": "urdu",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "کرنٹ لگ گیا ہے",
+  "lang": "urdu",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "وہ پانی میں ڈوب گیا",
+  "lang": "urdu",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "گولی لگی ہے",
+  "lang": "urdu",
+  "min_severity": 5,
+  "specialty": null
+ },
+ {
+  "text": "امی بے ہوش ہو گئی ہیں",
+  "lang": "urdu",
+  "min_severity": 5,
+  "specialty": "neurology"
+ },
+ {
+  "text": "سانس لینے میں مشکل ہو رہی ہے",
+  "lang": "urdu",
+  "min_severity": 5,
+  "specialty": "pulmonology"
+ },
+ {
+  "text": "بچے کو تیز بخار ہے",
+  "lang": "urdu",
+  "min_severity": 4,
+  "specialty": "pediatrics"
+ },
+ {
+  "text": "پیٹ میں شدید درد ہے",
+  "lang": "urdu",
+  "min_severity": 4,
+  "specialty": "gastroenterology"
+ },
+ {
+  "text": "کان میں درد",
+  "lang": "urdu",
+  "min_severity": 2,
+  "specialty": "ent"
+ },
+ {
+  "text": "آنکھ میں جلن",
+  "lang": "urdu",
+  "min_severity": 2,
+  "specialty": "ophthalmology"
+ }
+]

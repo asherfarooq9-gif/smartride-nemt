@@ -7,7 +7,7 @@ RUN useradd --create-home --uid 10001 app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY --chown=app:app main.py .
+COPY --chown=app:app main.py keywords.py ./
 
 USER app
 
