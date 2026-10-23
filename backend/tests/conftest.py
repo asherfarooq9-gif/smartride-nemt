@@ -69,6 +69,21 @@ def _clear_login_lockouts():
     yield
 
 
+@pytest.fixture(autouse=True)
+def _loop_safe_session_factory(monkeypatch):
+    """Code that opens its own session via `database.AsyncSessionLocal` (the streamed
+    CSV export) would otherwise reuse pooled connections bound to an earlier test's
+    event loop. Point it at a NullPool engine for the test database."""
+    import app.core.database as database
+
+    engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool)
+    monkeypatch.setattr(
+        database,
+        "AsyncSessionLocal",
+        async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False),
+    )
+
+
 @pytest_asyncio.fixture(autouse=True)
 async def _reset_redis_singleton():
     """The redis client is a module-level singleton bound to the event loop that

@@ -1,21 +1,25 @@
-from typing import Optional, List, Any, Dict
+from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_serializer
 from app.models.models import RideType, RideStatus
+
+# Free text from clients is bounded so one request cannot store megabytes.
+MAX_ADDRESS_LENGTH = 500
+MAX_REASON_LENGTH = 500
 
 
 class EmergencyRideRequest(BaseModel):
     pickup_lat: float = Field(ge=-90, le=90)
     pickup_lng: float = Field(ge=-180, le=180)
-    pickup_address: Optional[str] = None
+    pickup_address: Optional[str] = Field(default=None, max_length=MAX_ADDRESS_LENGTH)
     symptom_text: str = Field(min_length=1, max_length=2000)
 
 
 class ScheduledRideRequest(BaseModel):
     pickup_lat: float = Field(ge=-90, le=90)
     pickup_lng: float = Field(ge=-180, le=180)
-    pickup_address: Optional[str] = None
+    pickup_address: Optional[str] = Field(default=None, max_length=MAX_ADDRESS_LENGTH)
     scheduled_for: datetime
 
     @field_validator("scheduled_for")
@@ -34,7 +38,7 @@ class ScheduledRideRequest(BaseModel):
 
 class RideStatusUpdate(BaseModel):
     status: RideStatus
-    cancel_reason: Optional[str] = None
+    cancel_reason: Optional[str] = Field(default=None, max_length=MAX_REASON_LENGTH)
 
 
 class RateRideRequest(BaseModel):
@@ -71,11 +75,46 @@ class RideResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class RidePatientInfo(BaseModel):
+    full_name: str
+    phone: str
+    mobility_needs: Optional[str] = None
+
+
+class RideDriverInfo(BaseModel):
+    full_name: str
+    phone: str
+    vehicle_plate: str
+    vehicle_type: str
+
+
+class RideHospitalInfo(BaseModel):
+    name: str
+    address: str
+    city: str
+
+
+class RideTriageInfo(BaseModel):
+    predicted_specialty: str
+    confidence_score: float
+    severity_level: str
+    # Raw complaint text is PHI: only the owning patient and admins get it. For
+    # everyone else the key is absent from the payload, not null.
+    symptom_text: Optional[str] = None
+
+    @model_serializer(mode="wrap")
+    def _omit_missing_symptom_text(self, handler):
+        data = handler(self)
+        if data.get("symptom_text") is None:
+            data.pop("symptom_text", None)
+        return data
+
+
 class RideDetailResponse(RideResponse):
-    patient: Optional[Dict[str, Any]] = None
-    driver: Optional[Dict[str, Any]] = None
-    hospital: Optional[Dict[str, Any]] = None
-    triage: Optional[Dict[str, Any]] = None
+    patient: Optional[RidePatientInfo] = None
+    driver: Optional[RideDriverInfo] = None
+    hospital: Optional[RideHospitalInfo] = None
+    triage: Optional[RideTriageInfo] = None
 
 
 class RideListResponse(BaseModel):
