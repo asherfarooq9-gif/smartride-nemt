@@ -27,6 +27,7 @@ def make_limiter(**kwargs) -> Limiter:
         key_func=rate_limit_key,
         storage_uri=settings.REDIS_URL,
         in_memory_fallback_enabled=True,
+        enabled=settings.RATE_LIMITS_ENABLED,
         **kwargs,
     )
 

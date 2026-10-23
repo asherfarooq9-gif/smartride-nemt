@@ -31,9 +31,7 @@ ENV = {
     "ALLOWED_ORIGINS": f'["{ADMIN_ORIGIN}"]',
     "TRIAGE_SERVICE_URL": "http://localhost:9",  # unreachable: exercises the fallback
     "DEBUG": "false",
-    # Many sign-ups and logins from one IP in a test run:
-    "LOGIN_RATE_LIMIT": "1000/minute",
-    "REGISTER_RATE_LIMIT": "1000/minute",
+    "RATE_LIMITS_ENABLED": "false",  # many sign-ups and logins from one IP
     "ADMIN_PASSWORD": "admin123",  # throwaway database only
 }
 

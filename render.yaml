@@ -25,6 +25,8 @@ services:
         value: ""            # triage AI not deployed — graceful fallback
       - key: DEBUG
         value: "false"
+      - key: ENVIRONMENT
+        value: production
       - key: ALLOWED_ORIGINS
         sync: false          # JSON list, e.g. ["https://admin.example.com"]; the app refuses to boot with "*" when DEBUG=false
       - key: FORWARDED_ALLOW_IPS

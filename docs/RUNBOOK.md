@@ -72,6 +72,26 @@ checked) and `/ready` reports `redis: false`. Restore Redis; nothing else needs 
 and in the environment, restart `backend`), `METRICS_TOKEN` (also update the Prometheus
 scrape config), Twilio and Firebase credentials in their consoles.
 
+
+## Business rules the code enforces
+
+- A driver may accept a ride only while **available** (not offline, not already on a ride), and never their own ride.
+- Dispatch only considers drivers within `DRIVER_SEARCH_RADIUS_KM` (default 50) of the pickup.
+- A patient may cancel until pickup; a driver cancelling before pickup puts the ride back in the queue and goes offline.
+- Commission is `COMMISSION_RATE` (10%) of the fare and is charged once per ride; fares are `FARE_BASE_PKR` + `FARE_PER_KM_PKR` per km (pickup to hospital).
+
+## Known gaps and what is not verified
+
+Not built: `HospitalAlert` and `FamilyNotification` rows are never written (the SMS and
+FHIR sends happen but leave no audit record); drivers cannot top up their own wallet;
+the driver and patient screens are separate code (no shared screens).
+
+Written but never run (needs GitHub Actions or real devices): the release workflow's
+signing step, the CI `e2e`, `admin-dashboard`, `triage-tests` and security jobs
+(including Trivy), the Flutter `integration_test` flows (none exist), and anything on a
+physical phone (GPS in the background, push, calling).
+
+
 ## Before the first real patient (owner's checklist)
 
 Things code cannot do for you:

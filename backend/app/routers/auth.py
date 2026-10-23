@@ -112,7 +112,7 @@ async def _commit_or_conflict(db: AsyncSession) -> None:
 @router.post(
     "/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED
 )
-@limiter.limit(lambda: settings.REGISTER_RATE_LIMIT)
+@limiter.limit("5/minute")
 async def register(
     request: Request, body: RegisterRequest, db: AsyncSession = Depends(get_db)
 ):
@@ -170,7 +170,7 @@ async def register(
 
 
 @router.post("/login", response_model=TokenResponse)
-@limiter.limit(lambda: settings.LOGIN_RATE_LIMIT)
+@limiter.limit("10/minute")
 async def login(
     request: Request, body: LoginRequest, db: AsyncSession = Depends(get_db)
 ):

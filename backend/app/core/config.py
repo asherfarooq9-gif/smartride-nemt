@@ -55,9 +55,8 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: List[str] = ["*"]
     EMERGENCY_PIPELINE_TARGET_SECONDS: float = 60.0
     # Credential-guessing defence and absolute session lifetime
-    # Per client IP; sign-in also has the per-account lockout below.
-    LOGIN_RATE_LIMIT: str = "10/minute"
-    REGISTER_RATE_LIMIT: str = "5/minute"
+    # Off only for end-to-end test runs, which sign up and in from one IP.
+    RATE_LIMITS_ENABLED: bool = True
     LOGIN_MAX_FAILURES: int = 5
     LOGIN_LOCK_SECONDS: int = 900
     SESSION_MAX_DAYS: int = 30
@@ -89,6 +88,8 @@ class Settings(BaseSettings):
                     "Wildcard CORS origin is not allowed in production (DEBUG=False). "
                     "Set ALLOWED_ORIGINS to explicit origins."
                 )
+        if self.ENVIRONMENT == "production" and not self.RATE_LIMITS_ENABLED:
+            raise ValueError("RATE_LIMITS_ENABLED must be true in production")
         return self
 
 

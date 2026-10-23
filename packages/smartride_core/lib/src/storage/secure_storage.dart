@@ -2,8 +2,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 const _keyToken = 'smartride_jwt';
 const _keyUserId = 'smartride_user_id';
-const _keyRole = 'smartride_role'; // active role
-const _keyRoles = 'smartride_roles'; // CSV of all held roles
+const _keyRole = 'smartride_role';        // active role
+const _keyRoles = 'smartride_roles';      // CSV of all held roles
 
 class SecureStorage {
   SecureStorage._();
