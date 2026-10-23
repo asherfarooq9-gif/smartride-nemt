@@ -2,7 +2,7 @@ from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
@@ -24,7 +24,7 @@ from app.schemas.drivers import (
 )
 from app.models.models import Ride, RideStatus, WalletEntry
 from app.services import driver_service
-from sqlalchemy import select, func, and_, update
+from sqlalchemy import select, func, and_
 
 router = APIRouter()
 
@@ -43,7 +43,7 @@ def _to_response(driver: Driver, user: User) -> DriverResponse:
         vehicle_type=driver.vehicle_type,
         is_verified=driver.is_verified,
         status=driver.status,
-        wallet_balance_pkr=float(driver.wallet_balance_pkr or 0),
+        wallet_balance_pkr=driver.wallet_balance_pkr or Decimal(0),
         current_lat=driver.current_lat,
         current_lng=driver.current_lng,
         last_seen_at=driver.last_seen_at,
@@ -155,13 +155,13 @@ async def get_earnings(
             if r.hospital_id
             else None,
             completed_at=r.completed_at.isoformat() if r.completed_at else None,
-            fare_pkr=float(r.final_fare_pkr or r.estimated_fare_pkr or 0),
+            fare_pkr=r.final_fare_pkr or r.estimated_fare_pkr or Decimal(0),
             ride_type=r.ride_type.value,
         )
         for r in rows
     ]
     return EarningsResponse(
-        total_earned_pkr=float(total_earned), ride_count=int(ride_count), rides=rides
+        total_earned_pkr=total_earned, ride_count=int(ride_count), rides=rides
     )
 
 
@@ -214,19 +214,19 @@ async def get_wallet(
         .all()
     )
 
-    balance = float(driver.wallet_balance_pkr or 0)
+    balance = driver.wallet_balance_pkr or Decimal(0)
     return WalletResponse(
         balance_pkr=balance,
         commission_rate=settings.COMMISSION_RATE,
         plan=f"Pay Per Ride · {settings.COMMISSION_RATE:.0%}",
         low_balance=balance < 500,
-        weekly_commission_paid=float(weekly_commission),
-        weekly_net_earnings=float(weekly_gross - weekly_commission),
+        weekly_commission_paid=weekly_commission,
+        weekly_net_earnings=weekly_gross - weekly_commission,
         transactions=[
             WalletTransaction(
                 id=str(e.id),
                 type=e.kind,
-                amount_pkr=float(e.amount),
+                amount_pkr=e.amount,
                 description=e.kind.replace("_", " ").title(),
                 created_at=e.created_at,
             )
@@ -235,40 +235,46 @@ async def get_wallet(
     )
 
 
+def _topup_amount(body: WalletTopUpRequest) -> Decimal:
+    if body.plan_id is not None:
+        plan = _PLANS.get(body.plan_id)
+        if plan is None:
+            raise HTTPException(status_code=422, detail="Unknown plan_id")
+        return Decimal(plan["price_pkr"])
+    if body.amount_pkr <= 0:
+        raise HTTPException(status_code=422, detail="amount_pkr must be positive")
+    return body.amount_pkr
+
+
 @router.post("/{driver_id}/wallet/topup", response_model=DriverResponse)
 async def topup_wallet(
     driver_id: UUID,
     body: WalletTopUpRequest,
-    _admin: User = Depends(require_admin),
+    idempotency_key: Optional[str] = Header(default=None, min_length=1, max_length=128),
+    admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    """Admin credits a specific driver's wallet (manual JazzCash/EasyPaisa settlement)."""
-    if body.plan_id and body.plan_id in _PLANS:
-        amount = float(_PLANS[body.plan_id]["price_pkr"])
-    else:
-        if body.amount_pkr <= 0:
-            raise HTTPException(status_code=422, detail="amount_pkr must be positive")
-        amount = body.amount_pkr
+    """Admin credits a driver's wallet (manual JazzCash/EasyPaisa settlement).
 
-    driver = (
-        await db.execute(select(Driver).where(Driver.id == driver_id))
-    ).scalar_one_or_none()
-    if driver is None:
-        raise HTTPException(status_code=404, detail="Driver not found")
-    user = (
-        await db.execute(select(User).where(User.id == driver.user_id))
-    ).scalar_one()
+    Send an Idempotency-Key header to make retries safe: a replay returns the
+    current driver without crediting again.
+    """
+    amount = _topup_amount(body)
+    driver, user = await driver_service.get_driver_by_id(driver_id, db)
 
-    # Ledger row and balance change commit together; the increment is done in SQL
-    # so concurrent top-ups cannot overwrite each other.
-    db.add(WalletEntry(driver_id=driver.id, kind="topup", amount=Decimal(str(amount))))
-    await db.execute(
-        update(Driver)
-        .where(Driver.id == driver.id)
-        .values(wallet_balance_pkr=func.coalesce(Driver.wallet_balance_pkr, 0) + amount)
+    created = await driver_service.record_topup(
+        db, driver.id, amount, admin.id, body.payment_method, idempotency_key
     )
-    await db.commit()
-    await db.refresh(driver)
+    if created:
+        await db.commit()
+        await db.refresh(driver)
+    else:
+        previous = await driver_service.get_topup_by_key(db, idempotency_key)
+        if previous.driver_id != driver.id or previous.amount != amount:
+            raise HTTPException(
+                status_code=409,
+                detail="Idempotency-Key was already used for a different top-up",
+            )
     return _to_response(driver, user)
 
 

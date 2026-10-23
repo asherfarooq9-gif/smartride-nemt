@@ -1,12 +1,22 @@
 from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Optional
+from uuid import UUID
 
 from fastapi import HTTPException
-from sqlalchemy import select, func, and_, or_
+from sqlalchemy import select, func, and_, or_, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.search import contains
-from app.models.models import Driver, Ride, RideStatus, User, DriverStatus
+from app.models.models import (
+    Driver,
+    Ride,
+    RideStatus,
+    User,
+    DriverStatus,
+    WalletEntry,
+)
 from app.schemas.drivers import DriverUpdate, DriverStatusUpdate, LocationUpdate
 
 
@@ -24,6 +34,67 @@ async def get_driver_by_user(user: User, db: AsyncSession) -> Driver:
     if not driver:
         raise HTTPException(404, "Driver profile not found")
     return driver
+
+
+async def apply_balance_delta(db: AsyncSession, driver_id: UUID, delta: Decimal) -> None:
+    """Add `delta` to a driver's wallet balance in SQL (no read-modify-write).
+
+    Negative balances are allowed on purpose: commission is debited after the
+    ride completes, so a driver may owe money. Do not add a >= 0 guard here.
+    Exactly one row must change; anything else means the ledger and the driver
+    row have diverged and the caller's transaction must not commit.
+    """
+    result = await db.execute(
+        update(Driver)
+        .where(Driver.id == driver_id)
+        .values(wallet_balance_pkr=Driver.wallet_balance_pkr + delta)
+    )
+    if result.rowcount != 1:
+        raise RuntimeError(
+            f"wallet balance update for driver {driver_id} affected "
+            f"{result.rowcount} rows, expected exactly 1"
+        )
+
+
+async def record_topup(
+    db: AsyncSession,
+    driver_id: UUID,
+    amount: Decimal,
+    admin_user_id: UUID,
+    payment_method: str,
+    idempotency_key: Optional[str],
+) -> bool:
+    """Credit a top-up once. Returns False when the idempotency key was a replay.
+
+    The ledger insert and the balance change run in the caller's transaction.
+    ON CONFLICT DO NOTHING on the idempotency key makes a replay (or a racing
+    duplicate) a no-op instead of a second credit.
+    """
+    inserted = await db.execute(
+        pg_insert(WalletEntry)
+        .values(
+            driver_id=driver_id,
+            kind="topup",
+            amount=amount,
+            idempotency_key=idempotency_key,
+            admin_user_id=admin_user_id,
+            payment_method=payment_method,
+        )
+        .on_conflict_do_nothing(constraint="uq_wallet_idempotency_key")
+        .returning(WalletEntry.id)
+    )
+    if inserted.first() is None:
+        return False
+    await apply_balance_delta(db, driver_id, amount)
+    return True
+
+
+async def get_topup_by_key(db: AsyncSession, idempotency_key: str) -> WalletEntry:
+    return (
+        await db.execute(
+            select(WalletEntry).where(WalletEntry.idempotency_key == idempotency_key)
+        )
+    ).scalar_one()
 
 
 async def update_driver_profile(
@@ -93,9 +164,10 @@ async def list_drivers(
     if conditions:
         base_q = base_q.where(and_(*conditions))
 
-    total = (
-        await db.execute(select(func.count()).select_from(base_q.subquery()))
-    ).scalar()
+    count_q = select(func.count()).select_from(Driver).join(User, Driver.user_id == User.id)
+    if conditions:
+        count_q = count_q.where(and_(*conditions))
+    total = (await db.execute(count_q)).scalar()
     rows = (
         await db.execute(
             base_q.order_by(Driver.created_at.desc())

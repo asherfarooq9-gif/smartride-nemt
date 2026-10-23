@@ -21,7 +21,8 @@ import app.models.models  # noqa: F401  (register all models on Base.metadata)
 from tests.conftest import TEST_DATABASE_URL
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
-SCRATCH_DB = "smartride_migration_parity"
+# Derived from the test database name so concurrent runs never share a scratch DB.
+SCRATCH_DB = make_url(TEST_DATABASE_URL).database + "_parity"
 
 
 def _url_for(database: str) -> str:

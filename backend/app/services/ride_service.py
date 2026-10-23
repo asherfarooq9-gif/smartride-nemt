@@ -4,13 +4,14 @@ from math import radians, sin, cos, sqrt, atan2
 from typing import Optional
 
 from fastapi import HTTPException
-from sqlalchemy import select, func, and_, update
+from sqlalchemy import select, func, and_, exists, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core import metrics
 from app.core.search import contains
+from app.services.driver_service import ACTIVE_RIDE_STATUSES, apply_balance_delta
 from app.services.fare import commission_for, fare_for
 from app.services.hospital_matching import haversine_km
 from app.services.notifications import notify_user
@@ -90,11 +91,9 @@ async def charge_commission(db: AsyncSession, ride: Ride, driver_id) -> bool:
     )
     if inserted.first() is None:
         return False
-    await db.execute(
-        update(Driver)
-        .where(Driver.id == driver_id)
-        .values(wallet_balance_pkr=Driver.wallet_balance_pkr + amount)
-    )
+    # Commission is debited after the ride completes, so the balance may go
+    # negative. That is intended; do not add a >= 0 check on the debit.
+    await apply_balance_delta(db, driver_id, amount)
     return True
 
 
@@ -124,6 +123,7 @@ async def create_emergency_ride(
         pickup_lat=body.pickup_lat,
         pickup_lng=body.pickup_lng,
         pickup_address=body.pickup_address,
+        queued_at=func.now(),
     )
     db.add(ride)
     await db.commit()
@@ -142,6 +142,7 @@ async def create_scheduled_ride(
         pickup_lng=body.pickup_lng,
         pickup_address=body.pickup_address,
         scheduled_for=body.scheduled_for,
+        queued_at=func.now(),
     )
     db.add(ride)
     await db.commit()
@@ -214,6 +215,80 @@ async def get_triage_for_ride(ride_id: str, db: AsyncSession) -> Optional[Triage
     return result.scalar_one_or_none()
 
 
+async def _lock_ride(db: AsyncSession, ride: Ride) -> None:
+    """Re-read the ride FOR UPDATE and refresh the caller's instance in place.
+
+    Transitions race (driver 'completed' vs admin cancel, patient cancel vs driver
+    requeue). Taking the row lock before any check means the loser of the race sees
+    the winner's committed state and fails validation instead of overwriting it.
+    """
+    await db.execute(
+        select(Ride)
+        .where(Ride.id == ride.id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+
+
+async def _release_driver(db: AsyncSession, driver_id, ride_id) -> None:
+    """Mark the driver available unless they have since taken another live ride."""
+    on_another_ride = exists().where(
+        Ride.driver_id == driver_id,
+        Ride.id != ride_id,
+        Ride.status.in_(ACTIVE_RIDE_STATUSES),
+    )
+    await db.execute(
+        update(Driver)
+        .where(Driver.id == driver_id, ~on_another_ride)
+        .values(status=DriverStatus.available)
+        .execution_options(synchronize_session="fetch")
+    )
+
+
+async def _cancel_ride(db: AsyncSession, ride: Ride, reason: str) -> None:
+    ride.status = RideStatus.cancelled
+    ride.cancelled_at = datetime.now(timezone.utc)
+    ride.cancel_reason = reason
+    if ride.driver_id is not None:
+        await _release_driver(db, ride.driver_id, ride.id)
+
+
+async def _apply_driver_transition(
+    db: AsyncSession, ride: Ride, new_status: RideStatus, driver: Driver
+) -> None:
+    if ride.driver_id != driver.id:
+        raise HTTPException(403, "Not your ride")
+    if new_status == RideStatus.cancelled:
+        if ride.status in (RideStatus.driver_assigned, RideStatus.driver_en_route):
+            # Patient not on board yet: return the ride to the queue (the
+            # dispatch loop re-places it) and take this driver offline so
+            # they are not handed the same ride straight back.
+            ride.status = RideStatus.pending
+            ride.queued_at = func.now()
+            ride.driver_id = None
+            ride.driver_assigned_at = None
+            ride.hospital_id = None
+            driver.status = DriverStatus.offline
+        else:
+            ride.status = RideStatus.cancelled
+            ride.cancelled_at = datetime.now(timezone.utc)
+            await _release_driver(db, driver.id, ride.id)
+        return
+    if new_status != DRIVER_TRANSITIONS.get(ride.status):
+        raise HTTPException(400, f"Cannot transition from {ride.status} to {new_status}")
+    ride.status = new_status
+    now = datetime.now(timezone.utc)
+    if new_status == RideStatus.patient_picked_up:
+        ride.pickup_at = now
+    elif new_status == RideStatus.arrived_at_hospital:
+        ride.arrived_at = now
+    elif new_status == RideStatus.completed:
+        ride.completed_at = now
+        ride.final_fare_pkr = await ride_fare(db, ride)
+        await charge_commission(db, ride, driver.id)
+        await _release_driver(db, driver.id, ride.id)
+
+
 async def update_ride_status(
     ride: Ride,
     body: RideStatusUpdate,
@@ -223,58 +298,17 @@ async def update_ride_status(
     driver: Optional[Driver] = None,
 ) -> Ride:
     new_status = body.status
+    await _lock_ride(db, ride)
 
     if new_status == RideStatus.cancelled and ride.status in TERMINAL_STATUSES:
         raise HTTPException(400, f"Cannot cancel a {ride.status.value} ride")
 
     if role == "driver":
-        if ride.driver_id != driver.id:
-            raise HTTPException(403, "Not your ride")
-        allowed_next = DRIVER_TRANSITIONS.get(ride.status)
-        if new_status == RideStatus.cancelled:
-            if ride.status in (RideStatus.driver_assigned, RideStatus.driver_en_route):
-                # Patient not on board yet: return the ride to the queue (the
-                # dispatch loop re-places it) and take this driver offline so
-                # they are not handed the same ride straight back.
-                ride.status = RideStatus.pending
-                ride.driver_id = None
-                ride.driver_assigned_at = None
-                ride.hospital_id = None
-                driver.status = DriverStatus.offline
-            else:
-                ride.status = RideStatus.cancelled
-                ride.cancelled_at = datetime.now(timezone.utc)
-                driver.status = DriverStatus.available
-        elif new_status != allowed_next:
-            raise HTTPException(
-                400, f"Cannot transition from {ride.status} to {new_status}"
-            )
-        else:
-            ride.status = new_status
-            now = datetime.now(timezone.utc)
-            if new_status == RideStatus.patient_picked_up:
-                ride.pickup_at = now
-            elif new_status == RideStatus.arrived_at_hospital:
-                ride.arrived_at = now
-            elif new_status == RideStatus.completed:
-                ride.completed_at = now
-                driver.status = DriverStatus.available
-                ride.final_fare_pkr = await ride_fare(db, ride)
-                await charge_commission(db, ride, driver.id)
-
+        await _apply_driver_transition(db, ride, new_status, driver)
     elif role == "admin":
         if new_status != RideStatus.cancelled:
             raise HTTPException(400, "Admin can only cancel rides")
-        ride.status = RideStatus.cancelled
-        ride.cancelled_at = datetime.now(timezone.utc)
-        ride.cancel_reason = "Cancelled by admin"
-        if ride.driver_id is not None:
-            assigned_driver = (
-                await db.execute(select(Driver).where(Driver.id == ride.driver_id))
-            ).scalar_one_or_none()
-            if assigned_driver:
-                assigned_driver.status = DriverStatus.available
-
+        await _cancel_ride(db, ride, "Cancelled by admin")
     elif role == "patient":
         if ride.patient_id != patient.id:
             raise HTTPException(403, "Not your ride")
@@ -287,16 +321,7 @@ async def update_ride_status(
             RideStatus.driver_en_route,
         ):
             raise HTTPException(400, "Cannot cancel ride in current state")
-        ride.status = RideStatus.cancelled
-        ride.cancelled_at = datetime.now(timezone.utc)
-        ride.cancel_reason = body.cancel_reason or "Cancelled by patient"
-        if ride.driver_id is not None:
-            assigned_driver = (
-                await db.execute(select(Driver).where(Driver.id == ride.driver_id))
-            ).scalar_one_or_none()
-            if assigned_driver:
-                assigned_driver.status = DriverStatus.available
-
+        await _cancel_ride(db, ride, body.cancel_reason or "Cancelled by patient")
     else:
         raise HTTPException(403, "Forbidden")
 
@@ -339,6 +364,37 @@ async def update_ride_status(
         )
 
     return ride
+
+
+async def rate_completed_ride(
+    db: AsyncSession, ride_id, patient_id, rating, comment: Optional[str]
+) -> Ride:
+    """Store a patient's rating exactly once.
+
+    The checks live in the UPDATE's WHERE clause, so two simultaneous ratings
+    cannot both succeed: the loser matches no row and gets a 409.
+    """
+    rated = await db.execute(
+        update(Ride)
+        .where(
+            Ride.id == ride_id,
+            Ride.patient_id == patient_id,
+            Ride.status == RideStatus.completed,
+            Ride.patient_rating.is_(None),
+        )
+        .values(patient_rating=rating, rating_comment=comment)
+        .returning(Ride.id)
+    )
+    if rated.first() is None:
+        await db.rollback()
+        ride = await get_ride_by_id(ride_id, db)  # 404 if it does not exist
+        if ride.patient_id != patient_id:
+            raise HTTPException(403, "Forbidden")
+        if ride.status != RideStatus.completed:
+            raise HTTPException(400, "Can only rate completed rides")
+        raise HTTPException(409, "Ride already rated")
+    await db.commit()
+    return await get_ride_by_id(ride_id, db)
 
 
 async def get_pending_rides(driver: Driver, db: AsyncSession) -> list[Ride]:
@@ -449,12 +505,12 @@ async def list_rides_admin(
         conditions.append(Ride.pickup_address.ilike(contains(search), escape="\\"))
 
     base_q = select(Ride)
+    count_q = select(func.count()).select_from(Ride)
     if conditions:
         base_q = base_q.where(and_(*conditions))
+        count_q = count_q.where(and_(*conditions))
 
-    total = (
-        await db.execute(select(func.count()).select_from(base_q.subquery()))
-    ).scalar()
+    total = (await db.execute(count_q)).scalar()
     rows = (
         (
             await db.execute(

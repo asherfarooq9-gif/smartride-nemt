@@ -3,6 +3,8 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional, List
 from sqlalchemy import (
+    CheckConstraint,
+    DDL,
     String,
     Boolean,
     DateTime,
@@ -14,6 +16,8 @@ from sqlalchemy import (
     JSON,
     Index,
     UniqueConstraint,
+    event,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB, DOUBLE_PRECISION
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -153,7 +157,9 @@ class Patient(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), unique=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True
+    )
     full_name: Mapped[str] = mapped_column(String(100))
     date_of_birth: Mapped[Optional[datetime]] = mapped_column(DateTime)
     mobility_needs: Mapped[Optional[str]] = mapped_column(Text)
@@ -176,7 +182,9 @@ class Driver(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), unique=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True
+    )
     full_name: Mapped[str] = mapped_column(String(100))
     license_no: Mapped[str] = mapped_column(String(50), unique=True)
     vehicle_plate: Mapped[str] = mapped_column(String(20), unique=True)
@@ -196,9 +204,16 @@ class Driver(Base):
         DateTime(timezone=True), server_default=func.now()
     )
 
+    # user_id needs no extra index: its UNIQUE constraint already has one.
     __table_args__ = (
         Index("ix_drivers_status", "status"),
-        Index("ix_drivers_user_id", "user_id"),
+        # Dispatch only ever scans drivers that can take a ride right now.
+        Index(
+            "ix_drivers_available_location",
+            "current_lat",
+            "current_lng",
+            postgresql_where=text("status = 'available' AND is_verified"),
+        ),
     )
 
     user: Mapped["User"] = relationship("User", back_populates="driver")
@@ -238,20 +253,68 @@ class WalletEntry(Base):
     """Append-only money ledger. drivers.wallet_balance_pkr is its running total."""
 
     __tablename__ = "wallet_transactions"
-    __table_args__ = (UniqueConstraint("ride_id", "kind", name="uq_wallet_ride_kind"),)
+    __table_args__ = (
+        UniqueConstraint("ride_id", "kind", name="uq_wallet_ride_kind"),
+        UniqueConstraint("idempotency_key", name="uq_wallet_idempotency_key"),
+        CheckConstraint(
+            "kind IN ('topup', 'commission', 'adjustment')", name="ck_wallet_kind"
+        ),
+        # topup credits, commission debits, adjustment may go either way.
+        CheckConstraint(
+            "(kind = 'topup' AND amount > 0) "
+            "OR (kind = 'commission' AND amount < 0) "
+            "OR kind = 'adjustment'",
+            name="ck_wallet_amount_sign",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
+    # RESTRICT: a driver with ledger history cannot be deleted out from under it.
     driver_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("drivers.id", ondelete="CASCADE")
+        ForeignKey("drivers.id", ondelete="RESTRICT")
     )
     ride_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("rides.id"))
     kind: Mapped[str] = mapped_column(String(20))  # topup | commission | adjustment
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2))  # + credit, - debit
+    # Client-supplied replay key for top-ups; NULL for system rows.
+    idempotency_key: Mapped[Optional[str]] = mapped_column(Text)
+    # Who recorded a manual top-up, and how the money arrived.
+    admin_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT")
+    )
+    payment_method: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+# The ledger is append-only. Alembic 0007 installs the same trigger on migrated
+# databases; this hook installs it when tests build the schema with create_all.
+WALLET_APPEND_ONLY_FUNCTION = """
+CREATE OR REPLACE FUNCTION wallet_transactions_append_only()
+RETURNS TRIGGER AS $$
+BEGIN
+  RAISE EXCEPTION 'wallet_transactions is append-only (% not allowed)', TG_OP;
+END;
+$$ LANGUAGE plpgsql
+"""
+WALLET_APPEND_ONLY_TRIGGER = """
+CREATE TRIGGER trg_wallet_append_only
+BEFORE UPDATE OR DELETE ON wallet_transactions
+FOR EACH ROW EXECUTE FUNCTION wallet_transactions_append_only()
+"""
+event.listen(
+    WalletEntry.__table__,
+    "after_create",
+    DDL(WALLET_APPEND_ONLY_FUNCTION.replace("%", "%%")).execute_if(dialect="postgresql"),
+)
+event.listen(
+    WalletEntry.__table__,
+    "after_create",
+    DDL(WALLET_APPEND_ONLY_TRIGGER).execute_if(dialect="postgresql"),
+)
 
 
 class Ride(Base):
@@ -260,8 +323,13 @@ class Ride(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    patient_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("patients.id"))
-    driver_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("drivers.id"))
+    # RESTRICT: ride history must never vanish with its patient or driver.
+    patient_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("patients.id", ondelete="RESTRICT")
+    )
+    driver_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("drivers.id", ondelete="RESTRICT")
+    )
     hospital_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("hospitals.id"))
     ride_type: Mapped[RideType] = mapped_column(
         SAEnum(RideType, name="ride_type", create_type=False)
@@ -277,6 +345,11 @@ class Ride(Base):
     requested_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+    # When the ride last entered the pending queue (reset on driver requeue).
+    queued_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    symptom_text: Mapped[Optional[str]] = mapped_column(Text)
     driver_assigned_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True)
     )
@@ -285,9 +358,9 @@ class Ride(Base):
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     cancelled_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     cancel_reason: Mapped[Optional[str]] = mapped_column(Text)
-    estimated_fare_pkr: Mapped[Optional[float]] = mapped_column(Numeric(10, 2))
-    final_fare_pkr: Mapped[Optional[float]] = mapped_column(Numeric(10, 2))
-    patient_rating: Mapped[Optional[float]] = mapped_column(Numeric(2, 1))
+    estimated_fare_pkr: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2))
+    final_fare_pkr: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2))
+    patient_rating: Mapped[Optional[Decimal]] = mapped_column(Numeric(2, 1))
     rating_comment: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -299,6 +372,33 @@ class Ride(Base):
         Index("ix_rides_requested_at", "requested_at"),
         Index("ix_rides_patient_id", "patient_id"),
         Index("ix_rides_driver_id", "driver_id"),
+        Index("ix_rides_hospital_id", "hospital_id"),
+        # The dispatch loop reads only the pending queue, oldest first.
+        Index(
+            "ix_rides_pending_requested_at",
+            "requested_at",
+            postgresql_where=text("status = 'pending'"),
+        ),
+        Index(
+            "ix_rides_driver_status_completed",
+            "driver_id",
+            "status",
+            text("completed_at DESC"),
+        ),
+        # A patient can have at most one live emergency ride.
+        Index(
+            "uq_rides_active_emergency_per_patient",
+            "patient_id",
+            unique=True,
+            postgresql_where=text(
+                "ride_type = 'emergency' AND status IN ('pending', "
+                "'driver_assigned', 'driver_en_route', 'patient_picked_up', "
+                "'arrived_at_hospital')"
+            ),
+        ),
+        CheckConstraint(
+            "patient_rating BETWEEN 1 AND 5", name="ck_rides_patient_rating_range"
+        ),
     )
 
     patient: Mapped["Patient"] = relationship(
@@ -348,7 +448,10 @@ class TriageEvent(Base):
         DateTime(timezone=True), server_default=func.now()
     )
 
-    __table_args__ = (Index("ix_triage_ride_id", "ride_id"),)
+    __table_args__ = (
+        Index("ix_triage_ride_id", "ride_id"),
+        UniqueConstraint("ride_id", name="uq_triage_events_ride_id"),
+    )
 
     ride: Mapped["Ride"] = relationship("Ride", back_populates="triage_events")
 
@@ -372,6 +475,11 @@ class HospitalAlert(Base):
     status: Mapped[str] = mapped_column(String(20), default="pending")
     error_msg: Mapped[Optional[str]] = mapped_column(Text)
 
+    __table_args__ = (
+        Index("ix_hospital_alerts_ride_id", "ride_id"),
+        Index("ix_hospital_alerts_hospital_id", "hospital_id"),
+    )
+
     ride: Mapped["Ride"] = relationship("Ride", back_populates="hospital_alerts")
 
 
@@ -394,6 +502,8 @@ class FamilyNotification(Base):
         DateTime(timezone=True), server_default=func.now()
     )
     status: Mapped[str] = mapped_column(String(20), default="pending")
+
+    __table_args__ = (Index("ix_family_notifications_ride_id", "ride_id"),)
 
     ride: Mapped["Ride"] = relationship("Ride", back_populates="family_notifications")
 
