@@ -280,8 +280,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate compose file
-        run: docker compose config --quiet
+      # The compose files require secrets from .env (Grafana password etc.);
+      # the example file carries working dev values for every required variable.
+      - name: Validate dev and production compose files
+        run: |
+          cp .env.example .env
+          docker compose config --quiet
+          docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet
 
   pr-summary:
     name: PR Summary Comment

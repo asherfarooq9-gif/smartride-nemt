@@ -61,3 +61,6 @@ _serveerr.txt
 
 # Local agent tooling state
 .claude-flow/
+
+# Prometheus metrics token file (see docker-compose.prod.yml)
+secrets/

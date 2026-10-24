@@ -1,6 +1,9 @@
-FROM python:3.11-slim
+FROM python:3.11.17-slim-trixie
 
 WORKDIR /app
+
+# No .pyc writes: production runs with a read-only root filesystem.
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 
 # Run as an unprivileged user: a bug in the app must not be root in the container.
 RUN useradd --create-home --uid 10001 app

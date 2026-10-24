@@ -95,3 +95,13 @@ jobs:
             apps/patient_app/build/app/outputs/flutter-apk/app-release.apk
           draft: false
           prerelease: false
+
+      # Hosted runners are discarded, but self-hosted or cached runners are not:
+      # never leave the keystore, its passwords or the API config on disk.
+      - name: Remove signing material
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP/release.keystore" \
+            apps/patient_app/android/key.properties \
+            apps/patient_app/.env \
+            apps/patient_app/android/app/google-services.json
