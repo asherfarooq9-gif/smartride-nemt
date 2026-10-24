@@ -36,7 +36,9 @@ async def get_driver_by_user(user: User, db: AsyncSession) -> Driver:
     return driver
 
 
-async def apply_balance_delta(db: AsyncSession, driver_id: UUID, delta: Decimal) -> None:
+async def apply_balance_delta(
+    db: AsyncSession, driver_id: UUID, delta: Decimal
+) -> None:
     """Add `delta` to a driver's wallet balance in SQL (no read-modify-write).
 
     Negative balances are allowed on purpose: commission is debited after the
@@ -164,7 +166,9 @@ async def list_drivers(
     if conditions:
         base_q = base_q.where(and_(*conditions))
 
-    count_q = select(func.count()).select_from(Driver).join(User, Driver.user_id == User.id)
+    count_q = (
+        select(func.count()).select_from(Driver).join(User, Driver.user_id == User.id)
+    )
     if conditions:
         count_q = count_q.where(and_(*conditions))
     total = (await db.execute(count_q)).scalar()

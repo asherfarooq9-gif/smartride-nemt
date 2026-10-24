@@ -260,9 +260,7 @@ async def test_notify_user_reports_a_failed_lookup_without_raising(caplog):
 
 async def test_notify_user_reports_a_missing_device_token():
     no_token_db = SimpleNamespace(
-        execute=AsyncMock(
-            return_value=SimpleNamespace(scalar_one_or_none=lambda: None)
-        )
+        execute=AsyncMock(return_value=SimpleNamespace(scalar_one_or_none=lambda: None))
     )
 
     delivered = await notifications.notify_user(
@@ -399,7 +397,9 @@ def test_unusable_severity_is_escalated_never_downgraded(bad_severity):
 
 @pytest.mark.parametrize("bad_specialty", ["bogus", "", None, 12, ["cardiology"]])
 def test_unknown_specialty_becomes_general_emergency(bad_specialty):
-    triage = normalise_triage({"specialty": bad_specialty, "severity": "3"}, "sore knee")
+    triage = normalise_triage(
+        {"specialty": bad_specialty, "severity": "3"}, "sore knee"
+    )
 
     assert triage["specialty"] == "general_emergency"
     assert triage["severity"] == "3"
@@ -550,7 +550,10 @@ async def test_drivers_with_stale_or_missing_location_reports_are_not_candidates
     )
     await db.commit()
 
-    found = {d.id for d in await find_available_drivers_by_distance(db, PATIENT_LAT, PATIENT_LNG)}
+    found = {
+        d.id
+        for d in await find_available_drivers_by_distance(db, PATIENT_LAT, PATIENT_LNG)
+    }
 
     assert fresh_id in found
     assert stale_id not in found
@@ -606,7 +609,9 @@ async def test_a_driver_who_responded_in_time_keeps_the_ride(db, status, assigne
     await db.execute(
         update(Ride)
         .where(Ride.id == ride_id)
-        .values(status=status, driver_id=driver_id, driver_assigned_at=_ago(assigned_ago))
+        .values(
+            status=status, driver_id=driver_id, driver_assigned_at=_ago(assigned_ago)
+        )
     )
     await db.commit()
 
@@ -714,7 +719,9 @@ async def test_a_ride_given_back_by_its_driver_is_not_expired_at_once(
     client, verified_driver_token, db
 ):
     _, ride_id = await _assigned_ride(client, _phone(), verified_driver_token)
-    requeued = await _set_ride_status(client, verified_driver_token, ride_id, "cancelled")
+    requeued = await _set_ride_status(
+        client, verified_driver_token, ride_id, "cancelled"
+    )
     assert requeued.json()["status"] == "pending"
     # asked for 20 minutes ago, but only put back in the queue just now
     await db.execute(
@@ -785,9 +792,10 @@ async def test_a_status_push_that_could_not_be_sent_is_logged(
 ):
     _, ride_id = await _assigned_ride(client, _phone(), verified_driver_token)
 
-    with patch.object(
-        ride_service, "notify_user", AsyncMock(return_value=False)
-    ), caplog.at_level(logging.WARNING):
+    with (
+        patch.object(ride_service, "notify_user", AsyncMock(return_value=False)),
+        caplog.at_level(logging.WARNING),
+    ):
         r = await _set_ride_status(
             client, verified_driver_token, ride_id, "driver_en_route"
         )

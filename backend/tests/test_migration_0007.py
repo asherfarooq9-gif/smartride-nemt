@@ -86,7 +86,9 @@ async def scratch_db():
 async def test_upgrade_creates_and_downgrade_removes_the_0007_objects(scratch_db):
     up = _alembic("upgrade", "head")
     assert up.returncode == 0, up.stderr[-2000:]
-    indexes = await _scalars("SELECT indexname FROM pg_indexes WHERE schemaname='public'")
+    indexes = await _scalars(
+        "SELECT indexname FROM pg_indexes WHERE schemaname='public'"
+    )
     assert EXPECTED_INDEXES <= indexes
     assert not DROPPED_INDEXES & indexes
     # 0008 dropped these never-written tables, and their indexes with them.
@@ -112,7 +114,9 @@ async def test_upgrade_creates_and_downgrade_removes_the_0007_objects(scratch_db
 
     down = _alembic("downgrade", "0006")
     assert down.returncode == 0, down.stderr[-2000:]
-    indexes = await _scalars("SELECT indexname FROM pg_indexes WHERE schemaname='public'")
+    indexes = await _scalars(
+        "SELECT indexname FROM pg_indexes WHERE schemaname='public'"
+    )
     assert not EXPECTED_INDEXES & indexes
     assert {"idx_patients_user", "idx_drivers_user"} <= indexes
     assert (await _alembic_current()) == "0006"

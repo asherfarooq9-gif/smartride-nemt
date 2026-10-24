@@ -66,9 +66,7 @@ async def _expire(db, now: datetime) -> None:
                 or_(
                     # queued_at, not requested_at: a ride a driver gave back must
                     # get a fresh window instead of being closed on the spot.
-                    and_(
-                        Ride.ride_type == RideType.emergency, Ride.queued_at < cutoff
-                    ),
+                    and_(Ride.ride_type == RideType.emergency, Ride.queued_at < cutoff),
                     and_(Ride.ride_type == RideType.scheduled, due < now),
                 ),
             )
@@ -91,9 +89,7 @@ async def _expire(db, now: datetime) -> None:
             data={"ride_id": str(ride_id)},
         )
         if not told:
-            log.error(
-                "patient NOT told to call 1122 after expiry ride_id=%s", ride_id
-            )
+            log.error("patient NOT told to call 1122 after expiry ride_id=%s", ride_id)
 
 
 async def _requeue_unacknowledged(db, now: datetime) -> None:

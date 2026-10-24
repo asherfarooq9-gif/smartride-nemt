@@ -32,7 +32,11 @@ async def _topup(client, admin_token, driver_id, key=None, **body):
 async def _entries(db, driver_id) -> list[WalletEntry]:
     db.expire_all()
     return list(
-        (await db.execute(select(WalletEntry).where(WalletEntry.driver_id == driver_id)))
+        (
+            await db.execute(
+                select(WalletEntry).where(WalletEntry.driver_id == driver_id)
+            )
+        )
         .scalars()
         .all()
     )
@@ -121,7 +125,9 @@ async def test_topup_replay_with_same_key_credits_once(client, db, admin_token):
     replay = await _topup(client, admin_token, driver_id, key)
 
     assert first.status_code == replay.status_code == 200
-    assert first.json()["wallet_balance_pkr"] == replay.json()["wallet_balance_pkr"] == 100
+    assert (
+        first.json()["wallet_balance_pkr"] == replay.json()["wallet_balance_pkr"] == 100
+    )
     entries = await _entries(db, driver_id)
     assert [(e.kind, e.amount) for e in entries] == [("topup", Decimal("100.00"))]
     assert entries[0].idempotency_key == key
@@ -160,12 +166,16 @@ async def test_topup_is_exact_to_the_paisa(client, db, admin_token):
 
     db.expire_all()
     balance = (
-        await db.execute(select(Driver.wallet_balance_pkr).where(Driver.id == driver_id))
+        await db.execute(
+            select(Driver.wallet_balance_pkr).where(Driver.id == driver_id)
+        )
     ).scalar_one()
     assert balance == Decimal("10.40")
     ledger = (
         await db.execute(
-            select(func.sum(WalletEntry.amount)).where(WalletEntry.driver_id == driver_id)
+            select(func.sum(WalletEntry.amount)).where(
+                WalletEntry.driver_id == driver_id
+            )
         )
     ).scalar_one()
     assert ledger == balance
@@ -177,9 +187,7 @@ async def test_topup_rejects_sub_paisa_amounts(client, db, admin_token):
     assert r.status_code == 422
 
 
-async def test_topup_unknown_plan_is_422_not_a_silent_fallback(
-    client, db, admin_token
-):
+async def test_topup_unknown_plan_is_422_not_a_silent_fallback(client, db, admin_token):
     driver_id = await _driver(client, db)
     r = await _topup(client, admin_token, driver_id, plan_id="platinum")
     assert r.status_code == 422
@@ -202,7 +210,9 @@ async def test_balance_may_go_negative(client, db):
     await db.commit()
     db.expire_all()
     balance = (
-        await db.execute(select(Driver.wallet_balance_pkr).where(Driver.id == driver_id))
+        await db.execute(
+            select(Driver.wallet_balance_pkr).where(Driver.id == driver_id)
+        )
     ).scalar_one()
     assert balance == Decimal("-40.50")
 

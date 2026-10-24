@@ -105,7 +105,9 @@ def upgrade() -> None:
         "wallet_transactions",
         "kind IN ('topup', 'commission', 'adjustment')",
     )
-    op.create_check_constraint("ck_wallet_amount_sign", "wallet_transactions", AMOUNT_SIGN_OK)
+    op.create_check_constraint(
+        "ck_wallet_amount_sign", "wallet_transactions", AMOUNT_SIGN_OK
+    )
     op.execute("""
         CREATE OR REPLACE FUNCTION wallet_transactions_append_only()
         RETURNS TRIGGER AS $$

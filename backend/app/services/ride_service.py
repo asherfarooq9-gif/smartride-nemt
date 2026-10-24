@@ -315,7 +315,9 @@ async def _apply_driver_transition(
             await _release_driver(db, driver.id, ride.id)
         return
     if new_status != DRIVER_TRANSITIONS.get(ride.status):
-        raise HTTPException(400, f"Cannot transition from {ride.status} to {new_status}")
+        raise HTTPException(
+            400, f"Cannot transition from {ride.status} to {new_status}"
+        )
     now = datetime.now(timezone.utc)
     _ensure_leg_took_long_enough(ride, new_status, now)
     ride.status = new_status

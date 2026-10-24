@@ -1,6 +1,8 @@
 # Ruff configuration for the SmartRide backend.
 line-length = 88
 target-version = "py311"
+# Vendored byte-for-byte from ai-services/triage/keywords.py; a test checks the copies match.
+extend-exclude = ["app/services/triage_keywords.py"]
 
 [lint]
 # Pinned explicitly: newer ruff releases widen the implicit default set, which

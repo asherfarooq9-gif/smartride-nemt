@@ -308,7 +308,9 @@ FOR EACH ROW EXECUTE FUNCTION wallet_transactions_append_only()
 event.listen(
     WalletEntry.__table__,
     "after_create",
-    DDL(WALLET_APPEND_ONLY_FUNCTION.replace("%", "%%")).execute_if(dialect="postgresql"),
+    DDL(WALLET_APPEND_ONLY_FUNCTION.replace("%", "%%")).execute_if(
+        dialect="postgresql"
+    ),
 )
 event.listen(
     WalletEntry.__table__,

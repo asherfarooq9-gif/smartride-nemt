@@ -74,6 +74,8 @@ jobs:
       REDIS_URL: redis://localhost:6379/0
       SECRET_KEY: ci_test_secret_key_32_chars_long
       TRIAGE_SERVICE_URL: http://localhost:8001
+      # Production-mode settings refuse a wildcard CORS origin.
+      ALLOWED_ORIGINS: '["http://localhost:3000"]'
 
     steps:
       - uses: actions/checkout@v4

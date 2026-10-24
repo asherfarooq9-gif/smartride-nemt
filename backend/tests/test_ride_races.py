@@ -73,7 +73,11 @@ async def _driver_completes(session, ride):
         await session.execute(select(Driver).where(Driver.id == ride.driver_id))
     ).scalar_one()
     return await ride_service.update_ride_status(
-        ride, RideStatusUpdate(status=RideStatus.completed), "driver", session, driver=driver
+        ride,
+        RideStatusUpdate(status=RideStatus.completed),
+        "driver",
+        session,
+        driver=driver,
     )
 
 
@@ -200,5 +204,7 @@ async def test_rating_outside_one_to_five_is_rejected_by_the_database(
     await _set_ride_status(client, verified_driver_token, ride_id, "completed")
 
     with pytest.raises(IntegrityError):
-        await db.execute(update(Ride).where(Ride.id == ride_id).values(patient_rating=6))
+        await db.execute(
+            update(Ride).where(Ride.id == ride_id).values(patient_rating=6)
+        )
     await db.rollback()
