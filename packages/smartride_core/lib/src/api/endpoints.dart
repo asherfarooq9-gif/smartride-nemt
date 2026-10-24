@@ -166,15 +166,3 @@ Future<Map<String, dynamic>> getDriverWallet() async {
   return _c.get('/api/v1/drivers/wallet');
 }
 
-Future<DriverResponse> topUpWallet({
-  double? amountPkr,
-  String? planId,
-  required String paymentMethod,
-}) async {
-  final data = await _c.post('/api/v1/drivers/wallet/topup', {
-    'amount_pkr': amountPkr ?? 0,
-    if (planId != null) 'plan_id': planId,
-    'payment_method': paymentMethod,
-  });
-  return DriverResponse.fromJson(data);
-}
