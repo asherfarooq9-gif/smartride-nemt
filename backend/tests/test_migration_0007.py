@@ -17,9 +17,6 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 SCRATCH_DB = make_url(TEST_DATABASE_URL).database + "_mig0007"
 
 EXPECTED_INDEXES = {
-    "ix_hospital_alerts_ride_id",
-    "ix_hospital_alerts_hospital_id",
-    "ix_family_notifications_ride_id",
     "ix_rides_hospital_id",
     "ix_rides_pending_requested_at",
     "ix_rides_driver_status_completed",
@@ -92,6 +89,10 @@ async def test_upgrade_creates_and_downgrade_removes_the_0007_objects(scratch_db
     indexes = await _scalars("SELECT indexname FROM pg_indexes WHERE schemaname='public'")
     assert EXPECTED_INDEXES <= indexes
     assert not DROPPED_INDEXES & indexes
+    # 0008 dropped these never-written tables, and their indexes with them.
+    assert not {"hospital_alerts", "family_notifications"} & await _scalars(
+        "SELECT tablename FROM pg_tables WHERE schemaname='public'"
+    )
     constraints = await _scalars("SELECT conname FROM pg_constraint")
     assert EXPECTED_CONSTRAINTS <= constraints
     assert await _scalars(
@@ -146,5 +147,6 @@ async def test_downgrade_refuses_to_drop_ledger_audit_data(scratch_db):
 
     assert down.returncode != 0
     assert "Refusing to downgrade 0007" in down.stderr
-    assert (await _alembic_current()) == "0007"
+    # The whole downgrade is one transaction, so 0008's step is rolled back too.
+    assert (await _alembic_current()) == "0008"
     assert await _scalars("SELECT idempotency_key FROM wallet_transactions") == {"k"}

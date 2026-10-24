@@ -21,7 +21,6 @@ HIPAA "minimum necessary" and standard data-protection practice as the bar.
 | Phone | `users.phone`, emergency/coordinator | Medium — identifying |
 | Pickup location | `rides.pickup_lat/lng/address` | Medium — location + implies care event |
 | Emergency contact | `patients.emergency_contact_*` | Medium — third-party PII |
-| Family SMS body | `family_notifications.message_body` | Medium — name + destination |
 
 ---
 

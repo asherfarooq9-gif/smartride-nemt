@@ -34,9 +34,6 @@ class Settings(BaseSettings):
     TWILIO_AUTH_TOKEN: str = ""
     TWILIO_FROM_NUMBER: str = ""
 
-    # Google Maps
-    GOOGLE_MAPS_API_KEY: str = ""
-
     # Firebase
     FIREBASE_PROJECT_ID: str = ""
     FIREBASE_CREDENTIALS_PATH: str = "firebase-credentials.json"

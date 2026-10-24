@@ -33,7 +33,7 @@ real client IPs. Production ports are bound to `127.0.0.1` for that reason.
 
 Optional integrations, all of which degrade gracefully when unset: `TWILIO_*`
 (SMS to family and hospitals), `FIREBASE_PROJECT_ID` + credentials file (push),
-`SENTRY_DSN`, `GOOGLE_MAPS_API_KEY`.
+`SENTRY_DSN`.
 
 ## Release and rollback
 
@@ -82,9 +82,8 @@ scrape config), Twilio and Firebase credentials in their consoles.
 
 ## Known gaps and what is not verified
 
-Not built: `HospitalAlert` and `FamilyNotification` rows are never written (the SMS and
-FHIR sends happen but leave no audit record); drivers cannot top up their own wallet;
-the driver and patient screens are separate code (no shared screens).
+Not built: the hospital and family SMS and FHIR sends leave no audit record; drivers cannot
+top up their own wallet; the driver and patient screens are separate code (no shared screens).
 
 Written but never run (needs GitHub Actions or real devices): the release workflow's
 signing step, the CI `e2e`, `admin-dashboard`, `triage-tests` and security jobs

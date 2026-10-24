@@ -257,14 +257,12 @@ User ──────────── UserRoleLink (many)
   │
   ├──────────── Patient ──── Ride (many)
   │                            │
-  └──────────── Driver         ├──── TriageEvent
-                │              ├──── HospitalAlert
-                └── Ride       └──── FamilyNotification
+  └──────────── Driver         └──── TriageEvent
+                │
+                └── Ride
                 (assigned)
                 │
 Hospital ───────┘
-  │
-  └──── HospitalAlert
 
 AnalyticsHourly (standalone)
 ```
@@ -847,9 +845,6 @@ TRIAGE_SERVICE_URL=http://triage:8001
 TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 TWILIO_AUTH_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 TWILIO_FROM_NUMBER=+1234567890
-
-# Google Maps (geocoding)
-GOOGLE_MAPS_API_KEY=AIza...
 
 # Firebase (push notifications)
 FIREBASE_PROJECT_ID=smartride-xxxxx

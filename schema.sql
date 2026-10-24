@@ -1,6 +1,6 @@
 -- SmartRide NEMT -- PostgreSQL schema (schema only, no data).
 --
--- GENERATED from the Alembic migrations (head = 0007). DO NOT HAND EDIT.
+-- GENERATED from the Alembic migrations (head = 0008). DO NOT HAND EDIT.
 -- To regenerate after adding a migration, from backend/ with a scratch database:
 --   createdb smartride_schema_dump
 --   DATABASE_URL=postgresql+asyncpg://USER:PASS@HOST/smartride_schema_dump alembic upgrade head
@@ -236,37 +236,6 @@ CREATE TABLE public.drivers (
 
 
 --
--- Name: family_notifications; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.family_notifications (
-    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
-    ride_id uuid NOT NULL,
-    recipient_phone character varying(20) NOT NULL,
-    message_body text NOT NULL,
-    twilio_sid character varying(100),
-    sent_at timestamp with time zone DEFAULT now(),
-    status character varying(20) DEFAULT 'pending'::character varying
-);
-
-
---
--- Name: hospital_alerts; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.hospital_alerts (
-    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
-    ride_id uuid NOT NULL,
-    hospital_id uuid NOT NULL,
-    channel character varying(20) NOT NULL,
-    payload jsonb,
-    sent_at timestamp with time zone,
-    status character varying(20) DEFAULT 'pending'::character varying,
-    error_msg text
-);
-
-
---
 -- Name: hospitals; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -459,22 +428,6 @@ ALTER TABLE ONLY public.drivers
 
 
 --
--- Name: family_notifications family_notifications_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.family_notifications
-    ADD CONSTRAINT family_notifications_pkey PRIMARY KEY (id);
-
-
---
--- Name: hospital_alerts hospital_alerts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.hospital_alerts
-    ADD CONSTRAINT hospital_alerts_pkey PRIMARY KEY (id);
-
-
---
 -- Name: hospitals hospitals_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -648,27 +601,6 @@ CREATE INDEX ix_drivers_available_location ON public.drivers USING btree (curren
 
 
 --
--- Name: ix_family_notifications_ride_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX ix_family_notifications_ride_id ON public.family_notifications USING btree (ride_id);
-
-
---
--- Name: ix_hospital_alerts_hospital_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX ix_hospital_alerts_hospital_id ON public.hospital_alerts USING btree (hospital_id);
-
-
---
--- Name: ix_hospital_alerts_ride_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX ix_hospital_alerts_ride_id ON public.hospital_alerts USING btree (ride_id);
-
-
---
 -- Name: ix_rides_driver_status_completed; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -744,30 +676,6 @@ CREATE TRIGGER trg_wallet_append_only BEFORE DELETE OR UPDATE ON public.wallet_t
 
 ALTER TABLE ONLY public.drivers
     ADD CONSTRAINT drivers_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
-
-
---
--- Name: family_notifications family_notifications_ride_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.family_notifications
-    ADD CONSTRAINT family_notifications_ride_id_fkey FOREIGN KEY (ride_id) REFERENCES public.rides(id) ON DELETE CASCADE;
-
-
---
--- Name: hospital_alerts hospital_alerts_hospital_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.hospital_alerts
-    ADD CONSTRAINT hospital_alerts_hospital_id_fkey FOREIGN KEY (hospital_id) REFERENCES public.hospitals(id);
-
-
---
--- Name: hospital_alerts hospital_alerts_ride_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.hospital_alerts
-    ADD CONSTRAINT hospital_alerts_ride_id_fkey FOREIGN KEY (ride_id) REFERENCES public.rides(id) ON DELETE CASCADE;
 
 
 --
@@ -848,4 +756,4 @@ ALTER TABLE ONLY public.wallet_transactions
 
 
 -- Mark the database as being at the migration head this file was generated from.
-INSERT INTO public.alembic_version (version_num) VALUES ('0007');
+INSERT INTO public.alembic_version (version_num) VALUES ('0008');

@@ -19,7 +19,7 @@ from sqlalchemy import (
     event,
     text,
 )
-from sqlalchemy.dialects.postgresql import UUID, JSONB, DOUBLE_PRECISION
+from sqlalchemy.dialects.postgresql import UUID, DOUBLE_PRECISION
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -413,12 +413,6 @@ class Ride(Base):
     triage_events: Mapped[List["TriageEvent"]] = relationship(
         "TriageEvent", back_populates="ride"
     )
-    hospital_alerts: Mapped[List["HospitalAlert"]] = relationship(
-        "HospitalAlert", back_populates="ride"
-    )
-    family_notifications: Mapped[List["FamilyNotification"]] = relationship(
-        "FamilyNotification", back_populates="ride"
-    )
 
 
 # ─── TRIAGE EVENT ─────────────────────────────────────────────────────────────
@@ -461,58 +455,6 @@ class TriageEvent(Base):
     )
 
     ride: Mapped["Ride"] = relationship("Ride", back_populates="triage_events")
-
-
-# ─── HOSPITAL ALERT ───────────────────────────────────────────────────────────
-
-
-class HospitalAlert(Base):
-    __tablename__ = "hospital_alerts"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    ride_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("rides.id", ondelete="CASCADE")
-    )
-    hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"))
-    channel: Mapped[str] = mapped_column(String(20))
-    payload: Mapped[Optional[dict]] = mapped_column(JSONB)
-    sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    status: Mapped[str] = mapped_column(String(20), default="pending")
-    error_msg: Mapped[Optional[str]] = mapped_column(Text)
-
-    __table_args__ = (
-        Index("ix_hospital_alerts_ride_id", "ride_id"),
-        Index("ix_hospital_alerts_hospital_id", "hospital_id"),
-    )
-
-    ride: Mapped["Ride"] = relationship("Ride", back_populates="hospital_alerts")
-
-
-# ─── FAMILY NOTIFICATION ──────────────────────────────────────────────────────
-
-
-class FamilyNotification(Base):
-    __tablename__ = "family_notifications"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    ride_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("rides.id", ondelete="CASCADE")
-    )
-    recipient_phone: Mapped[str] = mapped_column(String(20))
-    message_body: Mapped[str] = mapped_column(Text)
-    twilio_sid: Mapped[Optional[str]] = mapped_column(String(100))
-    sent_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-    status: Mapped[str] = mapped_column(String(20), default="pending")
-
-    __table_args__ = (Index("ix_family_notifications_ride_id", "ride_id"),)
-
-    ride: Mapped["Ride"] = relationship("Ride", back_populates="family_notifications")
 
 
 # ─── ANALYTICS HOURLY ─────────────────────────────────────────────────────────
