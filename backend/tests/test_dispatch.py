@@ -5,6 +5,9 @@ then runs dispatch_emergency() directly and verifies the outcome.
 """
 
 import uuid
+from datetime import datetime, timezone
+
+import httpx
 import pytest
 import pytest_asyncio
 from unittest.mock import AsyncMock, patch
@@ -96,6 +99,7 @@ async def _seed(session: AsyncSession):
         status=DriverStatus.available,
         current_lat=33.7305,
         current_lng=73.0433,
+        last_seen_at=datetime.now(timezone.utc),
     )
     session.add(driver)
 
@@ -255,7 +259,7 @@ async def test_dispatch_triage_fallback_on_service_error(session: AsyncSession):
         "app.services.emergency_dispatch.httpx.AsyncClient",
     ) as mock_client_cls:
         mock_client_cls.return_value.__aenter__.return_value.post.side_effect = (
-            ConnectionError("triage down")
+            httpx.ConnectError("triage down")
         )
         result = await dispatch_emergency(ride, "chest pain", session)
 

@@ -439,7 +439,14 @@ class TriageEvent(Base):
     )
     confidence_score: Mapped[float] = mapped_column(Numeric(5, 4))
     severity_level: Mapped[SeverityLevel] = mapped_column(
-        SAEnum(SeverityLevel, name="severity_level", create_type=False)
+        # Persist the values ("1".."5") the migration created, not the member
+        # names ("one".."five"), or every triage insert fails against a real DB.
+        SAEnum(
+            SeverityLevel,
+            name="severity_level",
+            create_type=False,
+            values_callable=lambda members: [m.value for m in members],
+        )
     )
     rule_override: Mapped[bool] = mapped_column(Boolean, default=False)
     model_version: Mapped[str] = mapped_column(String(50))

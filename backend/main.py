@@ -50,6 +50,16 @@ async def _stop_task(task: asyncio.Task, name: str) -> None:
         log.error("%s crashed before shutdown", name, exc_info=result)
 
 
+def _warn_if_dispatch_loop_disabled() -> None:
+    """The first dispatch is a one-shot background task; the loop is the only retry."""
+    if not settings.DISPATCH_LOOP_ENABLED and not settings.DEBUG:
+        log.warning(
+            "DISPATCH_LOOP_ENABLED is false in a non-DEBUG deployment: rides that the "
+            "first dispatch cannot place (no driver free, restart mid-dispatch) will "
+            "never be retried or expired."
+        )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # #3 Fail fast if the default insecure secret key is still in use
@@ -71,6 +81,7 @@ async def lifespan(app: FastAPI):
 
     # Wire error tracking (no-op unless SENTRY_DSN is configured).
     init_error_tracking()
+    _warn_if_dispatch_loop_disabled()
 
     dispatch_task = (
         asyncio.create_task(dispatch_loop.run_forever())

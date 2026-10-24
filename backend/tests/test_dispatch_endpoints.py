@@ -36,12 +36,23 @@ async def _create_emergency(client: AsyncClient, token: str) -> str:
     return r.json()["id"]
 
 
+async def _park_latest_driver_near_pickup(db: AsyncSession) -> None:
+    """Pending rides are only listed to drivers with a known location nearby."""
+    driver = (
+        await db.execute(select(Driver).order_by(Driver.created_at.desc()).limit(1))
+    ).scalar_one()
+    driver.current_lat = PICKUP["pickup_lat"] + 0.01
+    driver.current_lng = PICKUP["pickup_lng"]
+    await db.commit()
+
+
 @pytest.mark.asyncio
 async def test_pending_rides_returns_unassigned(
-    client: AsyncClient, verified_driver_token: str
+    client: AsyncClient, verified_driver_token: str, db: AsyncSession
 ):
     patient_token = await _register(client, "+92300730010", "patient")
     await _create_emergency(client, patient_token)
+    await _park_latest_driver_near_pickup(db)
 
     r = await client.get(
         "/api/v1/rides/pending",

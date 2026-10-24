@@ -160,6 +160,8 @@ async def create_emergency_ride(
         pickup_lat=body.pickup_lat,
         pickup_lng=body.pickup_lng,
         pickup_address=body.pickup_address,
+        # Saved with the ride so a restart before triage never loses the complaint.
+        symptom_text=body.symptom_text,
         queued_at=func.now(),
     )
     db.add(ride)
@@ -394,13 +396,18 @@ async def update_ride_status(
     }
     if ride.status in labels:
         title, body_text = labels[ride.status]
-        await notify_user(
+        delivered = await notify_user(
             db,
             patient_id=ride.patient_id,
             title=title,
             body=body_text,
             data={"ride_id": str(ride.id)},
         )
+        if not delivered:
+            # The status change is already committed; only the push was lost.
+            log.warning(
+                "status push not sent ride_id=%s status=%s", ride.id, ride.status.value
+            )
 
     return ride
 
@@ -437,13 +444,28 @@ async def rate_completed_ride(
 
 
 async def get_pending_rides(driver: Driver, db: AsyncSession) -> list[Ride]:
-    """Unassigned pending rides, sorted by distance to driver (nearest first)."""
+    """Unassigned pending rides within DRIVER_SEARCH_RADIUS_KM of the driver, nearest first.
+
+    A driver with no known location gets an empty list: showing every pending
+    ride in the country would hand out patients' pickup points to drivers who
+    cannot possibly reach them.
+    """
+    if driver.current_lat is None or driver.current_lng is None:
+        return []
+    lat, lng = driver.current_lat, driver.current_lng
+    dlat = settings.DRIVER_SEARCH_RADIUS_KM / 111.0
+    dlng = dlat / max(cos(radians(lat)), 0.01)
     rows = (
         (
             await db.execute(
                 select(Ride)
                 .where(
-                    and_(Ride.status == RideStatus.pending, Ride.driver_id.is_(None))
+                    and_(
+                        Ride.status == RideStatus.pending,
+                        Ride.driver_id.is_(None),
+                        Ride.pickup_lat.between(lat - dlat, lat + dlat),
+                        Ride.pickup_lng.between(lng - dlng, lng + dlng),
+                    )
                 )
                 .options(selectinload(Ride.hospital))
                 .order_by(Ride.requested_at.asc())
@@ -453,15 +475,10 @@ async def get_pending_rides(driver: Driver, db: AsyncSession) -> list[Ride]:
         .scalars()
         .all()
     )
-
-    if driver.current_lat is not None and driver.current_lng is not None:
-        rows = sorted(
-            rows,
-            key=lambda r: _haversine_km(
-                driver.current_lat, driver.current_lng, r.pickup_lat, r.pickup_lng
-            ),
-        )
-    return list(rows)
+    with_km = [(r, _haversine_km(lat, lng, r.pickup_lat, r.pickup_lng)) for r in rows]
+    nearby = [(r, km) for r, km in with_km if km <= settings.DRIVER_SEARCH_RADIUS_KM]
+    nearby.sort(key=lambda pair: pair[1])
+    return [r for r, _ in nearby]
 
 
 async def accept_ride(ride_id: str, driver: Driver, db: AsyncSession) -> Ride:

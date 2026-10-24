@@ -70,6 +70,16 @@ async def send_push(
 _pending_pushes: set[asyncio.Task] = set()
 
 
+def _on_push_done(task: asyncio.Task, ride_id) -> None:
+    """Forget a finished push task and make sure a crash in it is never silent."""
+    _pending_pushes.discard(task)
+    if task.cancelled():
+        return
+    exc = task.exception()
+    if exc is not None:
+        log.error("push task failed ride_id=%s (%s)", ride_id, type(exc).__name__)
+
+
 async def notify_user(
     db,
     *,
@@ -78,15 +88,19 @@ async def notify_user(
     data: dict | None = None,
     user_id=None,
     patient_id=None,
-) -> None:
+) -> bool:
     """Fire-and-forget push to a user (by user id, or by patient profile id).
 
     Never raises: a failed notification must not fail the request that caused it.
+    Returns True only when a push was handed to the sender. False means nobody
+    will be told (lookup failed or no device token), so callers whose message is
+    safety-critical must log it.
     """
     from sqlalchemy import select
 
     from app.models.models import Patient, User
 
+    ride_id = (data or {}).get("ride_id")
     try:
         query = select(User.fcm_token)
         if patient_id is not None:
@@ -96,14 +110,18 @@ async def notify_user(
         else:
             query = query.where(User.id == user_id)
         token = (await db.execute(query)).scalar_one_or_none()
-        if token:
-            task = asyncio.create_task(
-                send_push(fcm_token=token, title=title, body=body, data=data)
-            )
-            _pending_pushes.add(task)  # keep a reference so it is not garbage-collected
-            task.add_done_callback(_pending_pushes.discard)
-    except Exception:
-        log.warning("push lookup failed", exc_info=True)
+    except Exception as exc:
+        log.warning("push lookup failed ride_id=%s (%s)", ride_id, type(exc).__name__)
+        return False
+    if not token:
+        log.info("push skipped, no device token ride_id=%s", ride_id)
+        return False
+    task = asyncio.create_task(
+        send_push(fcm_token=token, title=title, body=body, data=data)
+    )
+    _pending_pushes.add(task)  # keep a reference so it is not garbage-collected
+    task.add_done_callback(lambda done: _on_push_done(done, ride_id))
+    return True
 
 
 def _mask_phone(phone: str) -> str:
@@ -130,9 +148,11 @@ def _send_sms(to: str, body: str) -> bool:
             http_client=TwilioHttpClient(timeout=TWILIO_TIMEOUT_SECONDS),
         ).messages.create(body=body, from_=settings.TWILIO_FROM_NUMBER, to=to)
         log.info("SMS sent sid=%s to %s", msg.sid, _mask_phone(to))
+        return True
     except Exception as exc:
         # Log the exception *type* only — the message text can echo body/phone.
         log.warning("SMS send failed to %s: %s", _mask_phone(to), type(exc).__name__)
+        return False
 
 
 async def send_family_sms(*, patient, ride, driver, hospital_name: str) -> None:

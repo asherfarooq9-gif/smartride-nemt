@@ -16,7 +16,8 @@ from app.models.models import (
     User,
 )
 from app.services.dispatch_loop import retry_pending_dispatches
-from app.services.emergency_dispatch import dispatch_emergency
+from app.services.dispatch_loop import DRIVER_ACK_TIMEOUT_SECONDS
+from app.services.emergency_dispatch import DRIVER_FRESH_SECONDS, dispatch_emergency
 from tests.test_dispatch import TRIAGE_RESPONSE, _seed
 from tests.test_ride_lifecycle import _assigned_ride, _auth, _phone, _set_ride_status
 
@@ -39,17 +40,36 @@ def _ago(seconds: int) -> datetime:
 
 
 async def _isolate(db, driver_id, ride_id, *, available: bool) -> None:
-    """Other tests leave drivers and pending rides around; keep only the pair under test."""
+    """Keep only the pair under test in play.
+
+    The loop is global by nature, so other pending rides are cancelled. Drivers are
+    scoped: only ones recent enough to be dispatch candidates are touched, and the
+    driver under test is made fresh (or offline) explicitly.
+    """
     await db.execute(
         update(Ride)
-        .where(Ride.id != ride_id, Ride.status == RideStatus.pending)
+        .where(
+            Ride.id != ride_id,
+            (Ride.status == RideStatus.pending)
+            | (
+                (Ride.status == RideStatus.driver_assigned)
+                & (Ride.driver_assigned_at < _ago(DRIVER_ACK_TIMEOUT_SECONDS))
+            ),
+        )
         .values(status=RideStatus.cancelled)
     )
-    await db.execute(update(Driver).values(status=DriverStatus.offline))
+    await db.execute(
+        update(Driver)
+        .where(Driver.last_seen_at >= _ago(DRIVER_FRESH_SECONDS))
+        .values(status=DriverStatus.offline)
+    )
     await db.execute(
         update(Driver)
         .where(Driver.id == driver_id)
-        .values(status=DriverStatus.available if available else DriverStatus.offline)
+        .values(
+            status=DriverStatus.available if available else DriverStatus.offline,
+            last_seen_at=_ago(0),
+        )
     )
     await db.commit()
 
@@ -95,7 +115,9 @@ async def test_ride_nobody_accepted_is_cancelled_after_the_max_age(db):
     ride, driver, _ = await _seed(db)
     ride_id = ride.id
     await db.execute(
-        update(Ride).where(Ride.id == ride_id).values(requested_at=_ago(3600))
+        update(Ride)
+        .where(Ride.id == ride_id)
+        .values(requested_at=_ago(3600), queued_at=_ago(3600))
     )
     await _isolate(db, driver.id, ride_id, available=False)
 

@@ -57,6 +57,7 @@ async def _online_driver(client, db) -> tuple[str, str]:
             status=DriverStatus.available,
             current_lat=PICKUP["pickup_lat"] + 0.009,
             current_lng=PICKUP["pickup_lng"],
+            last_seen_at=datetime.now(timezone.utc),
         )
     )
     await db.commit()

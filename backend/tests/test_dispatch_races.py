@@ -1,6 +1,7 @@
 """Dispatch must stay correct when other requests change state mid-pipeline."""
 
 import asyncio
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -9,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import NullPool
 
 from app.models.models import Driver, DriverStatus, Ride, RideStatus
-from app.services.emergency_dispatch import dispatch_emergency
+from app.services.emergency_dispatch import DRIVER_FRESH_SECONDS, dispatch_emergency
 from tests.conftest import TEST_DATABASE_URL
 from tests.test_dispatch import TRIAGE_RESPONSE, _seed
 
@@ -22,9 +23,12 @@ def _factory():
 
 
 async def _only_this_driver_available(db: AsyncSession, driver_id) -> None:
-    """Other tests leave available drivers behind; isolate the one under test."""
+    """Take offline only the other drivers that dispatch could still pick (fresh ones)."""
+    fresh_since = datetime.now(timezone.utc) - timedelta(seconds=DRIVER_FRESH_SECONDS)
     await db.execute(
-        update(Driver).where(Driver.id != driver_id).values(status=DriverStatus.offline)
+        update(Driver)
+        .where(Driver.id != driver_id, Driver.last_seen_at >= fresh_since)
+        .values(status=DriverStatus.offline)
     )
     await db.commit()
 
@@ -35,7 +39,7 @@ async def test_dispatch_does_not_resurrect_a_cancelled_ride(db: AsyncSession):
     ride_id, driver_id = ride.id, driver.id
     await _only_this_driver_available(db, driver_id)
 
-    async def triage_then_patient_cancels(_text):
+    async def triage_then_patient_cancels(_text, **_kwargs):
         engine, factory = _factory()
         async with factory() as other:
             await other.execute(
