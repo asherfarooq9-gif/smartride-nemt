@@ -15,11 +15,16 @@ log = logging.getLogger("smartride.observability")
 def _scrub(event: dict, _hint: dict) -> dict:
     # Defence in depth: strip auth headers before anything leaves the process.
     try:
-        headers = event.get("request", {}).get("headers")
+        request = event.get("request", {})
+        headers = request.get("headers")
         if isinstance(headers, dict):
             for key in list(headers):
                 if key.lower() in ("authorization", "cookie"):
                     headers[key] = "[redacted]"
+        # Request bodies carry symptoms, addresses and phone numbers (PHI).
+        request.pop("data", None)
+        request.pop("cookies", None)
+        request.pop("query_string", None)
     except Exception:
         pass
     return event

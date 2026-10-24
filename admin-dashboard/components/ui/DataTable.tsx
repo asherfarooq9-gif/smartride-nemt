@@ -8,6 +8,8 @@ interface Column<T> {
   key: string
   render: (row: T) => React.ReactNode
   className?: string
+  /** Visually hide the header text (e.g. an actions column) but keep it for screen readers. */
+  hideHeader?: boolean
 }
 
 interface DataTableProps<T> {
@@ -35,16 +37,17 @@ export default function DataTable<T>({
 }: DataTableProps<T>) {
   return (
     <div className="bg-white border border-blue-100 rounded-2xl shadow-sm overflow-hidden">
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-blue-50 text-blue-700 text-xs uppercase tracking-wider">
             <tr>
               {columns.map(col => (
                 <th
                   key={col.key}
+                  scope="col"
                   className={`px-4 py-3 text-left font-semibold ${col.className ?? ''}`}
                 >
-                  {col.header}
+                  <span className={col.hideHeader ? 'sr-only' : undefined}>{col.header}</span>
                 </th>
               ))}
             </tr>
@@ -80,25 +83,29 @@ export default function DataTable<T>({
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-blue-50 text-sm text-gray-500">
-          <span>Page {page} of {totalPages}</span>
+        <nav aria-label="Pagination" className="flex items-center justify-between px-4 py-3 border-t border-blue-50 text-sm text-gray-500">
+          <span aria-live="polite">Page {page} of {totalPages}</span>
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={() => onPageChange(page - 1)}
               disabled={page <= 1}
+              aria-label="Previous page"
               className="p-1.5 rounded-lg hover:bg-blue-50 disabled:opacity-30 disabled:cursor-not-allowed transition"
             >
-              <ChevronLeft size={16} />
+              <ChevronLeft size={16} aria-hidden="true" />
             </button>
             <button
+              type="button"
               onClick={() => onPageChange(page + 1)}
               disabled={page >= totalPages}
+              aria-label="Next page"
               className="p-1.5 rounded-lg hover:bg-blue-50 disabled:opacity-30 disabled:cursor-not-allowed transition"
             >
-              <ChevronRight size={16} />
+              <ChevronRight size={16} aria-hidden="true" />
             </button>
           </div>
-        </div>
+        </nav>
       )}
     </div>
   )

@@ -81,7 +81,7 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
   @override
   Widget build(BuildContext context) {
     final rideAsync = ref.watch(_rideDetailProvider(widget.rideId));
-    final isStreaming = ref.watch(gpsStreamProvider);
+    final gpsStatus = ref.watch(gpsStreamProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -90,14 +90,10 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
             ) ??
             const Text('Active Ride'),
         actions: [
-          if (isStreaming)
-            const Padding(
-              padding: EdgeInsets.only(right: core.kSpaceLG),
-              child: Tooltip(
-                message: 'GPS streaming',
-                child: Icon(Icons.gps_fixed, color: core.kOnlineGreen),
-              ),
-            ),
+          Padding(
+            padding: const EdgeInsets.only(right: core.kSpaceLG),
+            child: _GpsStatusIcon(status: gpsStatus),
+          ),
         ],
       ),
       body: rideAsync.when(
@@ -283,6 +279,37 @@ class _ActionPanel extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// Tells the driver whether the patient can actually see their location.
+class _GpsStatusIcon extends StatelessWidget {
+  const _GpsStatusIcon({required this.status});
+  final GpsStreamStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final (icon, color, message) = switch (status) {
+      GpsStreamStatus.live => (
+          Icons.gps_fixed,
+          core.kOnlineGreen,
+          'Sharing your location with the patient',
+        ),
+      GpsStreamStatus.starting || GpsStreamStatus.degraded => (
+          Icons.gps_not_fixed,
+          core.kAmberWarning,
+          'Location sharing interrupted, reconnecting',
+        ),
+      GpsStreamStatus.idle => (
+          Icons.gps_off,
+          core.kError,
+          'Location sharing is off. The patient cannot see you.',
+        ),
+    };
+    return Tooltip(
+      message: message,
+      child: Semantics(label: message, child: Icon(icon, color: color)),
     );
   }
 }

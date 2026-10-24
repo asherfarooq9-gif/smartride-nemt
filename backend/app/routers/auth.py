@@ -1,24 +1,33 @@
+import logging
 from datetime import datetime, timezone
 from math import ceil
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
-from jose import JWTError, jwt
-from slowapi import Limiter
+import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from slowapi.util import get_remote_address
+from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.ratelimit import rate_limit_key
+from app.core.ratelimit import make_limiter
 from app.core.security import (
-    hash_password,
-    verify_password,
+    hash_password_async,
+    verify_password_async,
+    DUMMY_PASSWORD_HASH,
     create_access_token,
+    decode_token,
     get_current_user,
     bearer_scheme,
 )
-from app.core.redis_client import block_token
+from app.core.redis_client import (
+    block_token,
+    clear_login_failures,
+    count_login_failure,
+    is_login_locked,
+)
 from app.models.models import User, Patient, Driver, UserRole, UserRoleLink
 from app.schemas.auth import (
     RegisterRequest,
@@ -31,17 +40,53 @@ from app.schemas.auth import (
 )
 from fastapi.security import HTTPAuthorizationCredentials
 
+log = logging.getLogger("smartride.auth")
+
 router = APIRouter()
-limiter = Limiter(key_func=rate_limit_key)
+limiter = make_limiter()
 
 _DRIVER_FIELDS = ("license_no", "vehicle_plate", "vehicle_type")
 
 
-def _make_token(user: User, roles: list[str], active_role: str) -> str:
+def _make_token(
+    user: User, roles: list[str], active_role: str, auth_time: int | None = None
+) -> str:
     # `role` claim kept for backward-compat; `roles` carries full membership.
+    # `auth_time` is when the password was last entered; refresh keeps it so a
+    # stolen token cannot be renewed forever.
     return create_access_token(
-        {"sub": str(user.id), "role": active_role, "roles": roles}
+        {
+            "sub": str(user.id),
+            "role": active_role,
+            "roles": roles,
+            "auth_time": auth_time or int(datetime.now(timezone.utc).timestamp()),
+        }
     )
+
+
+async def _reissue(
+    credentials: HTTPAuthorizationCredentials, user: User, roles: list[str], active: str
+) -> str:
+    """Swap the presented token for one carrying the new roles; the old one stops working."""
+    payload = decode_token(credentials.credentials)
+    auth_time = int(payload.get("auth_time") or payload.get("iat") or 0) or None
+    await _revoke(credentials)  # failure is logged; the old token then lapses at exp
+    return _make_token(user, roles, active, auth_time)
+
+
+async def _revoke(credentials: HTTPAuthorizationCredentials) -> bool:
+    """Blocklist the presented token for the rest of its lifetime.
+
+    Returns False if it could not be blocklisted (undecodable token, or Redis
+    down); block_token has already logged the Redis case.
+    """
+    try:
+        payload = decode_token(credentials.credentials)
+    except jwt.PyJWTError:
+        log.warning("Revoke skipped: presented token could not be decoded")
+        return False
+    remaining = max(1, ceil(payload["exp"] - datetime.now(timezone.utc).timestamp()))
+    return await block_token(payload["jti"], remaining)
 
 
 async def _held_roles(db: AsyncSession, user_id) -> list[str]:
@@ -58,6 +103,19 @@ def _require_driver_fields(body) -> None:
             raise HTTPException(
                 status_code=422, detail=f"{field} is required for drivers"
             )
+
+
+async def _commit_or_conflict(db: AsyncSession) -> None:
+    """Unique-constraint violations (duplicate phone/licence/plate, including the
+    check-then-insert race) are a client conflict, not a server error."""
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Phone, licence number or vehicle plate is already registered",
+        )
 
 
 @router.post(
@@ -87,7 +145,7 @@ async def register(
 
     user = User(
         phone=body.phone,
-        password_hash=hash_password(body.password),
+        password_hash=await hash_password_async(body.password),
         role=active,
     )
     db.add(user)
@@ -108,7 +166,7 @@ async def register(
                 )
             )
 
-    await db.commit()
+    await _commit_or_conflict(db)
 
     roles = sorted(r.value for r in body.roles)
     return TokenResponse(
@@ -125,10 +183,20 @@ async def register(
 async def login(
     request: Request, body: LoginRequest, db: AsyncSession = Depends(get_db)
 ):
+    client_ip = get_remote_address(request)
+    if await is_login_locked(body.phone, client_ip):
+        raise HTTPException(
+            status_code=429, detail="Too many failed attempts. Try again later."
+        )
     result = await db.execute(select(User).where(User.phone == body.phone))
     user = result.scalar_one_or_none()
-    if not user or not verify_password(body.password, user.password_hash):
+    password_ok = await verify_password_async(
+        body.password, user.password_hash if user else DUMMY_PASSWORD_HASH
+    )
+    if not user or not password_ok:
+        await count_login_failure(body.phone, client_ip, settings.LOGIN_LOCK_SECONDS)
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    await clear_login_failures(body.phone, client_ip)
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account disabled")
 
@@ -155,6 +223,7 @@ async def login(
 async def add_role(
     request: Request,
     body: AddRoleRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -191,11 +260,13 @@ async def add_role(
         )
 
     db.add(UserRoleLink(user_id=current_user.id, role=body.role))
-    await db.commit()
+    await _commit_or_conflict(db)
 
     roles = await _held_roles(db, current_user.id)
     return TokenResponse(
-        access_token=_make_token(current_user, roles, current_user.role.value),
+        access_token=await _reissue(
+            credentials, current_user, roles, current_user.role.value
+        ),
         roles=roles,
         active_role=current_user.role.value,
         role=current_user.role.value,
@@ -204,8 +275,11 @@ async def add_role(
 
 
 @router.post("/switch-role", response_model=TokenResponse)
+@limiter.limit("20/minute")
 async def switch_role(
+    request: Request,
     body: SwitchRoleRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -220,7 +294,7 @@ async def switch_role(
 
     roles = await _held_roles(db, current_user.id)
     return TokenResponse(
-        access_token=_make_token(current_user, roles, target),
+        access_token=await _reissue(credentials, current_user, roles, target),
         roles=roles,
         active_role=target,
         role=target,
@@ -264,6 +338,12 @@ async def register_fcm_token(
     db: AsyncSession = Depends(get_db),
 ):
     if body.fcm_token:
+        # A device belongs to one account: whoever signed in last gets its pushes.
+        await db.execute(
+            update(User)
+            .where(User.fcm_token == body.fcm_token, User.id != current_user.id)
+            .values(fcm_token=None)
+        )
         current_user.fcm_token = body.fcm_token
         await db.commit()
 
@@ -273,19 +353,11 @@ async def logout(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     _user: User = Depends(get_current_user),
 ):
-    try:
-        payload = jwt.decode(
-            credentials.credentials,
-            settings.SECRET_KEY,
-            algorithms=[settings.JWT_ALGORITHM],
+    if not await _revoke(credentials):
+        # Say so: a silent 204 would leave the client believing the token is dead.
+        raise HTTPException(
+            status_code=503, detail="Could not sign out. Please try again."
         )
-        jti: str = payload.get("jti", "")
-        exp: int = payload.get("exp", 0)
-        if jti:
-            remaining = max(1, ceil(exp - datetime.now(timezone.utc).timestamp()))
-            await block_token(jti, remaining)
-    except JWTError:
-        pass
 
 
 @router.post("/refresh", response_model=RefreshResponse)
@@ -297,20 +369,13 @@ async def refresh_token(
 ):
     """Exchange a valid non-expired token for a fresh one, revoking the old token."""
     user = await get_current_user(credentials=credentials, db=db)
-    try:
-        payload = jwt.decode(
-            credentials.credentials,
-            settings.SECRET_KEY,
-            algorithms=[settings.JWT_ALGORITHM],
-        )
-        jti = payload.get("jti", "")
-        exp = payload.get("exp", 0)
-        remaining = max(0, int(exp - datetime.now(timezone.utc).timestamp()))
-        if jti and remaining > 0:
-            await block_token(jti, remaining)
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+    payload = decode_token(credentials.credentials)
+    now = datetime.now(timezone.utc).timestamp()
+    auth_time = int(payload.get("auth_time") or payload.get("iat") or now)
+    if now - auth_time > settings.SESSION_MAX_DAYS * 86400:
+        raise HTTPException(status_code=401, detail="Session expired. Sign in again.")
+    await _revoke(credentials)
 
     roles = await _held_roles(db, user.id)
-    new_token = _make_token(user, roles, user.role.value)
+    new_token = _make_token(user, roles, user.role.value, auth_time)
     return RefreshResponse(access_token=new_token)

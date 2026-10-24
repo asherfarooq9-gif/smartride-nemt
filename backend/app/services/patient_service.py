@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.search import contains
 from app.models.models import Patient, User, Ride
 from app.schemas.patients import PatientUpdate
 
@@ -44,7 +45,8 @@ async def list_patients(
     base_q = select(Patient, User).join(User, Patient.user_id == User.id)
     if search:
         base_q = base_q.where(
-            Patient.full_name.ilike(f"%{search}%") | User.phone.ilike(f"%{search}%")
+            Patient.full_name.ilike(contains(search), escape="\\")
+            | User.phone.ilike(contains(search), escape="\\")
         )
     total = (
         await db.execute(select(func.count()).select_from(base_q.subquery()))

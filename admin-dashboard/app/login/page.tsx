@@ -56,18 +56,21 @@ export default function LoginPage() {
           {/* Form */}
           <form onSubmit={handleSubmit} className="px-8 py-7 space-y-5">
             {error && (
-              <div className="flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm">
+              <div role="alert" className="flex items-center gap-2 text-red-700 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm">
                 <AlertCircle size={15} className="shrink-0" />
                 {error}
               </div>
             )}
 
             <div>
-              <label className="block text-sm font-semibold text-blue-900 mb-1.5">Phone</label>
+              <label htmlFor="phone" className="block text-sm font-semibold text-blue-900 mb-1.5">Phone</label>
               <div className="relative">
                 <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-400" />
                 <input
+                  id="phone"
+                  name="phone"
                   type="text"
+                  autoComplete="username"
                   value={phone}
                   onChange={e => setPhone(e.target.value)}
                   required
@@ -78,11 +81,14 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-blue-900 mb-1.5">Password</label>
+              <label htmlFor="password" className="block text-sm font-semibold text-blue-900 mb-1.5">Password</label>
               <div className="relative">
                 <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-400" />
                 <input
+                  id="password"
+                  name="password"
                   type="password"
+                  autoComplete="current-password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required

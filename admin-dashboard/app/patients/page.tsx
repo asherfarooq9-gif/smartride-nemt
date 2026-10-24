@@ -1,57 +1,40 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { api, type Patient } from '@/lib/api'
+import { useApiData } from '@/lib/useApiData'
+import { useDebouncedSearch } from '@/lib/useDebouncedSearch'
 import Modal from '@/components/ui/Modal'
-import LoadingRows from '@/components/ui/LoadingRows'
-import { Search, UserCircle, Phone, Calendar, AlertCircle } from 'lucide-react'
+import DataTable from '@/components/ui/DataTable'
 import EmptyState from '@/components/ui/EmptyState'
+import ErrorBanner from '@/components/ui/ErrorBanner'
+import { Search, UserCircle, Phone, Calendar } from 'lucide-react'
+
+const PAGE_SIZE = 20
 
 export default function PatientsPage() {
-  const [patients, setPatients] = useState<Patient[]>([])
-  const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [searchInput, setSearchInput] = useState('')
-  const [search, setSearch] = useState('')
+  const { searchInput, setSearchInput, search } = useDebouncedSearch(setPage)
   const [selected, setSelected] = useState<Patient | null>(null)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    setError('')
-    try {
-      const d = await api.patients(page, search)
-      setPatients(d.items)
-      setTotal(d.total)
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Error loading patients')
-    } finally {
-      setLoading(false)
-    }
-  }, [page, search])
-
-  useEffect(() => {
-    const t = setTimeout(() => { setSearch(searchInput); setPage(1) }, 400)
-    return () => clearTimeout(t)
-  }, [searchInput])
-
-  useEffect(() => { load() }, [load])
-
-  const pages = Math.ceil(total / 20)
+  const fetchPatients = useCallback(
+    (signal: AbortSignal) => api.patients(page, search, signal),
+    [page, search],
+  )
+  const { data, error, loading } = useApiData(fetchPatients)
+  const total = data?.total ?? 0
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-blue-900">
-          Patients <span className="text-blue-300 font-normal text-lg">({total})</span>
-        </h1>
-      </div>
+      <h1 className="text-2xl font-bold text-blue-900">
+        Patients <span className="text-blue-600 font-normal text-lg">({total})</span>
+      </h1>
 
-      {/* Search */}
       <div className="bg-white border border-blue-100 rounded-2xl p-4 shadow-sm">
         <div className="relative max-w-sm">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden="true" />
           <input
+            type="search"
+            aria-label="Search patients by name or phone"
             placeholder="Search by name or phone…"
             value={searchInput}
             onChange={e => setSearchInput(e.target.value)}
@@ -60,65 +43,48 @@ export default function PatientsPage() {
         </div>
       </div>
 
-      {error && (
-        <div className="flex items-center gap-3 text-red-600 bg-red-50 border border-red-200 rounded-xl p-4 text-sm">
-          <AlertCircle size={16} /> {error}
-        </div>
-      )}
+      <ErrorBanner message={error} />
 
-      <div className="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-blue-50 text-blue-600 text-xs uppercase border-b border-blue-100">
-            <tr>
-              {['Name', 'Phone', 'Date of Birth', 'Emergency Contact', 'Joined', 'Rides'].map(h => (
-                <th key={h} className="px-4 py-3 text-left font-medium">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-blue-50">
-            {loading ? (
-              <LoadingRows cols={6} />
-            ) : patients.length === 0 ? (
-              <tr>
-                <td colSpan={6}>
-                  <EmptyState
-                    icon={UserCircle}
-                    title="No patients found"
-                    description={search ? 'Try a different search term.' : 'Registered patients will appear here.'}
-                  />
-                </td>
-              </tr>
-            ) : (
-              patients.map(p => (
-                <tr key={p.id} className="hover:bg-blue-50/40 cursor-pointer transition-colors" onClick={() => setSelected(p)}>
-                  <td className="px-4 py-3 font-medium text-gray-900">{p.full_name}</td>
-                  <td className="px-4 py-3 text-gray-500">{p.phone}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">
-                    {p.date_of_birth ? new Date(p.date_of_birth).toLocaleDateString() : '—'}
-                  </td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">
-                    {p.emergency_contact_name
-                      ? `${p.emergency_contact_name} (${p.emergency_contact_phone ?? '—'})`
-                      : '—'}
-                  </td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">{new Date(p.created_at).toLocaleDateString()}</td>
-                  <td className="px-4 py-3 text-gray-600 font-medium">{p.total_rides ?? 0}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {pages > 1 && (
-        <div className="flex items-center gap-2">
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-            className="px-4 py-2 border border-blue-200 rounded-xl text-sm disabled:opacity-40 hover:border-blue-400 transition">← Prev</button>
-          <span className="px-3 py-2 text-sm text-blue-700">{page} / {pages}</span>
-          <button onClick={() => setPage(p => Math.min(pages, p + 1))} disabled={page === pages}
-            className="px-4 py-2 border border-blue-200 rounded-xl text-sm disabled:opacity-40 hover:border-blue-400 transition">Next →</button>
-        </div>
-      )}
+      <DataTable
+        columns={[
+          {
+            header: 'Name', key: 'name',
+            render: p => (
+              <button type="button" onClick={() => setSelected(p)} className="font-medium text-gray-900 text-left hover:underline">
+                {p.full_name}
+              </button>
+            ),
+          },
+          { header: 'Phone', key: 'phone', render: p => <span className="text-gray-500">{p.phone}</span> },
+          {
+            header: 'Date of Birth', key: 'dob',
+            render: p => <span className="text-gray-500 text-xs">{p.date_of_birth ? new Date(p.date_of_birth).toLocaleDateString() : '—'}</span>,
+          },
+          {
+            header: 'Emergency Contact', key: 'emergency',
+            render: p => (
+              <span className="text-gray-500 text-xs">
+                {p.emergency_contact_name ? `${p.emergency_contact_name} (${p.emergency_contact_phone ?? '—'})` : '—'}
+              </span>
+            ),
+          },
+          { header: 'Joined', key: 'joined', render: p => <span className="text-gray-500 text-xs">{new Date(p.created_at).toLocaleDateString()}</span> },
+          { header: 'Rides', key: 'rides', render: p => <span className="text-gray-600 font-medium">{p.total_rides ?? 0}</span> },
+        ]}
+        rows={data?.items ?? []}
+        keyFn={p => p.id}
+        loading={loading}
+        emptySlot={
+          <EmptyState
+            icon={UserCircle}
+            title="No patients found"
+            description={search ? 'Try a different search term.' : 'Registered patients will appear here.'}
+          />
+        }
+        page={page}
+        totalPages={Math.ceil(total / PAGE_SIZE)}
+        onPageChange={setPage}
+      />
 
       <Modal open={selected !== null} onClose={() => setSelected(null)} title="Patient Profile" width="lg">
         {selected && <PatientDetail patient={selected} />}
@@ -152,13 +118,13 @@ function PatientDetail({ patient: p }: { patient: Patient }) {
           <div className="bg-blue-50 rounded-xl p-4">
             <div className="flex items-center gap-2 mb-1">
               <Calendar size={12} className="text-gray-400" />
-              <p className="text-xs text-gray-400 font-medium">Date of Birth</p>
+              <p className="text-xs text-gray-500 font-medium">Date of Birth</p>
             </div>
             <p className="font-semibold text-gray-900">{new Date(p.date_of_birth).toLocaleDateString()}</p>
           </div>
         )}
         <div className="bg-gray-50 rounded-xl p-4">
-          <p className="text-xs text-gray-400 font-medium mb-1">Member Since</p>
+          <p className="text-xs text-gray-500 font-medium mb-1">Member Since</p>
           <p className="font-semibold text-gray-900">{new Date(p.created_at).toLocaleDateString()}</p>
         </div>
       </div>

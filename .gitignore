@@ -58,3 +58,9 @@ _archive/
 _flutter_tmp/
 _serveerr.txt
 *.tsbuildinfo
+
+# Local agent tooling state
+.claude-flow/
+
+# Prometheus metrics token file (see docker-compose.prod.yml)
+secrets/

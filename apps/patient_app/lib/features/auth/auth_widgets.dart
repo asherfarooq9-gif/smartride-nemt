@@ -32,9 +32,9 @@ class DarkField extends StatelessWidget {
         Text(
           label,
           style: GoogleFonts.dmSans(
-            fontSize: kFontCaption,
+            fontSize: kFontSmall,
             fontWeight: FontWeight.w700,
-            color: Colors.white38,
+            color: Colors.white70,
             letterSpacing: 0.6,
           ),
         ),
@@ -51,7 +51,7 @@ class DarkField extends StatelessWidget {
           ),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: Colors.white24),
+            hintStyle: const TextStyle(color: Colors.white70),
             suffixIcon: suffixIcon,
             filled: true,
             fillColor: kDarkFieldBg,

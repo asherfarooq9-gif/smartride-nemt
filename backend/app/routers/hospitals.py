@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, Query
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import require_admin
+from app.core.security import get_optional_user, require_admin
 from app.models.models import Hospital, User
 from app.schemas.hospitals import (
     HospitalResponse,
@@ -34,6 +36,17 @@ def _to_response(h: Hospital) -> HospitalResponse:
     )
 
 
+def _is_admin(viewer: User | None) -> bool:
+    return viewer is not None and "admin" in viewer.held_roles
+
+
+def _for_viewer(h: HospitalResponse, viewer: User | None) -> HospitalResponse:
+    """Hospital coordinators' phones and FHIR endpoints are operational data, not public."""
+    if _is_admin(viewer):
+        return h
+    return h.model_copy(update={"coordinator_phone": None, "fhir_endpoint": None})
+
+
 # ── Public ────────────────────────────────────────────────────────────────────
 
 
@@ -42,23 +55,33 @@ async def list_hospitals(
     active_only: bool = Query(True),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
+    viewer: User | None = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db),
 ):
+    # Only admins may list inactive hospitals.
     items, total = await hospital_service.list_hospitals(
-        db, active_only, page, page_size
+        db, active_only or not _is_admin(viewer), page, page_size
     )
     # items may be HospitalResponse (cached) or Hospital (DB); normalise
     responses = [
         item if isinstance(item, HospitalResponse) else _to_response(item)
         for item in items
     ]
-    return HospitalListResponse(items=responses, total=total)
+    return HospitalListResponse(
+        items=[_for_viewer(r, viewer) for r in responses], total=total
+    )
 
 
 @router.get("/{hospital_id}", response_model=HospitalResponse)
-async def get_hospital(hospital_id: str, db: AsyncSession = Depends(get_db)):
+async def get_hospital(
+    hospital_id: UUID,
+    viewer: User | None = Depends(get_optional_user),
+    db: AsyncSession = Depends(get_db),
+):
     h = await hospital_service.get_hospital_by_id(hospital_id, db)
-    return _to_response(h)
+    if not h.is_active and not _is_admin(viewer):
+        raise HTTPException(404, "Hospital not found")
+    return _for_viewer(_to_response(h), viewer)
 
 
 # ── Admin ─────────────────────────────────────────────────────────────────────
@@ -76,7 +99,7 @@ async def create_hospital(
 
 @router.patch("/{hospital_id}", response_model=HospitalResponse)
 async def update_hospital(
-    hospital_id: str,
+    hospital_id: UUID,
     body: HospitalUpdate,
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),

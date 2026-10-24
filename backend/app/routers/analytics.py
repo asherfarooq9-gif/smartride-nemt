@@ -1,6 +1,6 @@
 """
 Analytics endpoints.
-- Hourly snapshot writer (Celery task hook / admin trigger)
+- Hourly snapshot writer (admin trigger)
 - Dashboard summary (live counts from DB)
 - Demand forecast (simple rolling 7-day average per city/hour)
 """
@@ -25,6 +25,14 @@ from app.models.models import (
 
 router = APIRouter()
 
+# Every state in which a driver is committed to a ride.
+ACTIVE_STATUSES = [
+    RideStatus.driver_assigned,
+    RideStatus.driver_en_route,
+    RideStatus.patient_picked_up,
+    RideStatus.arrived_at_hospital,
+]
+
 
 # ── Live dashboard summary ────────────────────────────────────────────────────
 
@@ -37,60 +45,39 @@ async def dashboard_summary(
     now = datetime.now(timezone.utc)
     day_ago = now - timedelta(hours=24)
 
-    total_rides = (await db.execute(select(func.count()).select_from(Ride))).scalar()
+    def count(table, *where):
+        return select(func.count()).select_from(table).where(*where).scalar_subquery()
 
-    emergency_24h = (
+    # One round trip for every number on the dashboard.
+    row = (
         await db.execute(
-            select(func.count())
-            .select_from(Ride)
-            .where(
-                and_(Ride.ride_type == RideType.emergency, Ride.requested_at >= day_ago)
+            select(
+                count(Ride).label("total_rides"),
+                count(
+                    Ride,
+                    Ride.ride_type == RideType.emergency,
+                    Ride.requested_at >= day_ago,
+                ).label("emergency_24h"),
+                count(Ride, Ride.status.in_(ACTIVE_STATUSES)).label("active_rides"),
+                count(Driver, Driver.status == DriverStatus.available).label(
+                    "available"
+                ),
+                count(Driver).label("total_drivers"),
+                count(Hospital, Hospital.is_active.is_(True)).label("hospitals"),
+                select(func.avg(AnalyticsHourly.avg_eta_seconds))
+                .where(AnalyticsHourly.snapshot_hour >= day_ago)
+                .scalar_subquery()
+                .label("avg_eta"),
             )
         )
-    ).scalar()
-
-    active_rides = (
-        await db.execute(
-            select(func.count())
-            .select_from(Ride)
-            .where(
-                Ride.status.in_(
-                    [
-                        RideStatus.driver_assigned,
-                        RideStatus.driver_en_route,
-                        RideStatus.patient_picked_up,
-                    ]
-                )
-            )
-        )
-    ).scalar()
-
-    available_drivers = (
-        await db.execute(
-            select(func.count())
-            .select_from(Driver)
-            .where(Driver.status == DriverStatus.available)
-        )
-    ).scalar()
-
-    total_drivers = (
-        await db.execute(select(func.count()).select_from(Driver))
-    ).scalar()
-    active_hospitals = (
-        await db.execute(
-            select(func.count())
-            .select_from(Hospital)
-            .where(Hospital.is_active.is_(True))
-        )
-    ).scalar()
-
-    avg_eta = (
-        await db.execute(
-            select(func.avg(AnalyticsHourly.avg_eta_seconds)).where(
-                AnalyticsHourly.snapshot_hour >= day_ago
-            )
-        )
-    ).scalar()
+    ).one()
+    total_rides, emergency_24h, active_rides = (
+        row.total_rides,
+        row.emergency_24h,
+        row.active_rides,
+    )
+    available_drivers, total_drivers = row.available, row.total_drivers
+    active_hospitals, avg_eta = row.hospitals, row.avg_eta
 
     return {
         "total_rides": total_rides,
@@ -113,7 +100,7 @@ async def write_hourly_snapshot(
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    """Write one analytics snapshot for the current hour. Called by Celery or admin."""
+    """Write one analytics snapshot for the current hour. Called by admin."""
     now = datetime.now(timezone.utc)
     hour_start = now.replace(minute=0, second=0, microsecond=0)
     next_hour = hour_start + timedelta(hours=1)

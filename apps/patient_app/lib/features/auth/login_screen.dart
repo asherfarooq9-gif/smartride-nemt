@@ -85,7 +85,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   'Log in to your SmartRide account',
                   style: GoogleFonts.dmSans(
                     fontSize: kFontSmall,
-                    color: Colors.white54,
+                    color: Colors.white70,
                   ),
                 ),
                 const SizedBox(height: kSpaceXXL),
@@ -103,12 +103,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   hint: 'Your password',
                   obscureText: _obscure,
                   suffixIcon: IconButton(
+                    tooltip: _obscure ? 'Show password' : 'Hide password',
                     icon: Icon(
                       _obscure
                           ? Icons.visibility_outlined
                           : Icons.visibility_off_outlined,
-                      color: Colors.white38,
-                      size: 20,
+                      color: Colors.white70,
                     ),
                     onPressed: () => setState(() => _obscure = !_obscure),
                   ),
@@ -178,22 +178,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: kSpaceLG),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
                       "Don't have an account? ",
                       style: GoogleFonts.dmSans(
-                        color: Colors.white54,
+                        color: Colors.white70,
                         fontSize: kFontSmall,
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () => context.go('/signup'),
+                    TextButton(
+                      onPressed: () => context.go('/signup'),
+                      style: TextButton.styleFrom(
+                        minimumSize: const Size(kMinTapTarget, kMinTapTarget),
+                      ),
                       child: Text(
                         'Sign up',
                         style: GoogleFonts.dmSans(
-                          color: kAuthTeal,
+                          color: kDarkTeal,
                           fontSize: kFontSmall,
                           fontWeight: FontWeight.w600,
                         ),

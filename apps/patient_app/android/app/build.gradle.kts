@@ -6,8 +6,15 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
-    id("com.google.gms.google-services")
-    id("com.google.firebase.crashlytics")
+}
+
+// google-services.json is git-ignored (it identifies the Firebase project). The
+// Firebase plugins fail the whole build when it is missing, which broke CI and
+// fresh clones, so apply them only when the file is present. Without it the app
+// still builds; Firebase init is already wrapped in try/catch at startup.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+    apply(plugin = "com.google.firebase.crashlytics")
 }
 
 // Release signing is driven by android/key.properties (git-ignored). When it's

@@ -1,0 +1,8 @@
+node_modules/
+.next/
+e2e/
+playwright-report/
+test-results/
+playwright.config.ts
+.env*
+*.log

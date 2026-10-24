@@ -72,7 +72,6 @@ class _TopUpScreenState extends State<TopUpScreen> {
   bool _isCustom = false;
   final _customAmount = TextEditingController();
   String _paymentMethod = 'JazzCash';
-  bool _loading = false;
 
   @override
   void dispose() {
@@ -83,11 +82,11 @@ class _TopUpScreenState extends State<TopUpScreen> {
   String get _confirmLabel {
     if (_isCustom) {
       final amt = _customAmount.text.trim();
-      return amt.isEmpty ? 'Enter an amount' : 'Top Up PKR $amt';
+      return amt.isEmpty ? 'Enter an amount' : 'Continue · PKR $amt';
     }
     if (_selectedPlan != null) {
       final plan = _plans[_selectedPlan!];
-      return 'Activate ${plan.name} · PKR ${plan.price}';
+      return 'Continue · ${plan.name} · PKR ${plan.price}';
     }
     return 'Select a plan or amount';
   }
@@ -100,11 +99,21 @@ class _TopUpScreenState extends State<TopUpScreen> {
     return _selectedPlan != null;
   }
 
-  void _showSuccess(BuildContext context) {
+  // The server has no self-service payment: an admin credits the wallet after
+  // the payment is settled by hand, so this screen explains the steps instead
+  // of pretending to charge anything. ponytail: replace with a payment gateway
+  // call when one is integrated.
+  void _showInstructions(BuildContext context) {
+    final amount = _isCustom
+        ? _customAmount.text.trim()
+        : _plans[_selectedPlan!].price.toString();
     showDialog<void>(
       context: context,
       builder: (_) => _SuccessDialog(
-        title: _isCustom ? 'Top-up successful!' : 'Plan activated!',
+        title: 'Almost done',
+        message: 'Send PKR $amount by $_paymentMethod, then send the receipt '
+            'to SmartRide support. Your wallet is credited once an admin '
+            'confirms the payment.',
         onDone: () {
           Navigator.of(context).pop();
           Navigator.of(context).pop();
@@ -188,35 +197,7 @@ class _TopUpScreenState extends State<TopUpScreen> {
           const SizedBox(height: kSpaceXXL),
           PrimaryButton(
             label: _confirmLabel,
-            isLoading: _loading,
-            onPressed: _canConfirm
-                ? () async {
-                    setState(() => _loading = true);
-                    try {
-                      await topUpWallet(
-                        amountPkr: _isCustom
-                            ? (double.tryParse(_customAmount.text) ?? 0)
-                            : null,
-                        planId: _isCustom ? null : const ['starter', 'standard', 'pro'][_selectedPlan!],
-                        paymentMethod: _paymentMethod,
-                      );
-                      if (!mounted) return;
-                      // ignore: use_build_context_synchronously
-                      _showSuccess(context);
-                    } on AppError catch (e) {
-                      if (!mounted) return;
-                      // ignore: use_build_context_synchronously
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(e.message),
-                          backgroundColor: kRed600,
-                        ),
-                      );
-                    } finally {
-                      if (mounted) setState(() => _loading = false);
-                    }
-                  }
-                : null,
+            onPressed: _canConfirm ? () => _showInstructions(context) : null,
             color: kBlue600,
             height: kButtonHeight,
           ),
@@ -517,9 +498,14 @@ class _PaymentMethodRow extends StatelessWidget {
 
 class _SuccessDialog extends StatelessWidget {
   final String title;
+  final String message;
   final VoidCallback onDone;
 
-  const _SuccessDialog({required this.title, required this.onDone});
+  const _SuccessDialog({
+    required this.title,
+    required this.message,
+    required this.onDone,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -553,6 +539,12 @@ class _SuccessDialog extends StatelessWidget {
                 fontWeight: FontWeight.w700,
                 color: kText900,
               ),
+            ),
+            const SizedBox(height: kSpaceMD),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: kFontBody, color: kText600),
             ),
             const SizedBox(height: kSpaceXXL),
             PrimaryButton(

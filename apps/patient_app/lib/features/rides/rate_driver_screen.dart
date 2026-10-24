@@ -32,14 +32,21 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
       );
       if (!mounted) return;
       setState(() { _submitting = false; _submitted = true; });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(e is core.AppError ? e.message : 'Could not submit rating'),
-        backgroundColor: core.kError,
-      ));
+    } on core.AppError catch (e) {
+      _failed(e.message);
+    } on Exception catch (e, st) {
+      core.ErrorReporter.report('Submitting a rating failed', e, st);
+      _failed('Could not submit your rating. Please try again.');
     }
+  }
+
+  void _failed(String message) {
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(message),
+      backgroundColor: core.kError,
+    ));
   }
 
   @override
@@ -107,15 +114,17 @@ class _RatingForm extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(5, (i) {
               final star = i + 1;
-              return GestureDetector(
-                onTap: () => onRatingChanged(star.toDouble()),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: Icon(
-                    star <= ratingInt ? Icons.star_rounded : Icons.star_outline_rounded,
-                    size: 48,
-                    color: star <= ratingInt ? Colors.amber : core.kBorder,
-                  ),
+              return IconButton(
+                tooltip: '$star out of 5 stars',
+                isSelected: star == ratingInt,
+                onPressed: () => onRatingChanged(star.toDouble()),
+                constraints: const BoxConstraints(
+                    minWidth: core.kMinTapTarget,
+                    minHeight: core.kMinTapTarget),
+                icon: Icon(
+                  star <= ratingInt ? Icons.star_rounded : Icons.star_outline_rounded,
+                  size: 40,
+                  color: star <= ratingInt ? Colors.amber : core.kBorder,
                 ),
               );
             }),

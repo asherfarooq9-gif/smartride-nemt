@@ -108,7 +108,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           ),
                         ),
                       ),
-                      if (dash.isLoading)
+                      // Spinner only for the first load: a background refresh must not
+                      // blank the list under the driver's finger.
+                      if (dash.isLoading && dash.driver == null)
                         const SliverFillRemaining(
                           child: core.LoadingState(message: 'Refreshing...'),
                         )
@@ -174,6 +176,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     if (!mounted) return;
     if (result == AcceptResult.success) {
       context.push('/driver/ride/$rideId');
+    } else if (result == AcceptResult.successWithoutTracking) {
+      context.push('/driver/ride/$rideId');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ride accepted, but location sharing is off. '
+              'Allow location access so the patient can see you.'),
+          duration: Duration(seconds: 8),
+        ),
+      );
     } else if (result == AcceptResult.alreadyTaken) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

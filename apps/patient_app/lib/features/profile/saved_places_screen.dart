@@ -163,24 +163,21 @@ class _AddPlaceButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        height: kMinTapTarget,
-        decoration: BoxDecoration(
+    return OutlinedButton(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size.fromHeight(kMinTapTarget),
+        side: const BorderSide(color: kBorder),
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(kRadiusLG),
-          border: Border.all(color: kBorder),
         ),
-        child: const Center(
-          child: Text(
-            '＋  Add a place',
-            style: TextStyle(
-              fontSize: kFontSmall,
-              fontWeight: FontWeight.w600,
-              color: kTeal600,
-            ),
-          ),
+      ),
+      child: const Text(
+        '＋  Add a place',
+        style: TextStyle(
+          fontSize: kFontSmall,
+          fontWeight: FontWeight.w600,
+          color: kTeal600,
         ),
       ),
     );

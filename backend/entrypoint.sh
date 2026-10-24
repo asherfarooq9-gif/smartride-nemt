@@ -10,5 +10,7 @@ fi
 echo "Running Alembic migrations..."
 alembic upgrade head
 
+# Behind a reverse proxy set FORWARDED_ALLOW_IPS (uvicorn reads it) so the real
+# client IP is used for rate limiting; the default trusts only 127.0.0.1.
 echo "Starting SmartRide API..."
 exec uvicorn main:app --host 0.0.0.0 --port 8000

@@ -229,22 +229,24 @@ class ScheduledRideRequest {
   const ScheduledRideRequest({
     required this.pickupAddress,
     required this.scheduledFor,
-    this.pickupLat,
-    this.pickupLng,
+    required this.pickupLat,
+    required this.pickupLng,
     this.hospitalId,
   });
 
   final String pickupAddress;
   final DateTime scheduledFor;
-  final double? pickupLat;
-  final double? pickupLng;
+  // The backend rejects a ride without coordinates (422), so they are required
+  // here rather than silently dropped from the request.
+  final double pickupLat;
+  final double pickupLng;
   final String? hospitalId;
 
   Map<String, dynamic> toJson() => {
         'pickup_address': pickupAddress,
         'scheduled_for': scheduledFor.toUtc().toIso8601String(),
-        if (pickupLat != null) 'pickup_lat': pickupLat,
-        if (pickupLng != null) 'pickup_lng': pickupLng,
+        'pickup_lat': pickupLat,
+        'pickup_lng': pickupLng,
       };
 }
 
@@ -252,19 +254,19 @@ class EmergencyRideRequest {
   const EmergencyRideRequest({
     required this.pickupAddress,
     required this.symptomText,
-    this.pickupLat,
-    this.pickupLng,
+    required this.pickupLat,
+    required this.pickupLng,
   });
 
   final String pickupAddress;
   final String symptomText;
-  final double? pickupLat;
-  final double? pickupLng;
+  final double pickupLat;
+  final double pickupLng;
 
   Map<String, dynamic> toJson() => {
         'pickup_address': pickupAddress,
         'symptom_text': symptomText,
-        if (pickupLat != null) 'pickup_lat': pickupLat,
-        if (pickupLng != null) 'pickup_lng': pickupLng,
+        'pickup_lat': pickupLat,
+        'pickup_lng': pickupLng,
       };
 }

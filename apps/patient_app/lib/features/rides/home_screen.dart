@@ -46,23 +46,10 @@ class HomeScreen extends ConsumerWidget {
                   Row(
                     children: [
                       Builder(
-                        builder: (ctx) => GestureDetector(
-                          onTap: () => Scaffold.of(ctx).openDrawer(),
-                          child: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: kSurface,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.1),
-                                  blurRadius: 8,
-                                ),
-                              ],
-                            ),
-                            child: const Icon(Icons.menu, size: 20),
-                          ),
+                        builder: (ctx) => _MapOverlayButton(
+                          tooltip: 'Open menu',
+                          icon: Icons.menu,
+                          onPressed: () => Scaffold.of(ctx).openDrawer(),
                         ),
                       ),
                       const Spacer(),
@@ -101,8 +88,8 @@ class HomeScreen extends ConsumerWidget {
                           Text(
                             _greeting(),
                             style: const TextStyle(
-                              fontSize: 14,
-                              color: kText400,
+                              fontSize: kFontSmall,
+                              color: kText600,
                             ),
                           ),
                           Text(
@@ -201,6 +188,52 @@ final _meProvider = FutureProvider.autoDispose<String>((ref) async {
   }
 });
 
+/// 48dp round button floating over the map; the tooltip is also the screen
+/// reader label.
+class _MapOverlayButton extends StatelessWidget {
+  const _MapOverlayButton({
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+    this.hasBadge = false,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onPressed;
+  final bool hasBadge;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: kSurface,
+      shape: const CircleBorder(),
+      elevation: 3,
+      child: Stack(
+        children: [
+          IconButton(
+            tooltip: tooltip,
+            onPressed: onPressed,
+            icon: Icon(icon, color: kText900),
+            constraints: const BoxConstraints(
+                minWidth: kMinTapTarget, minHeight: kMinTapTarget),
+          ),
+          if (hasBadge)
+            const Positioned(
+              top: 10,
+              right: 10,
+              child: DecoratedBox(
+                decoration:
+                    BoxDecoration(color: kRed600, shape: BoxShape.circle),
+                child: SizedBox(width: 10, height: 10),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _NotificationBell extends ConsumerWidget {
   const _NotificationBell();
 
@@ -209,43 +242,11 @@ class _NotificationBell extends ConsumerWidget {
     final hasUnread = ref
         .watch(notificationsProvider('patient'))
         .any((n) => !n.isRead);
-    return GestureDetector(
-      onTap: () => context.push('/notifications'),
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: kSurface,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 8,
-            ),
-          ],
-        ),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            const Center(
-              child: Icon(Icons.notifications_outlined, size: 20),
-            ),
-            if (hasUnread)
-              Positioned(
-                top: 6,
-                right: 6,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: kRed600,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
+    return _MapOverlayButton(
+      tooltip: hasUnread ? 'Notifications, you have unread' : 'Notifications',
+      icon: Icons.notifications_outlined,
+      hasBadge: hasUnread,
+      onPressed: () => context.push('/notifications'),
     );
   }
 }
@@ -256,33 +257,38 @@ class _PortalChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Scaffold.of(context).openDrawer(),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-            horizontal: kSpaceMD, vertical: kSpaceXS),
-        decoration: BoxDecoration(
-          color: kSurface,
+    return Semantics(
+      button: true,
+      label: 'Patient portal. Open portal menu',
+      excludeSemantics: true,
+      child: Material(
+        color: kSurface,
+        elevation: 3,
+        borderRadius: BorderRadius.circular(kRadiusPill),
+        child: InkWell(
           borderRadius: BorderRadius.circular(kRadiusPill),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1), blurRadius: 8),
-          ],
-        ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Patient',
-              style: TextStyle(
-                fontSize: kFontSmall,
-                fontWeight: FontWeight.w600,
-                color: kTeal600,
+          onTap: () => Scaffold.of(context).openDrawer(),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: kMinTapTarget),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: kSpaceMD),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Patient',
+                    style: TextStyle(
+                      fontSize: kFontSmall,
+                      fontWeight: FontWeight.w600,
+                      color: kTeal600,
+                    ),
+                  ),
+                  SizedBox(width: 2),
+                  Icon(Icons.keyboard_arrow_down, size: 18, color: kTeal600),
+                ],
               ),
             ),
-            SizedBox(width: 2),
-            Icon(Icons.keyboard_arrow_down, size: 16, color: kTeal600),
-          ],
+          ),
         ),
       ),
     );
@@ -307,8 +313,14 @@ class _EmergencyButtonState extends State<_EmergencyButton>
       duration: const Duration(milliseconds: 2400),
     );
     _pulse = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+  }
 
-    if (!WidgetsBinding.instance.accessibilityFeatures.disableAnimations) {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.stop();
+    } else if (!_controller.isAnimating) {
       _controller.repeat();
     }
   }
@@ -321,44 +333,31 @@ class _EmergencyButtonState extends State<_EmergencyButton>
 
   @override
   Widget build(BuildContext context) {
-    final disableAnimations =
-        MediaQuery.of(context).disableAnimations;
+    final disableAnimations = MediaQuery.disableAnimationsOf(context);
+    // Grow with the system font size so the label always fits the circle.
+    final diameter = MediaQuery.textScalerOf(context)
+        .scale(kEmergencyButtonSize)
+        .clamp(kEmergencyButtonSize, kEmergencyButtonSize * 1.5);
 
     return Semantics(
       label: 'Request emergency ride',
+      hint: 'Double tap to get immediate help',
       button: true,
-      child: GestureDetector(
-        onTap: () => context.push('/symptoms'),
-        child: SizedBox(
-          width: kEmergencyButtonSize + 40,
-          height: kEmergencyButtonSize + 40,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              if (!disableAnimations)
-                AnimatedBuilder(
-                  animation: _pulse,
-                  builder: (context, _) {
-                    final t = _pulse.value;
-                    return Transform.scale(
-                      scale: 1.0 + 0.22 * t,
-                      child: Opacity(
-                        opacity: 0.25 * (1 - t),
-                        child: Container(
-                          width: kEmergencyButtonSize,
-                          height: kEmergencyButtonSize,
-                          decoration: const BoxDecoration(
-                            color: kRed600,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              Container(
-                width: kEmergencyButtonSize,
-                height: kEmergencyButtonSize,
+      excludeSemantics: true,
+      child: SizedBox(
+        width: diameter + 40,
+        height: diameter + 40,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            if (!disableAnimations)
+              _PulseRing(animation: _pulse, size: diameter),
+            Material(
+              type: MaterialType.circle,
+              color: Colors.transparent,
+              child: Ink(
+                width: diameter,
+                height: diameter,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: const RadialGradient(
@@ -366,32 +365,85 @@ class _EmergencyButtonState extends State<_EmergencyButton>
                   ),
                   boxShadow: kEmergencyButtonShadow,
                 ),
-                child: const Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.add, color: Colors.white, size: 40),
-                    SizedBox(height: 4),
-                    Text(
-                      'EMERGENCY',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'Tap for immediate help',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.white70,
-                      ),
-                    ),
-                  ],
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: () => context.push('/symptoms'),
+                  child: const _EmergencyLabel(),
                 ),
               ),
-            ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PulseRing extends StatelessWidget {
+  const _PulseRing({required this.animation, required this.size});
+  final Animation<double> animation;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, _) {
+        final t = animation.value;
+        return Transform.scale(
+          scale: 1.0 + 0.22 * t,
+          child: Opacity(
+            opacity: 0.25 * (1 - t),
+            child: Container(
+              width: size,
+              height: size,
+              decoration: const BoxDecoration(
+                color: kRed600,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _EmergencyLabel extends StatelessWidget {
+  const _EmergencyLabel();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(kSpaceLG),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: SizedBox(
+            width: 120,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.add, color: Colors.white, size: 40),
+                SizedBox(height: 4),
+                Text(
+                  'EMERGENCY',
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Tap for immediate help',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: kFontSmall, color: Colors.white),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -405,41 +457,51 @@ class _ActiveRideBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.push('/ride/${ride.id}'),
-      child: Container(
-        padding: const EdgeInsets.all(kSpaceMD),
-        decoration: BoxDecoration(
-          color: kTeal100,
+    return Semantics(
+      button: true,
+      label: 'Active ride, ${ride.status.displayLabel}. View details',
+      excludeSemantics: true,
+      child: Material(
+        color: kTeal100,
+        borderRadius: BorderRadius.circular(kRadiusLG),
+        child: InkWell(
           borderRadius: BorderRadius.circular(kRadiusLG),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.directions_car, color: kTeal600),
-            const SizedBox(width: kSpaceMD),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          onTap: () => context.push('/ride/${ride.id}'),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: kMinTapTarget),
+            child: Padding(
+              padding: const EdgeInsets.all(kSpaceMD),
+              child: Row(
                 children: [
-                  const Text(
-                    'Active Ride',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: kText900,
+                  const Icon(Icons.directions_car, color: kTeal600),
+                  const SizedBox(width: kSpaceMD),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Active Ride',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: kText900,
+                          ),
+                        ),
+                        Text(
+                          ride.status.displayLabel,
+                          style: const TextStyle(
+                            fontSize: kFontSmall,
+                            color: kText600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  Text(
-                    ride.status.displayLabel,
-                    style: const TextStyle(
-                      fontSize: kFontSmall,
-                      color: kText600,
-                    ),
-                  ),
+                  const Icon(Icons.arrow_forward_ios,
+                      size: 16, color: kText600),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios, size: 16, color: kText600),
-          ],
+          ),
         ),
       ),
     );

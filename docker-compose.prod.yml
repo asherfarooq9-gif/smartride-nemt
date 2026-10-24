@@ -1,0 +1,147 @@
+# Production overrides. Use together with the base file:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Every secret below is REQUIRED: compose refuses to start if one is missing.
+# Put TLS termination (nginx, Caddy, a cloud load balancer) in front of
+# `backend` and `admin_dashboard`; nothing here serves HTTPS itself.
+#
+# Notes:
+#  - `!reset` / `!override` need Docker Compose >= 2.24.
+#  - Source bind mounts and --reload from the dev file are removed.
+#  - Every container drops all Linux capabilities, cannot gain privileges and
+#    has a read-only root filesystem (writable paths are tmpfs or named
+#    volumes) plus memory/CPU/PID limits. Capabilities are added back per
+#    service only where the image entrypoint needs them (postgres, redis).
+#  - Prometheus authenticates to /metrics with a token file, never an env var:
+#      printf %s "$METRICS_TOKEN" > secrets/metrics_token   # keep out of git
+#    and set METRICS_TOKEN_FILE=./secrets/metrics_token in .env.
+
+x-hardened: &hardened
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  read_only: true
+
+services:
+  postgres:
+    <<: *hardened
+    ports: !reset []
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    # The official entrypoint chowns the data dir, then drops to the postgres user.
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    tmpfs:
+      - /tmp
+      - /var/run/postgresql
+    deploy:
+      resources:
+        limits: { cpus: "2.0", memory: 1g, pids: 256 }
+
+  redis:
+    <<: *hardened
+    ports: !reset []
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?set REDIS_PASSWORD}"]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    # The official entrypoint chowns /data, then drops to the redis user.
+    cap_add: [CHOWN, SETGID, SETUID]
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 512m, pids: 256 }
+
+  pgbouncer:
+    <<: *hardened
+    ports: !reset []
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 256m, pids: 256 }
+
+  backend:
+    <<: *hardened
+    restart: unless-stopped
+    volumes: !reset []
+    environment:
+      DEBUG: "false"
+      ENVIRONMENT: production
+      # Plausibility limits on client-controlled ride data (see config.py).
+      RIDE_MIN_TRANSITION_SECONDS: "15"
+      SERVICE_AREA_BBOX: "23.0,60.5,37.5,78.0"
+      DATABASE_URL: postgresql+asyncpg://smartride:${POSTGRES_PASSWORD}@postgres:5432/smartride
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY (python -c "import secrets; print(secrets.token_hex(32))")}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?set ALLOWED_ORIGINS, e.g. ["https://admin.example.com"]}
+      METRICS_TOKEN: ${METRICS_TOKEN:?set METRICS_TOKEN for Prometheus}
+      # uvicorn only trusts X-Forwarded-For from these peers (IPs or CIDRs).
+      # Rate limits key on the client IP, so without the proxy listed here every
+      # user shares the proxy's IP. A host-side proxy reaches the container from
+      # the compose network gateway, NOT 127.0.0.1: use that gateway or the
+      # compose network CIDR (docker network inspect <project>_default).
+      FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:?set FORWARDED_ALLOW_IPS to your reverse proxy IP/CIDR}
+    ports: !override
+      - "127.0.0.1:8000:8000"
+    tmpfs:
+      - /tmp
+    deploy:
+      resources:
+        limits: { cpus: "2.0", memory: 1g, pids: 256 }
+
+  triage:
+    <<: *hardened
+    restart: unless-stopped
+    volumes: !reset []
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
+    ports: !reset []
+    tmpfs:
+      - /tmp
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 768m, pids: 256 }
+
+  admin_dashboard:
+    <<: *hardened
+    restart: unless-stopped
+    build:
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?set NEXT_PUBLIC_API_URL to the public API URL}
+    ports: !override
+      - "127.0.0.1:3000:3000"
+    tmpfs:
+      - /tmp
+      - /app/.next/cache
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 512m, pids: 256 }
+
+  prometheus:
+    <<: *hardened
+    restart: unless-stopped
+    ports: !override
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.prod.yml:/etc/prometheus/prometheus.yml:ro
+      - ${METRICS_TOKEN_FILE:?set METRICS_TOKEN_FILE to the file holding METRICS_TOKEN}:/etc/prometheus/metrics_token:ro
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 512m, pids: 256 }
+
+  grafana:
+    <<: *hardened
+    restart: unless-stopped
+    ports: !override
+      - "127.0.0.1:3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:?set GRAFANA_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?set GRAFANA_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    tmpfs:
+      - /tmp
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 512m, pids: 256 }

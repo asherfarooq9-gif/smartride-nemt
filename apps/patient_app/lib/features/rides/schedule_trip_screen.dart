@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:patient_app/core/date_format.dart';
+import 'package:patient_app/core/location.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 
 const _specialties = [
@@ -8,6 +10,11 @@ const _specialties = [
   'Orthopedics', 'Pediatrics', 'Dialysis',
   'Eye / ENT', 'Neurology', 'Oncology', 'Dental',
 ];
+
+final _hospitalsProvider =
+    FutureProvider.autoDispose<List<core.HospitalResponse>>(
+  (_) => core.getHospitals(),
+);
 
 class ScheduleTripScreen extends ConsumerStatefulWidget {
   const ScheduleTripScreen({super.key});
@@ -22,10 +29,6 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
   String? _selectedSpecialty;
   DateTime? _selectedDateTime;
   bool _submitting = false;
-
-  final _hospitalsProvider = FutureProvider.autoDispose<List<core.HospitalResponse>>(
-    (_) => core.getHospitals(),
-  );
 
   @override
   void dispose() {
@@ -53,16 +56,23 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
   }
 
   Future<void> _submit() async {
-    if (_addressCtrl.text.trim().isEmpty && _selectedDateTime == null) {
+    final dt = _selectedDateTime;
+    if (dt == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all required fields')),
+        const SnackBar(content: Text('Please choose a date and time')),
       );
       return;
     }
-    final dt = _selectedDateTime ?? DateTime.now().add(const Duration(hours: 2));
     setState(() => _submitting = true);
     try {
+      final position = await ref.read(locationReaderProvider)();
+      if (position == null) {
+        throw const core.AppError(
+            'We need your location to book a pickup. Turn on location and try again.');
+      }
       final ride = await core.createScheduledRide(core.ScheduledRideRequest(
+        pickupLat: position.latitude,
+        pickupLng: position.longitude,
         pickupAddress: _addressCtrl.text.trim().isEmpty
             ? 'Current location'
             : _addressCtrl.text.trim(),
@@ -71,15 +81,22 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
       ));
       if (!mounted) return;
       context.go('/booking-confirmed/${ride.id}');
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(e is core.AppError ? e.message : 'Booking failed'),
-        backgroundColor: core.kError,
-      ));
+    } on core.AppError catch (e) {
+      _showError(e.message);
+    } on Exception catch (e, st) {
+      core.ErrorReporter.report('Booking a ride failed', e, st);
+      _showError('Booking failed. Please try again.');
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(message),
+      backgroundColor: core.kError,
+    ));
   }
 
   @override
@@ -98,17 +115,17 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                   core.kSpaceLG, core.kSpaceMD, core.kSpaceLG, 0),
               child: Row(
                 children: [
-                  GestureDetector(
-                    onTap: () => context.pop(),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.arrow_back_ios,
-                            size: 16, color: core.kPatientPrimary),
-                        Text('Back',
-                            style: TextStyle(
-                                color: core.kPatientPrimary,
-                                fontSize: core.kFontSM)),
-                      ],
+                  TextButton.icon(
+                    onPressed: () => context.pop(),
+                    icon: const Icon(Icons.arrow_back_ios,
+                        size: 16, color: core.kPatientPrimary),
+                    label: const Text('Back',
+                        style: TextStyle(
+                            color: core.kPatientPrimary,
+                            fontSize: core.kFontSM)),
+                    style: TextButton.styleFrom(
+                      minimumSize:
+                          const Size(core.kMinTapTarget, core.kMinTapTarget),
                     ),
                   ),
                 ],
@@ -181,39 +198,29 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                       runSpacing: core.kSpaceSM,
                       children: _specialties.map((s) {
                         final selected = _selectedSpecialty == s;
-                        return GestureDetector(
-                          onTap: () => setState(() =>
+                        return FilterChip(
+                          label: Text(s),
+                          selected: selected,
+                          onSelected: (_) => setState(() =>
                               _selectedSpecialty = selected ? null : s),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 150),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: core.kSpaceLG,
-                                vertical: core.kSpaceSM),
-                            decoration: BoxDecoration(
-                              color: selected
-                                  ? core.kPatientPrimary
-                                  : Colors.white,
-                              borderRadius:
-                                  BorderRadius.circular(core.kRadiusXXL),
-                              border: Border.all(
-                                color: selected
-                                    ? core.kPatientPrimary
-                                    : core.kDivider,
-                              ),
-                            ),
-                            child: Text(
-                              s,
-                              style: TextStyle(
-                                fontSize: core.kFontSM,
-                                color: selected
-                                    ? Colors.white
-                                    : core.kOnSurface,
-                                fontWeight: selected
-                                    ? FontWeight.w600
-                                    : FontWeight.normal,
-                              ),
-                            ),
+                          showCheckmark: false,
+                          backgroundColor: Colors.white,
+                          selectedColor: core.kPatientPrimary,
+                          side: BorderSide(
+                            color: selected
+                                ? core.kPatientPrimary
+                                : core.kDivider,
                           ),
+                          labelStyle: TextStyle(
+                            fontSize: core.kFontSM,
+                            color: selected ? Colors.white : core.kOnSurface,
+                            fontWeight:
+                                selected ? FontWeight.w600 : FontWeight.normal,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: core.kSpaceSM,
+                              vertical: core.kSpaceSM),
+                          materialTapTargetSize: MaterialTapTargetSize.padded,
                         );
                       }).toList(),
                     ),
@@ -222,17 +229,13 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                     // When
                     const _SectionLabel('WHEN'),
                     const SizedBox(height: core.kSpaceSM),
-                    GestureDetector(
+                    _TapCard(
+                      semanticLabel: _selectedDateTime == null
+                          ? 'Select date and time'
+                          : 'Date and time: ${formatDateTime(_selectedDateTime!)}. Change',
                       onTap: _pickDateTime,
-                      child: Container(
-                        padding: const EdgeInsets.all(core.kSpaceLG),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius:
-                              BorderRadius.circular(core.kRadiusMD),
-                          border: Border.all(color: core.kDivider),
-                        ),
-                        child: Row(
+                      padding: core.kSpaceLG,
+                      child: Row(
                           children: [
                             const Icon(Icons.calendar_today,
                                 color: core.kPatientPrimary, size: 20),
@@ -240,7 +243,7 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                             Text(
                               _selectedDateTime == null
                                   ? 'Select date & time'
-                                  : _formatDateTime(_selectedDateTime!),
+                                  : formatDateTime(_selectedDateTime!),
                               style: TextStyle(
                                 color: _selectedDateTime == null
                                     ? core.kTextSecondary
@@ -252,7 +255,6 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                             const Icon(Icons.arrow_forward_ios,
                                 size: 14, color: core.kTextSecondary),
                           ],
-                        ),
                       ),
                     ),
                     const SizedBox(height: core.kSpaceXXL),
@@ -283,14 +285,6 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
     );
   }
 
-  String _formatDateTime(DateTime dt) {
-    final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    final months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    final h = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
-    final m = dt.minute.toString().padLeft(2, '0');
-    final ampm = dt.hour >= 12 ? 'PM' : 'AM';
-    return '${days[dt.weekday - 1]}, ${dt.day} ${months[dt.month - 1]} · $h:$m $ampm';
-  }
 }
 
 class _SectionLabel extends StatelessWidget {
@@ -301,7 +295,7 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) => Text(
         text,
         style: const TextStyle(
-          fontSize: 11,
+          fontSize: core.kFontSM,
           fontWeight: FontWeight.w600,
           color: core.kTextSecondary,
           letterSpacing: 1.1,
@@ -322,26 +316,61 @@ class _LocationTile extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => _TapCard(
+        semanticLabel: title,
         onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(core.kSpaceMD),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(core.kRadiusMD),
-            border: Border.all(color: core.kDivider),
-          ),
-          child: Row(
-            children: [
-              Icon(icon, color: color, size: 20),
-              const SizedBox(width: core.kSpaceMD),
-              Text(title,
-                  style: TextStyle(
-                      color: color, fontWeight: FontWeight.w600)),
-            ],
-          ),
+        padding: core.kSpaceMD,
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: core.kSpaceMD),
+            Flexible(
+              child: Text(title,
+                  style:
+                      TextStyle(color: color, fontWeight: FontWeight.w600)),
+            ),
+          ],
         ),
       );
+}
+
+/// Bordered, tappable white card with ripple and a screen reader label.
+class _TapCard extends StatelessWidget {
+  const _TapCard({
+    required this.semanticLabel,
+    required this.onTap,
+    required this.padding,
+    required this.child,
+  });
+
+  final String semanticLabel;
+  final VoidCallback onTap;
+  final double padding;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: semanticLabel,
+      excludeSemantics: true,
+      child: Material(
+        color: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(core.kRadiusMD),
+          side: const BorderSide(color: core.kDivider),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(core.kRadiusMD),
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: core.kMinTapTarget),
+            child: Padding(padding: EdgeInsets.all(padding), child: child),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _HospitalPicker extends StatelessWidget {

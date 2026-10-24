@@ -1,14 +1,23 @@
-import csv
-import io
+from uuid import UUID
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query, Request
+from fastapi import (
+    APIRouter,
+    Depends,
+    Header,
+    HTTPException,
+    BackgroundTasks,
+    Query,
+    Request,
+    Response,
+)
 from fastapi.responses import StreamingResponse
-from slowapi import Limiter
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import metrics
 from app.core.database import get_db
-from app.core.ratelimit import rate_limit_key
+from app.core.ratelimit import make_limiter
 from app.core.security import (
     get_current_user,
     require_patient,
@@ -24,11 +33,29 @@ from app.schemas.rides import (
     RideResponse,
     RideListResponse,
     RideDetailResponse,
+    RideDriverInfo,
+    RideHospitalInfo,
+    RidePatientInfo,
+    RideTriageInfo,
 )
-from app.services import ride_service
+from app.services import idempotency, ride_service
+from app.services.ride_export import rides_csv_chunks
 
 router = APIRouter()
-limiter = Limiter(key_func=rate_limit_key)
+limiter = make_limiter()
+
+# Must match the predicate of the partial unique index
+# uq_rides_active_emergency_per_patient (migration 0007).
+_ACTIVE_EMERGENCY_STATUSES = (
+    RideStatus.pending,
+    RideStatus.driver_assigned,
+    RideStatus.driver_en_route,
+    RideStatus.patient_picked_up,
+    RideStatus.arrived_at_hospital,
+)
+_ACTIVE_EMERGENCY_INDEX = "uq_rides_active_emergency_per_patient"
+_EMERGENCY_IDEMPOTENCY_SCOPE = "emergency"
+_SCHEDULED_IDEMPOTENCY_SCOPE = "scheduled"
 
 
 def _to_response(ride: Ride) -> RideResponse:
@@ -65,33 +92,157 @@ async def _run_dispatch(ride_id: str, symptom_text: str) -> None:
 # ── Patient endpoints ─────────────────────────────────────────────────────────
 
 
-@router.post("/emergency", response_model=RideResponse, status_code=201)
+async def _find_active_emergency(patient_id, db: AsyncSession) -> Optional[Ride]:
+    result = await db.execute(
+        select(Ride)
+        .where(
+            Ride.patient_id == patient_id,
+            Ride.ride_type == RideType.emergency,
+            Ride.status.in_(_ACTIVE_EMERGENCY_STATUSES),
+        )
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
+async def _recall_ride(
+    scope: str, patient_id, key: str, body_fingerprint: str, db: AsyncSession
+) -> Optional[Ride]:
+    """The ride this Idempotency-Key already produced; 409 if the body changed."""
+    recalled = await idempotency.recall(scope, patient_id, key)
+    if recalled is None:
+        return None
+    ride_id, stored_fingerprint = recalled
+    if stored_fingerprint is not None and stored_fingerprint != body_fingerprint:
+        raise HTTPException(
+            409, "Idempotency-Key was already used with a different request body"
+        )
+    ride = (
+        await db.execute(select(Ride).where(Ride.id == ride_id))
+    ).scalar_one_or_none()
+    if ride is not None and ride.patient_id == patient_id:
+        return ride
+    return None
+
+
+async def _find_replayed_ride(
+    patient_id, key: Optional[str], body_fingerprint: str, db: AsyncSession
+) -> Optional[Ride]:
+    """The ride a repeated request should get back, or None to create a new one."""
+    if key:
+        ride = await _recall_ride(
+            _EMERGENCY_IDEMPOTENCY_SCOPE, patient_id, key, body_fingerprint, db
+        )
+        if ride is not None:
+            return ride
+    return await _find_active_emergency(patient_id, db)
+
+
+@router.post(
+    "/emergency",
+    response_model=RideResponse,
+    status_code=201,
+    responses={
+        200: {
+            "description": (
+                "The patient already has a live emergency ride (double tap, retry, "
+                "or the same Idempotency-Key): that ride is returned and no new "
+                "ride or dispatch is started."
+            ),
+            "model": RideResponse,
+        }
+    },
+)
 @limiter.limit("5/minute")
 async def create_emergency_ride(
     request: Request,
+    response: Response,
     body: EmergencyRideRequest,
     background_tasks: BackgroundTasks,
+    idempotency_key: Optional[str] = Header(default=None, alias="Idempotency-Key"),
     current_user: User = Depends(require_patient),
     db: AsyncSession = Depends(get_db),
 ):
+    key = idempotency.validate_key(idempotency_key)
     patient = await ride_service.get_patient_by_user(current_user, db)
-    ride = await ride_service.create_emergency_ride(patient, body, db)
-    metrics.rides_created_total.labels(ride_type="emergency").inc()
-    background_tasks.add_task(_run_dispatch, str(ride.id), body.symptom_text)
+    patient_id = patient.id  # read before any rollback expires the instance
+    body_fingerprint = idempotency.fingerprint(body)
+
+    ride = await _find_replayed_ride(patient_id, key, body_fingerprint, db)
+    if ride is None:
+        try:
+            ride = await ride_service.create_emergency_ride(patient, body, db)
+        except IntegrityError as exc:
+            # A concurrent request created the patient's emergency ride first.
+            await db.rollback()
+            if _ACTIVE_EMERGENCY_INDEX not in str(exc.orig):
+                raise
+            ride = await _find_active_emergency(patient_id, db)
+            if ride is None:
+                raise HTTPException(409, "Emergency ride already in progress")
+        else:
+            metrics.rides_created_total.labels(ride_type="emergency").inc()
+            background_tasks.add_task(_run_dispatch, str(ride.id), body.symptom_text)
+            if key:
+                await idempotency.remember(
+                    _EMERGENCY_IDEMPOTENCY_SCOPE,
+                    patient_id,
+                    key,
+                    ride.id,
+                    body_fingerprint,
+                )
+            return _to_response(ride)
+
+    response.status_code = 200
+    if key:
+        await idempotency.remember(
+            _EMERGENCY_IDEMPOTENCY_SCOPE, patient_id, key, ride.id, body_fingerprint
+        )
     return _to_response(ride)
 
 
-@router.post("/scheduled", response_model=RideResponse, status_code=201)
+@router.post(
+    "/scheduled",
+    response_model=RideResponse,
+    status_code=201,
+    responses={
+        200: {
+            "description": (
+                "The same Idempotency-Key was already used for this request: the "
+                "ride it created is returned and no new ride is made."
+            ),
+            "model": RideResponse,
+        }
+    },
+)
 @limiter.limit("10/minute")
 async def create_scheduled_ride(
     request: Request,
+    response: Response,
     body: ScheduledRideRequest,
+    idempotency_key: Optional[str] = Header(default=None, alias="Idempotency-Key"),
     current_user: User = Depends(require_patient),
     db: AsyncSession = Depends(get_db),
 ):
+    key = idempotency.validate_key(idempotency_key)
     patient = await ride_service.get_patient_by_user(current_user, db)
+    patient_id = patient.id  # read before the commit expires the instance
+    body_fingerprint = idempotency.fingerprint(body)
+
+    if key:
+        replayed = await _recall_ride(
+            _SCHEDULED_IDEMPOTENCY_SCOPE, patient_id, key, body_fingerprint, db
+        )
+        if replayed is not None:
+            response.status_code = 200
+            return _to_response(replayed)
+
     ride = await ride_service.create_scheduled_ride(patient, body, db)
     metrics.rides_created_total.labels(ride_type="scheduled").inc()
+    if key:
+        await idempotency.remember(
+            _SCHEDULED_IDEMPOTENCY_SCOPE, patient_id, key, ride.id, body_fingerprint
+        )
     return _to_response(ride)
 
 
@@ -106,79 +257,87 @@ async def my_rides(
     return RideListResponse(items=[_to_response(r) for r in rows], total=total)
 
 
+async def _authorize_ride_access(ride: Ride, user: User, db: AsyncSession) -> str:
+    """Return how `user` may see `ride` ("admin", "patient" or "driver"), else 403.
+
+    Uses held_roles (set membership), not the active role, so multi-role accounts
+    are checked by their actual relationship to the ride regardless of which
+    portal they are in. A dual-role account that owns the ride is the patient;
+    one that is driving it falls through to the driver check.
+    """
+    held = user.held_roles
+    if "admin" in held:
+        return "admin"
+    if "patient" in held:
+        patient = await ride_service.get_patient_by_user(user, db)
+        if ride.patient_id == patient.id:
+            return "patient"
+    if "driver" in held:
+        driver = await ride_service.get_driver_by_user(user, db)
+        if ride.driver_id == driver.id:
+            return "driver"
+    raise HTTPException(403, "Forbidden")
+
+
+def _patient_info(ride: Ride) -> Optional[RidePatientInfo]:
+    if not ride.patient:
+        return None
+    p = ride.patient
+    return RidePatientInfo(
+        full_name=p.full_name, phone=p.user.phone, mobility_needs=p.mobility_needs
+    )
+
+
+def _driver_info(ride: Ride) -> Optional[RideDriverInfo]:
+    if not ride.driver:
+        return None
+    d = ride.driver
+    return RideDriverInfo(
+        full_name=d.full_name,
+        phone=d.user.phone,
+        vehicle_plate=d.vehicle_plate,
+        vehicle_type=d.vehicle_type,
+    )
+
+
+def _hospital_info(ride: Ride) -> Optional[RideHospitalInfo]:
+    h = ride.hospital
+    if not h:
+        return None
+    return RideHospitalInfo(name=h.name, address=h.address, city=h.city)
+
+
+def _triage_info(triage, authorized_as: str) -> Optional[RideTriageInfo]:
+    if not triage:
+        return None
+    # Raw symptom free-text is sensitive PHI. The assigned driver only needs
+    # specialty + severity to prepare; the full complaint is shown to the
+    # patient (their own data) and admins only - minimum necessary.
+    can_see_symptoms = authorized_as in ("patient", "admin")
+    return RideTriageInfo(
+        predicted_specialty=triage.predicted_specialty.value,
+        confidence_score=float(triage.confidence_score),
+        severity_level=triage.severity_level.value,
+        symptom_text=triage.symptom_text if can_see_symptoms else None,
+    )
+
+
 @router.get("/{ride_id}/detail", response_model=RideDetailResponse)
 async def get_ride_detail(
-    ride_id: str,
+    ride_id: UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     ride = await ride_service.get_ride_with_relations(ride_id, db)
-
-    # Use held_roles (set membership) not active role so multi-role accounts
-    # are checked correctly regardless of which portal they are currently in.
-    # Track *how* the caller is authorized so we can scope PHI in the response:
-    # a dual-role account that owns the ride is treated as the patient, not
-    # merely the assigned driver.
-    held = current_user.held_roles
-    authorized_as = None
-    if "admin" in held:
-        authorized_as = "admin"
-    else:
-        if "patient" in held:
-            patient = await ride_service.get_patient_by_user(current_user, db)
-            if patient and ride.patient_id == patient.id:
-                authorized_as = "patient"
-        if authorized_as is None and "driver" in held:
-            driver = await ride_service.get_driver_by_user(current_user, db)
-            if driver and ride.driver_id == driver.id:
-                authorized_as = "driver"
-        if authorized_as is None:
-            raise HTTPException(403, "Forbidden")
-
-    patient_data = None
-    if ride.patient:
-        p, u = ride.patient, ride.patient.user
-        patient_data = {
-            "full_name": p.full_name,
-            "phone": u.phone,
-            "mobility_needs": p.mobility_needs,
-        }
-
-    driver_data = None
-    if ride.driver:
-        d, u = ride.driver, ride.driver.user
-        driver_data = {
-            "full_name": d.full_name,
-            "phone": u.phone,
-            "vehicle_plate": d.vehicle_plate,
-            "vehicle_type": d.vehicle_type,
-        }
-
-    hospital_data = None
-    if ride.hospital:
-        h = ride.hospital
-        hospital_data = {"name": h.name, "address": h.address, "city": h.city}
-
-    triage_data = None
-    t = await ride_service.get_triage_for_ride(ride_id, db)
-    if t:
-        triage_data = {
-            "predicted_specialty": t.predicted_specialty.value,
-            "confidence_score": float(t.confidence_score),
-            "severity_level": t.severity_level.value,
-        }
-        # Raw symptom free-text is sensitive PHI. The assigned driver only
-        # needs specialty + severity to prepare; the full complaint is shown
-        # to the patient (their own data) and admins only — minimum necessary.
-        if authorized_as in ("patient", "admin"):
-            triage_data["symptom_text"] = t.symptom_text
+    authorized_as = await _authorize_ride_access(ride, current_user, db)
+    triage = await ride_service.get_triage_for_ride(ride_id, db)
 
     return RideDetailResponse(
         **_to_response(ride).model_dump(),
-        patient=patient_data,
-        driver=driver_data,
-        hospital=hospital_data,
-        triage=triage_data,
+        patient=_patient_info(ride),
+        driver=_driver_info(ride),
+        hospital=_hospital_info(ride),
+        triage=_triage_info(triage, authorized_as),
     )
 
 
@@ -201,7 +360,7 @@ async def pending_rides(
 
 @router.post("/{ride_id}/accept", response_model=RideResponse)
 async def accept_ride(
-    ride_id: str,
+    ride_id: UUID,
     current_user: User = Depends(require_driver),
     db: AsyncSession = Depends(get_db),
 ):
@@ -215,29 +374,21 @@ async def accept_ride(
 
 @router.post("/{ride_id}/rate", response_model=RideResponse)
 async def rate_ride(
-    ride_id: str,
+    ride_id: UUID,
     body: RateRideRequest,
     current_user: User = Depends(require_patient),
     db: AsyncSession = Depends(get_db),
 ):
     patient = await ride_service.get_patient_by_user(current_user, db)
-    ride = await ride_service.get_ride_by_id(ride_id, db)
-    if ride.patient_id != patient.id:
-        raise HTTPException(403, "Forbidden")
-    if ride.status != RideStatus.completed:
-        raise HTTPException(400, "Can only rate completed rides")
-    if ride.patient_rating is not None:
-        raise HTTPException(409, "Ride already rated")
-    ride.patient_rating = body.rating
-    ride.rating_comment = body.comment
-    await db.commit()
-    await db.refresh(ride)
+    ride = await ride_service.rate_completed_ride(
+        db, ride_id, patient.id, body.rating, body.comment
+    )
     return _to_response(ride)
 
 
 @router.patch("/{ride_id}/status", response_model=RideResponse)
 async def update_ride_status(
-    ride_id: str,
+    ride_id: UUID,
     body: RideStatusUpdate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -284,62 +435,11 @@ async def export_rides_csv(
     ride_type: Optional[RideType] = Query(None),
     search: Optional[str] = Query(None),
     _admin: User = Depends(require_admin),
-    db: AsyncSession = Depends(get_db),
 ):
-    async def generate_csv():
-        # Stream page by page so we never hold the full export in memory.
-        page, page_size = 1, 500
-        buf = io.StringIO()
-        writer = csv.writer(buf)
-        writer.writerow(
-            [
-                "id",
-                "ride_type",
-                "status",
-                "pickup_address",
-                "requested_at",
-                "completed_at",
-                "cancelled_at",
-                "estimated_fare_pkr",
-                "final_fare_pkr",
-                "patient_id",
-                "driver_id",
-                "hospital_id",
-            ]
-        )
-        yield buf.getvalue()
-        while True:
-            rows, _ = await ride_service.list_rides_admin(
-                db, page, page_size, status, ride_type, search
-            )
-            if not rows:
-                break
-            buf = io.StringIO()
-            writer = csv.writer(buf)
-            for r in rows:
-                writer.writerow(
-                    [
-                        str(r.id),
-                        r.ride_type.value,
-                        r.status.value,
-                        r.pickup_address or "",
-                        r.requested_at.isoformat() if r.requested_at else "",
-                        r.completed_at.isoformat() if r.completed_at else "",
-                        r.cancelled_at.isoformat() if r.cancelled_at else "",
-                        float(r.estimated_fare_pkr) if r.estimated_fare_pkr else "",
-                        float(r.final_fare_pkr) if r.final_fare_pkr else "",
-                        str(r.patient_id),
-                        str(r.driver_id) if r.driver_id else "",
-                        str(r.hospital_id) if r.hospital_id else "",
-                    ]
-                )
-            yield buf.getvalue()
-            if len(rows) < page_size:
-                break
-            page += 1
-
+    # No get_db here: the streamed body runs after the request-scoped session may
+    # be closed, so the generator opens its own.
     return StreamingResponse(
-        generate_csv(),
+        rides_csv_chunks(status, ride_type, search),
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=rides.csv"},
     )
@@ -347,20 +447,12 @@ async def export_rides_csv(
 
 @router.get("/{ride_id}", response_model=RideResponse)
 async def get_ride(
-    ride_id: str,
+    ride_id: UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     ride = await ride_service.get_ride_by_id(ride_id, db)
-    if "admin" not in current_user.held_roles:
-        if "patient" in current_user.held_roles:
-            patient = await ride_service.get_patient_by_user(current_user, db)
-            if ride.patient_id != patient.id:
-                raise HTTPException(403, "Forbidden")
-        elif "driver" in current_user.held_roles:
-            driver = await ride_service.get_driver_by_user(current_user, db)
-            if ride.driver_id != driver.id:
-                raise HTTPException(403, "Forbidden")
+    await _authorize_ride_access(ride, current_user, db)
     return _to_response(ride)
 
 

@@ -1,9 +1,13 @@
 # Ruff configuration for the SmartRide backend.
 line-length = 88
 target-version = "py311"
+# Vendored byte-for-byte from ai-services/triage/keywords.py; a test checks the copies match.
+extend-exclude = ["app/services/triage_keywords.py"]
 
 [lint]
-# Default rule set (E, F, W) is enough for this project's CI gate.
+# Pinned explicitly: newer ruff releases widen the implicit default set, which
+# would silently change what this CI gate enforces.
+select = ["E4", "E7", "E9", "F", "W"]
 
 [lint.per-file-ignores]
 # Test modules and conftest intentionally set environment variables and adjust

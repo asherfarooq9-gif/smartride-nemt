@@ -25,11 +25,21 @@ services:
         value: ""            # triage AI not deployed — graceful fallback
       - key: DEBUG
         value: "false"
-      - key: GOOGLE_MAPS_API_KEY
-        value: ""
+      - key: ENVIRONMENT
+        value: production
+      - key: RIDE_MIN_TRANSITION_SECONDS
+        value: "15"          # min seconds for the pickup->hospital and hospital->completed legs
+      - key: SERVICE_AREA_BBOX
+        value: "23.0,60.5,37.5,78.0"   # min_lat,min_lng,max_lat,max_lng (Pakistan); pickups outside are rejected
+      - key: ALLOWED_ORIGINS
+        sync: false          # JSON list, e.g. ["https://admin.example.com"]; the app refuses to boot with "*" when DEBUG=false
+      - key: METRICS_TOKEN
+        sync: false          # bearer token Prometheus sends to /metrics; set in the Render dashboard
+      - key: FORWARDED_ALLOW_IPS
+        value: "*"           # Render's proxy is the only peer; lets uvicorn read X-Forwarded-For so rate limits key on the real client IP
       - key: TWILIO_ACCOUNT_SID
         value: ""
       - key: TWILIO_AUTH_TOKEN
         value: ""
-      - key: TWILIO_PHONE_NUMBER
+      - key: TWILIO_FROM_NUMBER
         value: ""
