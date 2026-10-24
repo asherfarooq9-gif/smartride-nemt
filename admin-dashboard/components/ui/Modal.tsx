@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useRef } from 'react'
+import { useEffect, useId, useRef } from 'react'
 import { X } from 'lucide-react'
 
 interface Props {
@@ -12,42 +12,55 @@ interface Props {
 
 const WIDTHS = { md: 'max-w-md', lg: 'max-w-lg', xl: 'max-w-xl', '2xl': 'max-w-2xl' }
 
+/**
+ * Native <dialog>.showModal() gives what hand-rolled modals get wrong: a focus
+ * trap (the rest of the page is inert), initial focus inside the dialog, focus
+ * restored to the trigger on close, and Escape closing only the top-most dialog
+ * when modals are stacked (e.g. a confirmation over the ride detail).
+ */
 export default function Modal({ open, onClose, title, children, width = 'lg' }: Props) {
-  const ref = useRef<HTMLDivElement>(null)
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  const titleId = useId()
 
   useEffect(() => {
-    if (!open) return
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [open, onClose])
-
-  if (!open) return null
+    const dialog = dialogRef.current
+    if (!open || !dialog) return
+    dialog.showModal()
+    return () => dialog.close()
+  }, [open])
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
+    <dialog
+      ref={dialogRef}
+      aria-labelledby={titleId}
+      onCancel={e => {
+        // React bubbles `cancel` from a nested dialog to its parent; only react to our own.
+        if (e.target !== e.currentTarget) return
+        // Keep `open` as the single source of truth: the effect closes the dialog.
+        e.preventDefault()
+        onClose()
+      }}
+      onClick={e => {
+        if (e.target === e.currentTarget) onClose() // click on the backdrop
+      }}
+      className={`m-auto w-[calc(100%-2rem)] ${WIDTHS[width]} rounded-2xl bg-white p-0 text-gray-900 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm`}
     >
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div
-        ref={ref}
-        className={`relative w-full ${WIDTHS[width]} bg-white rounded-2xl shadow-2xl max-h-[90vh] flex flex-col`}
-      >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-blue-100">
-          <h2 className="text-lg font-semibold text-blue-900">{title}</h2>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-blue-50 transition text-gray-500 hover:text-blue-900"
-            aria-label="Close"
-          >
-            <X size={18} />
-          </button>
+      {open && (
+        <div className="flex max-h-[90vh] flex-col">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-blue-100">
+            <h2 id={titleId} className="text-lg font-semibold text-blue-900">{title}</h2>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded-lg hover:bg-blue-50 transition text-gray-500 hover:text-blue-900"
+              aria-label="Close"
+            >
+              <X size={18} aria-hidden="true" />
+            </button>
+          </div>
+          <div className="overflow-y-auto flex-1 px-6 py-4">{children}</div>
         </div>
-        <div className="overflow-y-auto flex-1 px-6 py-4">{children}</div>
-      </div>
-    </div>
+      )}
+    </dialog>
   )
 }

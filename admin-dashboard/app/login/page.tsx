@@ -56,7 +56,7 @@ export default function LoginPage() {
           {/* Form */}
           <form onSubmit={handleSubmit} className="px-8 py-7 space-y-5">
             {error && (
-              <div role="alert" className="flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm">
+              <div role="alert" className="flex items-center gap-2 text-red-700 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm">
                 <AlertCircle size={15} className="shrink-0" />
                 {error}
               </div>

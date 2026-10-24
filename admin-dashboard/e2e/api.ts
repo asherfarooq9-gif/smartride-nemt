@@ -1,4 +1,5 @@
 export const API_URL = 'http://localhost:18010'
+export const ADMIN_URL = 'http://localhost:13100'
 export const ADMIN = { phone: '+92300000001', password: 'admin123' }
 
 export const TEST_PATIENT = { phone: '+923001110001', password: 'patient123', full_name: 'E2E Patient' }
@@ -17,6 +18,11 @@ export function testDriver(project: string, spare = false) {
   }
 }
 export const RIDE_ADDRESS = 'E2E Test Street 42'
+/** Each viewport project cancels its own ride, so the shared RIDE_ADDRESS ride stays pending. */
+export const cancelRideAddress = (project: string) => `E2E Cancel Street ${project}`
+export const BULK_RIDE_ADDRESS = 'E2E Bulk Street'
+/** More than one page (20) of rides, so pagination has something to page through. */
+export const BULK_RIDE_COUNT = 21
 
 export async function post<T>(path: string, body: unknown, token?: string): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {

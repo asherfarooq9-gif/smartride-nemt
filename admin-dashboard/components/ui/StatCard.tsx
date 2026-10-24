@@ -30,7 +30,7 @@ export default function StatCard({ label, value, icon: Icon, color = 'blue', sub
         <div>
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{label}</p>
           <p className="text-3xl font-bold text-gray-900 mt-1">{value}</p>
-          {subtitle && <p className="text-xs text-gray-400 mt-1">{subtitle}</p>}
+          {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
         </div>
         <div className={`p-3 rounded-xl border ${cls}`}>
           <Icon size={20} />

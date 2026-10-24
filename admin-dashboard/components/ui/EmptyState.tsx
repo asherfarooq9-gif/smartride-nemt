@@ -14,7 +14,7 @@ export default function EmptyState({ icon: Icon, title, description }: EmptyStat
       </div>
       <p className="text-blue-900 font-semibold text-base">{title}</p>
       {description && (
-        <p className="text-gray-400 text-sm mt-1 max-w-xs">{description}</p>
+        <p className="text-gray-500 text-sm mt-1 max-w-xs">{description}</p>
       )}
     </div>
   )

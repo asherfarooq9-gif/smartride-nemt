@@ -1,11 +1,38 @@
 import { expect, test } from '@playwright/test'
-import { ADMIN, TEST_PATIENT } from './api'
+import { ADMIN, API_URL, TEST_PATIENT } from './api'
 
 test.use({ storageState: { cookies: [], origins: [] } })
 
 test('unauthenticated visit redirects to the login page', async ({ page }) => {
   await page.goto('/rides')
   await expect(page).toHaveURL(/\/login$/)
+})
+
+test('unauthenticated visit never renders protected UI or calls the API', async ({ page, request }) => {
+  // Record, from the first paint on, whether the app chrome or any API call appears.
+  const apiRequests: string[] = []
+  page.on('request', r => {
+    if (r.url().startsWith(API_URL)) apiRequests.push(r.url())
+  })
+  await page.addInitScript(() => {
+    const w = window as unknown as { __sawProtected: boolean }
+    w.__sawProtected = false
+    const check = () => {
+      if (document.querySelector('aside, main')) w.__sawProtected = true
+    }
+    new MutationObserver(check).observe(document, { childList: true, subtree: true })
+  })
+
+  await page.goto('/rides')
+  await expect(page).toHaveURL(/\/login$/)
+  await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible()
+  expect(await page.evaluate(() => (window as unknown as { __sawProtected: boolean }).__sawProtected)).toBe(false)
+  expect(apiRequests).toEqual([])
+
+  // The server-rendered HTML itself carries no protected markup either.
+  const html = await (await request.get('/rides')).text()
+  expect(html).not.toContain('NEMT Admin')
+  expect(html).not.toContain('Total Rides')
 })
 
 test('wrong password shows an error and stays on the login page', async ({ page }) => {

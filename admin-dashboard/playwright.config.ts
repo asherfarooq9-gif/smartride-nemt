@@ -1,7 +1,6 @@
 import { defineConfig, devices } from '@playwright/test'
+import { ADMIN_URL, API_URL } from './e2e/api'
 
-const API_URL = 'http://localhost:18010'
-const ADMIN_URL = 'http://localhost:13100'
 const python = process.env.E2E_PYTHON ?? 'python'
 
 export default defineConfig({
@@ -32,10 +31,12 @@ export default defineConfig({
       reuseExistingServer: false,
     },
     {
-      command: 'npm run build && npm run start -- -p 13100',
+      command: `npm run build && npm run start -- -p ${new URL(ADMIN_URL).port}`,
       url: ADMIN_URL + '/login',
       timeout: 240_000,
-      reuseExistingServer: !process.env.CI,
+      // A stale server from an earlier run would test old code: reuse only on request
+      // (E2E_REUSE_SERVER=1), e.g. when iterating on specs against a fresh build.
+      reuseExistingServer: process.env.E2E_REUSE_SERVER === '1',
       env: { NEXT_PUBLIC_API_URL: API_URL },
     },
   ],
