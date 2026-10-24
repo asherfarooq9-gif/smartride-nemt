@@ -8,11 +8,14 @@ emergency-ride-per-patient rule still prevents duplicates.
 """
 
 import asyncio
+import hashlib
+import json
 import logging
 import re
 from typing import Optional
 
 from fastapi import HTTPException
+from pydantic import BaseModel
 from redis.exceptions import RedisError
 
 from app.core.redis_client import get_redis
@@ -39,22 +42,47 @@ def _redis_key(scope: str, patient_id, key: str) -> str:
     return f"idem:{scope}:{patient_id}:{key}"
 
 
-async def recall(scope: str, patient_id, key: str) -> Optional[str]:
-    """The ride id stored for this key, or None (also when Redis is down)."""
+def fingerprint(body: BaseModel) -> str:
+    """Stable digest of a request body, to tell a true retry from key reuse."""
+    canonical = json.dumps(
+        body.model_dump(mode="json"), sort_keys=True, separators=(",", ":")
+    )
+    return hashlib.sha256(canonical.encode()).hexdigest()[:32]
+
+
+async def recall(
+    scope: str, patient_id, key: str
+) -> Optional[tuple[str, Optional[str]]]:
+    """(ride id, body fingerprint) stored for this key, or None.
+
+    None also covers Redis being down. The fingerprint is None for entries
+    written without one.
+    """
     try:
         r = await get_redis()
-        return await r.get(_redis_key(scope, patient_id, key))
+        raw = await r.get(_redis_key(scope, patient_id, key))
     except _REDIS_ERRORS:
         log.warning("Idempotency lookup failed; ignoring key", exc_info=True)
         return None
+    if not raw:
+        return None
+    ride_id, _, stored_fingerprint = raw.partition(":")
+    return ride_id, stored_fingerprint or None
 
 
-async def remember(scope: str, patient_id, key: str, ride_id) -> None:
+async def remember(
+    scope: str,
+    patient_id,
+    key: str,
+    ride_id,
+    body_fingerprint: Optional[str] = None,
+) -> None:
+    value = f"{ride_id}:{body_fingerprint}" if body_fingerprint else str(ride_id)
     try:
         r = await get_redis()
         await r.set(
             _redis_key(scope, patient_id, key),
-            str(ride_id),
+            value,
             ex=IDEMPOTENCY_TTL_SECONDS,
             nx=True,
         )

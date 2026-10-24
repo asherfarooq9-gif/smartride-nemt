@@ -70,6 +70,9 @@ services:
     environment:
       DEBUG: "false"
       ENVIRONMENT: production
+      # Plausibility limits on client-controlled ride data (see config.py).
+      RIDE_MIN_TRANSITION_SECONDS: "15"
+      SERVICE_AREA_BBOX: "23.0,60.5,37.5,78.0"
       DATABASE_URL: postgresql+asyncpg://smartride:${POSTGRES_PASSWORD}@postgres:5432/smartride
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
       SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY (python -c "import secrets; print(secrets.token_hex(32))")}

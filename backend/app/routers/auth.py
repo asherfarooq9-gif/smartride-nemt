@@ -275,7 +275,9 @@ async def add_role(
 
 
 @router.post("/switch-role", response_model=TokenResponse)
+@limiter.limit("20/minute")
 async def switch_role(
+    request: Request,
     body: SwitchRoleRequest,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     current_user: User = Depends(get_current_user),

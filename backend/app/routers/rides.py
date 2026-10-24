@@ -55,6 +55,7 @@ _ACTIVE_EMERGENCY_STATUSES = (
 )
 _ACTIVE_EMERGENCY_INDEX = "uq_rides_active_emergency_per_patient"
 _EMERGENCY_IDEMPOTENCY_SCOPE = "emergency"
+_SCHEDULED_IDEMPOTENCY_SCOPE = "scheduled"
 
 
 def _to_response(ride: Ride) -> RideResponse:
@@ -104,20 +105,36 @@ async def _find_active_emergency(patient_id, db: AsyncSession) -> Optional[Ride]
     return result.scalar_one_or_none()
 
 
+async def _recall_ride(
+    scope: str, patient_id, key: str, body_fingerprint: str, db: AsyncSession
+) -> Optional[Ride]:
+    """The ride this Idempotency-Key already produced; 409 if the body changed."""
+    recalled = await idempotency.recall(scope, patient_id, key)
+    if recalled is None:
+        return None
+    ride_id, stored_fingerprint = recalled
+    if stored_fingerprint is not None and stored_fingerprint != body_fingerprint:
+        raise HTTPException(
+            409, "Idempotency-Key was already used with a different request body"
+        )
+    ride = (
+        await db.execute(select(Ride).where(Ride.id == ride_id))
+    ).scalar_one_or_none()
+    if ride is not None and ride.patient_id == patient_id:
+        return ride
+    return None
+
+
 async def _find_replayed_ride(
-    patient_id, key: Optional[str], db: AsyncSession
+    patient_id, key: Optional[str], body_fingerprint: str, db: AsyncSession
 ) -> Optional[Ride]:
     """The ride a repeated request should get back, or None to create a new one."""
     if key:
-        ride_id = await idempotency.recall(
-            _EMERGENCY_IDEMPOTENCY_SCOPE, patient_id, key
+        ride = await _recall_ride(
+            _EMERGENCY_IDEMPOTENCY_SCOPE, patient_id, key, body_fingerprint, db
         )
-        if ride_id:
-            ride = (
-                await db.execute(select(Ride).where(Ride.id == ride_id))
-            ).scalar_one_or_none()
-            if ride is not None and ride.patient_id == patient_id:
-                return ride
+        if ride is not None:
+            return ride
     return await _find_active_emergency(patient_id, db)
 
 
@@ -149,8 +166,9 @@ async def create_emergency_ride(
     key = idempotency.validate_key(idempotency_key)
     patient = await ride_service.get_patient_by_user(current_user, db)
     patient_id = patient.id  # read before any rollback expires the instance
+    body_fingerprint = idempotency.fingerprint(body)
 
-    ride = await _find_replayed_ride(patient_id, key, db)
+    ride = await _find_replayed_ride(patient_id, key, body_fingerprint, db)
     if ride is None:
         try:
             ride = await ride_service.create_emergency_ride(patient, body, db)
@@ -167,29 +185,64 @@ async def create_emergency_ride(
             background_tasks.add_task(_run_dispatch, str(ride.id), body.symptom_text)
             if key:
                 await idempotency.remember(
-                    _EMERGENCY_IDEMPOTENCY_SCOPE, patient_id, key, ride.id
+                    _EMERGENCY_IDEMPOTENCY_SCOPE,
+                    patient_id,
+                    key,
+                    ride.id,
+                    body_fingerprint,
                 )
             return _to_response(ride)
 
     response.status_code = 200
     if key:
         await idempotency.remember(
-            _EMERGENCY_IDEMPOTENCY_SCOPE, patient_id, key, ride.id
+            _EMERGENCY_IDEMPOTENCY_SCOPE, patient_id, key, ride.id, body_fingerprint
         )
     return _to_response(ride)
 
 
-@router.post("/scheduled", response_model=RideResponse, status_code=201)
+@router.post(
+    "/scheduled",
+    response_model=RideResponse,
+    status_code=201,
+    responses={
+        200: {
+            "description": (
+                "The same Idempotency-Key was already used for this request: the "
+                "ride it created is returned and no new ride is made."
+            ),
+            "model": RideResponse,
+        }
+    },
+)
 @limiter.limit("10/minute")
 async def create_scheduled_ride(
     request: Request,
+    response: Response,
     body: ScheduledRideRequest,
+    idempotency_key: Optional[str] = Header(default=None, alias="Idempotency-Key"),
     current_user: User = Depends(require_patient),
     db: AsyncSession = Depends(get_db),
 ):
+    key = idempotency.validate_key(idempotency_key)
     patient = await ride_service.get_patient_by_user(current_user, db)
+    patient_id = patient.id  # read before the commit expires the instance
+    body_fingerprint = idempotency.fingerprint(body)
+
+    if key:
+        replayed = await _recall_ride(
+            _SCHEDULED_IDEMPOTENCY_SCOPE, patient_id, key, body_fingerprint, db
+        )
+        if replayed is not None:
+            response.status_code = 200
+            return _to_response(replayed)
+
     ride = await ride_service.create_scheduled_ride(patient, body, db)
     metrics.rides_created_total.labels(ride_type="scheduled").inc()
+    if key:
+        await idempotency.remember(
+            _SCHEDULED_IDEMPOTENCY_SCOPE, patient_id, key, ride.id, body_fingerprint
+        )
     return _to_response(ride)
 
 

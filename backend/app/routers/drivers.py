@@ -2,12 +2,13 @@ from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.ratelimit import make_limiter
 from app.core.security import require_driver, require_admin
 from app.models.models import Driver, User
 from app.schemas.drivers import (
@@ -27,6 +28,7 @@ from app.services import driver_service
 from sqlalchemy import select, func, and_
 
 router = APIRouter()
+limiter = make_limiter()
 
 
 class VerifyBody(BaseModel):
@@ -75,7 +77,9 @@ async def update_me(
 
 
 @router.patch("/status", response_model=DriverResponse)
+@limiter.limit("30/minute")
 async def update_status(
+    request: Request,
     body: DriverStatusUpdate,
     current_user: User = Depends(require_driver),
     db: AsyncSession = Depends(get_db),
@@ -86,7 +90,9 @@ async def update_status(
 
 
 @router.post("/location", response_model=DriverResponse)
+@limiter.limit("60/minute")
 async def update_location(
+    request: Request,
     body: LocationUpdate,
     current_user: User = Depends(require_driver),
     db: AsyncSession = Depends(get_db),

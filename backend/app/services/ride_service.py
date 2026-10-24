@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime, timezone
-from math import radians, sin, cos, sqrt, atan2
+from math import atan2, ceil, cos, radians, sin, sqrt
 from typing import Optional
 
 from fastapi import HTTPException
@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core import metrics
+from app.core.config import settings
 from app.core.search import contains
 from app.services.driver_service import ACTIVE_RIDE_STATUSES, apply_balance_delta
 from app.services.fare import commission_for, fare_for
@@ -60,6 +61,41 @@ DRIVER_TRANSITIONS = {
     RideStatus.patient_picked_up: RideStatus.arrived_at_hospital,
     RideStatus.arrived_at_hospital: RideStatus.completed,
 }
+
+
+# Status -> the Ride column holding when the leg leading into it started.
+_LEG_START_FIELD = {
+    RideStatus.arrived_at_hospital: "pickup_at",
+    RideStatus.completed: "arrived_at",
+}
+
+
+def ensure_in_service_area(lat: float, lng: float) -> None:
+    """Reject pickups outside SERVICE_AREA_BBOX (no-op when it is unset)."""
+    bbox = settings.service_area_bbox()
+    if bbox is None:
+        return
+    min_lat, min_lng, max_lat, max_lng = bbox
+    if not (min_lat <= lat <= max_lat and min_lng <= lng <= max_lng):
+        raise HTTPException(422, "Pickup location is outside the service area")
+
+
+def _ensure_leg_took_long_enough(
+    ride: Ride, new_status: RideStatus, now: datetime
+) -> None:
+    """Refuse a status that follows its predecessor faster than any real trip."""
+    minimum = settings.RIDE_MIN_TRANSITION_SECONDS
+    field = _LEG_START_FIELD.get(new_status)
+    started = getattr(ride, field) if field else None
+    if minimum <= 0 or started is None:
+        return
+    elapsed = (now - started).total_seconds()
+    if elapsed < minimum:
+        raise HTTPException(
+            400,
+            f"Too soon to mark {new_status.value}; try again in "
+            f"{ceil(minimum - elapsed)}s",
+        )
 
 
 async def ride_fare(db: AsyncSession, ride: Ride):
@@ -116,6 +152,7 @@ async def get_driver_by_user(user: User, db: AsyncSession) -> Driver:
 async def create_emergency_ride(
     patient: Patient, body: EmergencyRideRequest, db: AsyncSession
 ) -> Ride:
+    ensure_in_service_area(body.pickup_lat, body.pickup_lng)
     ride = Ride(
         patient_id=patient.id,
         ride_type=RideType.emergency,
@@ -134,6 +171,7 @@ async def create_emergency_ride(
 async def create_scheduled_ride(
     patient: Patient, body: ScheduledRideRequest, db: AsyncSession
 ) -> Ride:
+    ensure_in_service_area(body.pickup_lat, body.pickup_lng)
     ride = Ride(
         patient_id=patient.id,
         ride_type=RideType.scheduled,
@@ -276,8 +314,9 @@ async def _apply_driver_transition(
         return
     if new_status != DRIVER_TRANSITIONS.get(ride.status):
         raise HTTPException(400, f"Cannot transition from {ride.status} to {new_status}")
-    ride.status = new_status
     now = datetime.now(timezone.utc)
+    _ensure_leg_took_long_enough(ride, new_status, now)
+    ride.status = new_status
     if new_status == RideStatus.patient_picked_up:
         ride.pickup_at = now
     elif new_status == RideStatus.arrived_at_hospital:

@@ -35,6 +35,7 @@ os.environ.setdefault("ALLOWED_ORIGINS", '["http://localhost:3000"]')
 from app.core.database import Base, get_db  # noqa: E402
 from main import app, limiter as _main_limiter  # noqa: E402
 from app.routers.auth import limiter as _auth_limiter  # noqa: E402
+from app.routers.drivers import limiter as _drivers_limiter  # noqa: E402
 from app.routers.rides import limiter as _rides_limiter  # noqa: E402
 
 # Rate limits would otherwise reject the many register/login calls the suite
@@ -42,6 +43,7 @@ from app.routers.rides import limiter as _rides_limiter  # noqa: E402
 _main_limiter.enabled = False
 _auth_limiter.enabled = False
 _rides_limiter.enabled = False
+_drivers_limiter.enabled = False
 
 
 async def _run_ddl() -> None:
