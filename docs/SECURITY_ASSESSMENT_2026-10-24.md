@@ -222,7 +222,34 @@ No chain in this review reached full account takeover, data exfiltration at scal
 
 ---
 
-## 7. Remediation Status
+## 7. Live Verification (2026-10-25)
+
+Everything above was a code review. This section is different: the backend
+was actually started (local Docker Postgres + Redis, `security/assessment-
+hardening` branch) and real HTTP/WebSocket requests were sent to it on
+`127.0.0.1` only — nothing left this machine, nothing touched Render.
+
+| Attack tried | Result |
+|---|---|
+| IDOR: patient B reads patient A's ride detail | Blocked — `403 Forbidden` |
+| JWT `alg:none` forged token | Blocked — `401` |
+| JWT signature tampering | Blocked — `401` |
+| JWT payload tampering (patient→admin role, reusing the old signature) | Blocked — `401` |
+| No token / garbage token | Blocked — `401` |
+| SQL injection on login phone field (`' OR '1'='1`, `'; DROP TABLE users; --`, UNION-based) | Blocked — `401 Invalid credentials` each time; `users` table confirmed intact afterward by a successful real login |
+| CORS preflight from `https://evil-attacker.example` | No `Access-Control-Allow-Origin` header returned (browser blocks it); an allowed origin gets the header correctly |
+| Scheduled-ride double-submit, same Idempotency-Key | First call `201`, second call `200` with the same ride id — fix #5 confirmed working |
+| Idempotency-Key reused with a different pickup location | `409 Conflict` — fix #11 confirmed working |
+| `/auth/switch-role` flooded with 25 rapid calls | First 20 succeed, calls 21-25 get `429` — fix #7 confirmed working |
+| Driver `/location` flooded with 65 rapid calls | First 60 succeed, calls 61-65 get `429` — fix #8 confirmed working |
+| WebSocket connect with no auth message | Server closes the connection (code 1008) |
+| WebSocket connect with a garbage token | Server closes the connection (code 1008) |
+
+No successful attack in this list. Every protection that code review predicted
+was present, including the five fixes shipped yesterday, held up under real
+traffic.
+
+## 8. Remediation Status
 
 Updated after the fixes on branch `security/assessment-hardening`.
 
@@ -251,12 +278,16 @@ Updated after the fixes on branch `security/assessment-hardening`.
 
 ---
 
-## 8. Notes on Methodology
+## 9. Notes on Methodology
 
-This was a **static, read-only code review** — no requests were sent to any
-running instance of the application, local or deployed. Findings describing
-"theoretical PoC" are derived from reading the code paths involved and
-describing what a request would need to look like to trigger the behavior;
-they were not executed. If live verification is wanted later, it should be
-run only against a local `docker-compose` dev stack, never against the
-Render deployment or any shared database.
+Sections 1-6 were a static, read-only code review (2026-10-24): no requests
+sent anywhere. "Theoretical PoC" there means what a request would need to
+look like to trigger the behavior, described but not executed.
+
+Section 7 (2026-10-25) is different: real attacks were actually run, but
+only against a copy of the backend running on `127.0.0.1` on this machine,
+talking to the local Docker Postgres/Redis — never the Render deployment,
+never a shared database. The local dev database had some stale duplicate
+test rides from earlier manual testing; those were cancelled (not deleted)
+so the app's own startup migration would run, then the server was started,
+tested, and stopped again.
