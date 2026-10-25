@@ -13,6 +13,7 @@ from app.core import metrics
 from app.core.config import settings
 from app.core.search import contains
 from app.services.driver_service import ACTIVE_RIDE_STATUSES, apply_balance_delta
+from app.services.emergency_dispatch import match_hospital_for_ride
 from app.services.fare import commission_for, fare_for
 from app.services.hospital_matching import haversine_km
 from app.services.notifications import notify_user
@@ -483,6 +484,35 @@ async def get_pending_rides(driver: Driver, db: AsyncSession) -> list[Ride]:
     return [r for r, _ in nearby]
 
 
+async def _hospital_placement(ride_id: str, db: AsyncSession) -> dict:
+    """Hospital and estimated fare for a ride that dispatch has not placed yet.
+
+    Dispatch sets these when it assigns a driver itself. A driver who accepts a
+    pending ride by hand skips that path, so without this the ride would have no
+    destination, no hospital to pre-alert, and a 0 km base fare on completion.
+    Returns {} (leave the ride as it is) when it already has a hospital, has no
+    symptom text to triage, or no hospital is in range.
+    """
+    ride = (
+        await db.execute(
+            select(
+                Ride.hospital_id, Ride.pickup_lat, Ride.pickup_lng, Ride.symptom_text
+            ).where(Ride.id == ride_id)
+        )
+    ).first()
+    if ride is None or ride.hospital_id is not None or not ride.symptom_text:
+        return {}
+    match = await match_hospital_for_ride(
+        db, ride_id, ride.pickup_lat, ride.pickup_lng, ride.symptom_text
+    )
+    if match is None:
+        return {}
+    return {
+        "hospital_id": match.hospital_id,
+        "estimated_fare_pkr": fare_for(match.distance_km),
+    }
+
+
 async def accept_ride(ride_id: str, driver: Driver, db: AsyncSession) -> Ride:
     """Atomically assign a driver to a ride; raises 409 if already taken."""
     requester_user_id = (
@@ -494,6 +524,8 @@ async def accept_ride(ride_id: str, driver: Driver, db: AsyncSession) -> Ride:
     ).scalar_one_or_none()
     if requester_user_id == driver.user_id:
         raise HTTPException(403, "You cannot accept your own ride")
+
+    placement = await _hospital_placement(ride_id, db)
 
     # Claim the driver first: only an available driver may take a ride, and two
     # simultaneous accepts by one driver cannot both succeed.
@@ -518,6 +550,7 @@ async def accept_ride(ride_id: str, driver: Driver, db: AsyncSession) -> Ride:
             driver_id=driver.id,
             status=RideStatus.driver_assigned,
             driver_assigned_at=datetime.now(timezone.utc),
+            **placement,
         )
         .returning(Ride.id)
     )

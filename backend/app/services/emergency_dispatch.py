@@ -424,20 +424,7 @@ async def _load_context(
 ) -> tuple[Optional[dict], list[HospitalCandidate], PatientInfo]:
     """Read everything the pipeline needs, then end the transaction."""
     stored_triage = await load_stored_triage(db, ride.id)
-    hospitals = [
-        HospitalCandidate(
-            id=str(h.id),
-            name=h.name,
-            lat=h.lat,
-            lng=h.lng,
-            specialties=h.specialties,
-            ed_capacity=h.ed_capacity,
-            ed_current_load=h.ed_current_load,
-            fhir_endpoint=h.fhir_endpoint,
-            coordinator_phone=h.coordinator_phone,
-        )
-        for h in await load_active_hospitals(db)
-    ]
+    hospitals = await load_hospital_candidates(db)
     row = await load_patient(db, ride.patient_id)
     patient = PatientInfo(
         id=row.id,
@@ -507,6 +494,43 @@ async def load_active_hospitals(db: AsyncSession):
         select(Hospital).where(Hospital.is_active == True)  # noqa: E712 — SQLAlchemy column comparison
     )
     return result.scalars().all()
+
+
+async def load_hospital_candidates(db: AsyncSession) -> list[HospitalCandidate]:
+    return [
+        HospitalCandidate(
+            id=str(h.id),
+            name=h.name,
+            lat=h.lat,
+            lng=h.lng,
+            specialties=h.specialties,
+            ed_capacity=h.ed_capacity,
+            ed_current_load=h.ed_current_load,
+            fhir_endpoint=h.fhir_endpoint,
+            coordinator_phone=h.coordinator_phone,
+        )
+        for h in await load_active_hospitals(db)
+    ]
+
+
+async def match_hospital_for_ride(
+    db: AsyncSession, ride_id, pickup_lat: float, pickup_lng: float, symptom_text: str
+) -> Optional[MatchResult]:
+    """Best hospital for a ride that dispatch did not place (a driver accepted it).
+
+    Uses the stored triage result when there is one, otherwise the local rules:
+    the driver is waiting on this call, so it never makes a network request.
+    """
+    triage = await load_stored_triage(db, ride_id) or normalise_triage(
+        fallback_triage(symptom_text), symptom_text
+    )
+    matches = match_hospitals(
+        patient_lat=pickup_lat,
+        patient_lng=pickup_lng,
+        required_specialty=triage["specialty"],
+        candidates=await load_hospital_candidates(db),
+    )
+    return matches[0] if matches else None
 
 
 async def load_patient(db: AsyncSession, patient_id):

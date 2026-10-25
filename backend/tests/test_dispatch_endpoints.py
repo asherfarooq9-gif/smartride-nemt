@@ -4,9 +4,9 @@ import pytest
 from httpx import AsyncClient
 from unittest.mock import AsyncMock, patch
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, update
 
-from app.models.models import Driver
+from app.models.models import Driver, Hospital, Ride, Specialty
 
 
 PICKUP = {"pickup_lat": 33.7215, "pickup_lng": 73.0433}
@@ -158,3 +158,63 @@ async def test_unverified_driver_cannot_accept(client: AsyncClient, db: AsyncSes
         headers={"Authorization": f"Bearer {token}"},
     )
     assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_accept_sets_hospital_and_estimated_fare(
+    client: AsyncClient, verified_driver_token: str, db: AsyncSession
+):
+    """A manually accepted emergency must get a destination, not just a driver.
+
+    Without a hospital the driver has nowhere to go, no pre-alert target exists,
+    and completion bills the 0 km base fare.
+    """
+    hospital = Hospital(
+        name="Accept Test Hospital",
+        address="A",
+        city="Islamabad",
+        lat=PICKUP["pickup_lat"] + 0.045,  # ~5 km from the pickup
+        lng=PICKUP["pickup_lng"],
+        specialties=[s.value for s in Specialty],
+        ed_capacity=1000,
+        ed_current_load=0,
+    )
+    db.add(hospital)
+    await db.commit()
+    hospital_id = hospital.id
+    # Other tests leave hospitals in the shared database; take them out of the running.
+    others = (
+        (
+            await db.execute(
+                select(Hospital.id).where(
+                    Hospital.is_active.is_(True), Hospital.id != hospital_id
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    await db.execute(
+        update(Hospital).where(Hospital.id.in_(others)).values(is_active=False)
+    )
+    await db.commit()
+    patient_token = await _register(client, "+92300730090", "patient")
+    ride_id = await _create_emergency(client, patient_token)
+
+    try:
+        r = await client.post(
+            f"/api/v1/rides/{ride_id}/accept",
+            headers={"Authorization": f"Bearer {verified_driver_token}"},
+        )
+    finally:
+        await db.execute(
+            update(Hospital).where(Hospital.id.in_(others)).values(is_active=True)
+        )
+        await db.commit()
+
+    assert r.status_code == 200, r.text
+    db.expire_all()
+    ride = (await db.execute(select(Ride).where(Ride.id == ride_id))).scalar_one()
+    assert ride.hospital_id == hospital_id
+    assert ride.estimated_fare_pkr is not None
+    assert ride.estimated_fare_pkr > 200  # more than the 0 km base fare
