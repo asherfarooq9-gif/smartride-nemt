@@ -35,3 +35,35 @@ def test_render_sets_allowed_origins_and_forwarded_ips():
     # Without ALLOWED_ORIGINS the production validator rejects the default "*".
     assert "ALLOWED_ORIGINS" in names
     assert "FORWARDED_ALLOW_IPS" in names
+
+
+def _forwarded_allow_ips(manifest: str) -> str:
+    text = (REPO_ROOT / manifest).read_text()
+    match = re.search(
+        r'key:\s*FORWARDED_ALLOW_IPS\s*\n\s*value:\s*"([^"]*)"', text, re.M
+    )
+    assert match, f"{manifest} does not set FORWARDED_ALLOW_IPS to a literal value"
+    return match.group(1)
+
+
+def test_render_does_not_trust_every_forwarded_for_value():
+    """A wildcard makes uvicorn take the left-most X-Forwarded-For entry, which the client
+    writes (Render appends to it). That defeats the IP rate limits and the login
+    lockout, so trust only the proxy's own address range."""
+    if not (REPO_ROOT / "render.yaml").exists():
+        pytest.skip("render.yaml not present")
+    assert _forwarded_allow_ips("render.yaml").strip() != "*"
+
+
+def test_render_trusted_proxies_ignore_a_spoofed_forwarded_for():
+    from uvicorn.middleware.proxy_headers import _TrustedHosts
+
+    if not (REPO_ROOT / "render.yaml").exists():
+        pytest.skip("render.yaml not present")
+    trusted = _TrustedHosts(_forwarded_allow_ips("render.yaml"))
+
+    # The client sent "1.2.3.4"; Render appended the real client, 203.0.113.9.
+    spoofed = "1.2.3.4, 203.0.113.9"
+    host, _ = trusted.get_trusted_client_address(spoofed)
+
+    assert host == "203.0.113.9"

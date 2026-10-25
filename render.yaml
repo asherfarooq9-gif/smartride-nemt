@@ -35,8 +35,13 @@ services:
         sync: false          # JSON list, e.g. ["https://admin.example.com"]; the app refuses to boot with "*" when DEBUG=false
       - key: METRICS_TOKEN
         sync: false          # bearer token Prometheus sends to /metrics; set in the Render dashboard
+      # Never "*": uvicorn would then take the LEFT-most X-Forwarded-For entry, which
+      # the client writes (Render appends to the header). Trusting only private
+      # ranges makes uvicorn walk the header from the right and stop at the first
+      # public address, the one Render added. Confirm after deploy with
+      # curl -H 'X-Forwarded-For: 1.2.3.4' on /auth/login and check the logged IP.
       - key: FORWARDED_ALLOW_IPS
-        value: "*"           # Render's proxy is the only peer; lets uvicorn read X-Forwarded-For so rate limits key on the real client IP
+        value: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10"
       - key: TWILIO_ACCOUNT_SID
         value: ""
       - key: TWILIO_AUTH_TOKEN
