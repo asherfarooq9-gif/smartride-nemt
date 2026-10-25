@@ -8,7 +8,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 RUN useradd --create-home --uid 10001 app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# setuptools and wheel are build tools the app does not need at run time; removing
+# them drops their known-vulnerable bundled code from the image.
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip uninstall -y setuptools wheel
 
 COPY --chown=app:app main.py keywords.py ./
 

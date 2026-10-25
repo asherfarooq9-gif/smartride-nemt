@@ -15,6 +15,10 @@ RUN npm run build
 
 FROM node:20.19-alpine AS runner
 WORKDIR /app
+# Pick up the latest Alpine security patches, and drop npm: the site runs with plain
+# `node`, and npm's bundled packages carry known vulnerabilities.
+RUN apk upgrade --no-cache \
+    && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 COPY --from=builder --chown=node:node /app/.next/standalone ./
