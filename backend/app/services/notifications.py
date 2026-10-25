@@ -201,7 +201,9 @@ async def send_hospital_alert(*, ride, triage: dict, hospital, patient) -> bool:
     Callers should record a False result: nobody at the hospital was told.
     """
     ride_id = getattr(ride, "id", None)
-    fhir_bundle = _build_fhir_bundle(ride=ride, triage=triage, patient=patient)
+    fhir_bundle = _build_fhir_bundle(
+        ride=ride, triage=triage, patient=patient, ed_full=hospital.ed_full
+    )
 
     if hospital.has_fhir and hospital.fhir_endpoint:
         try:
@@ -226,6 +228,7 @@ async def send_hospital_alert(*, ride, triage: dict, hospital, patient) -> bool:
         f"Specialty: {triage.get('specialty', 'unknown')} | "
         f"Severity: {triage.get('severity', '?')} | "
         f"Ride: {ride.id}"
+        f"{' | ED FULL per your last update, please confirm' if hospital.ed_full else ''}"
     )
     sent = await asyncio.to_thread(_send_sms, hospital.coordinator_phone, body)
     if not sent:
@@ -233,7 +236,10 @@ async def send_hospital_alert(*, ride, triage: dict, hospital, patient) -> bool:
     return bool(sent)
 
 
-def _build_fhir_bundle(*, ride, triage: dict, patient) -> dict:
+def _build_fhir_bundle(*, ride, triage: dict, patient, ed_full: bool = False) -> dict:
+    tags = [{"code": f"severity-{triage.get('severity', '3')}"}]
+    if ed_full:
+        tags.append({"code": "ed-reported-full"})
     return {
         "resourceType": "Bundle",
         "type": "transaction",
@@ -247,9 +253,7 @@ def _build_fhir_bundle(*, ride, triage: dict, patient) -> dict:
                     "reasonCode": [
                         {"text": triage.get("specialty", "general_emergency")}
                     ],
-                    "meta": {
-                        "tag": [{"code": f"severity-{triage.get('severity', '3')}"}]
-                    },
+                    "meta": {"tag": tags},
                 }
             }
         ],

@@ -58,6 +58,7 @@ async def test_hospital_alert_falls_back_to_sms_when_fhir_fails():
         has_fhir=True,
         fhir_endpoint="https://fhir.invalid/bundle",
         coordinator_phone="+923009998888",
+        ed_full=False,
     )
     sent = []
 
@@ -86,6 +87,32 @@ async def test_hospital_alert_falls_back_to_sms_when_fhir_fails():
         )
 
     assert sent == ["+923009998888"]
+
+
+async def test_hospital_sms_says_when_the_ed_reports_full():
+    sent = []
+
+    async def send(ed_full: bool) -> str:
+        sent.clear()
+        hospital = SimpleNamespace(
+            has_fhir=False,
+            fhir_endpoint=None,
+            coordinator_phone="+923009998888",
+            ed_full=ed_full,
+        )
+        with patch.object(
+            notifications, "_send_sms", lambda to, body: sent.append(body) or True
+        ):
+            await notifications.send_hospital_alert(
+                ride=RIDE,
+                triage={"specialty": "cardiology", "severity": "5"},
+                hospital=hospital,
+                patient=PATIENT,
+            )
+        return sent[0]
+
+    assert "ED FULL" in await send(True)
+    assert "ED FULL" not in await send(False)
 
 
 async def test_password_hashing_does_not_block_the_event_loop():
