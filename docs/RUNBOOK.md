@@ -31,6 +31,15 @@ Put TLS in front of `backend` and `admin_dashboard` (nginx, Caddy or a cloud loa
 balancer) and set `FORWARDED_ALLOW_IPS` to the proxy's address so rate limits see
 real client IPs. Production ports are bound to `127.0.0.1` for that reason.
 
+Never set `FORWARDED_ALLOW_IPS` to `*`. uvicorn then trusts the left-most
+`X-Forwarded-For` entry, which the client controls, and the IP rate limits and login
+lockout can be bypassed. On Render it is set to the private ranges in `render.yaml`;
+after a deploy, send `curl -H 'X-Forwarded-For: 1.2.3.4'` to `/auth/login` and check the
+logged client IP is yours, not `1.2.3.4`.
+
+Wallet top-ups (`POST /drivers/{id}/wallet/topup`) require an `Idempotency-Key` header;
+reuse the same key when retrying so the driver is credited once.
+
 Optional integrations, all of which degrade gracefully when unset: `TWILIO_*`
 (SMS to family and hospitals), `FIREBASE_PROJECT_ID` + credentials file (push),
 `SENTRY_DSN`.
