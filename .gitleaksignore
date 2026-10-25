@@ -1,0 +1,3 @@
+# Dummy SECRET_KEY used only by CI tests ("ci_test_secret_key_32_chars_long"), not a real secret.
+# Fingerprint = commit:file:rule:line. Only this one finding is ignored.
+a37e4684de2350cec83a76e1cfaa1a660d938309:.github/workflows/ci.yml:generic-api-key:42
