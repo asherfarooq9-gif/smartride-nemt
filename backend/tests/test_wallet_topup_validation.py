@@ -17,7 +17,11 @@ async def _topup_raw(client: AsyncClient, admin_token: str, driver_id: str, body
     return await client.post(
         f"/api/v1/drivers/{driver_id}/wallet/topup",
         content=body,
-        headers={**_auth(admin_token), "Content-Type": "application/json"},
+        headers={
+            **_auth(admin_token),
+            "Content-Type": "application/json",
+            "Idempotency-Key": uuid.uuid4().hex,
+        },
     )
 
 
@@ -44,7 +48,7 @@ async def test_topup_unknown_driver_id_is_404_not_500(client, admin_token):
     r = await client.post(
         f"/api/v1/drivers/{uuid.uuid4()}/wallet/topup",
         json={"amount_pkr": 100, "payment_method": "jazzcash"},
-        headers=_auth(admin_token),
+        headers={**_auth(admin_token), "Idempotency-Key": uuid.uuid4().hex},
     )
     assert r.status_code == 404
 
@@ -54,6 +58,6 @@ async def test_topup_malformed_driver_id_is_422_not_500(client, admin_token):
     r = await client.post(
         "/api/v1/drivers/not-a-uuid/wallet/topup",
         json={"amount_pkr": 100, "payment_method": "jazzcash"},
-        headers=_auth(admin_token),
+        headers={**_auth(admin_token), "Idempotency-Key": uuid.uuid4().hex},
     )
     assert r.status_code == 422
