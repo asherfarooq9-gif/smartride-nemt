@@ -67,3 +67,15 @@ def test_render_trusted_proxies_ignore_a_spoofed_forwarded_for():
     host, _ = trusted.get_trusted_client_address(spoofed)
 
     assert host == "203.0.113.9"
+
+
+def test_render_does_not_overwrite_twilio_secrets_on_sync():
+    """A literal "" is re-applied on every blueprint sync and would wipe the secret
+    set in the Render dashboard, silently turning SMS off. `sync: false` leaves it."""
+    if not (REPO_ROOT / "render.yaml").exists():
+        pytest.skip("render.yaml not present")
+    text = (REPO_ROOT / "render.yaml").read_text()
+    for name in ("TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM_NUMBER"):
+        block = re.search(rf"key:\s*{name}\s*\n\s*(\S[^\n]*)", text)
+        assert block, f"{name} missing from render.yaml"
+        assert block.group(1).startswith("sync: false"), f"{name} must be sync: false"

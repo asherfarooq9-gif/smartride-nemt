@@ -43,8 +43,8 @@ services:
       - key: FORWARDED_ALLOW_IPS
         value: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10"
       - key: TWILIO_ACCOUNT_SID
-        value: ""
+        sync: false          # set in the Render dashboard; SMS is off until you do
       - key: TWILIO_AUTH_TOKEN
-        value: ""
+        sync: false          # set in the Render dashboard; SMS is off until you do
       - key: TWILIO_FROM_NUMBER
-        value: ""
+        sync: false          # set in the Render dashboard; SMS is off until you do
