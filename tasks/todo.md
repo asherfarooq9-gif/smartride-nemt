@@ -23,7 +23,7 @@ Each task: red test, fix, ruff, focused tests, commit. Size in brackets.
 - [x] **T10 (S)** D7: `/ready` used by orchestrator probes; `/health` stays liveness. Update `render.yaml`, Dockerfile healthcheck, compose, tests.
 - [x] **T11 (S)** D4: advisory lock around `alembic upgrade head` in `entrypoint.sh`/`alembic/env.py`. Test: two concurrent upgrades do not race.
 - [x] **T12 (S)** D3: rewrite the RUNBOOK rollback section (migrations 0007/0008, backup first, roll forward preferred).
-- [ ] **T13 (S)** D5: `render.yaml` plan comments and triage service decision documented; remove `sync` conflicts. Owner decides the plan.
+- [x] **T13 (S)** D5: the paid-plan decision is the owner's; `render.yaml` now says plainly that `free` is pilot-only and why, and documents the no-triage fallback.
 - [x] **T14 (M)** D1: Prometheus alert rules for DB/Redis down, stuck dispatch loop, aged pending rides, failed SMS/FHIR/push (add the metrics), ledger mismatch; add an Alertmanager config with a placeholder receiver. Receiver is a placeholder until the owner picks who is paged.
 - [x] **T15 (S)** D2: `release.yml` waits for CI on the tagged commit (`require-green-ci`). Dropped: a backend image build/push job, because Render builds from the repo and no registry has been chosen (owner decision).
 - [x] **T16 (S)** D6: prod compose mount for `FIREBASE_CREDENTIALS_PATH`; log a warning at startup when push is configured but the file is missing.

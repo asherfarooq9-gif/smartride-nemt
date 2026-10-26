@@ -1,3 +1,8 @@
+# PILOT ONLY. Both `plan: free` entries below are for demos and the FYP pilot, not for
+# real patients: a free web service sleeps when idle (the first request after a quiet
+# spell waits tens of seconds, and nothing is dispatching while it sleeps) and a free
+# database expires. Move both to a paid plan before anyone relies on this for an
+# emergency. That is a spending decision, so it is left to the owner (docs/RUNBOOK.md).
 databases:
   - name: smartride-db
     databaseName: smartride
@@ -24,8 +29,11 @@ services:
         sync: false          # set manually in Render dashboard (Upstash)
       - key: SECRET_KEY
         generateValue: true
+      # The triage service is not deployed here. Dispatch then uses the built-in
+      # keyword rules (the same ones the service falls back on), which err towards
+      # the higher severity. Deploy ai-services/triage and set this URL to use the model.
       - key: TRIAGE_SERVICE_URL
-        value: ""            # triage AI not deployed — graceful fallback
+        value: ""
       - key: DEBUG
         value: "false"
       - key: ENVIRONMENT
