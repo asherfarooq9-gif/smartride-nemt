@@ -171,9 +171,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Future<void> _accept(String rideId) async {
-    final result =
+    final outcome =
         await ref.read(dashboardProvider.notifier).acceptRide(rideId);
     if (!mounted) return;
+    final result = outcome.result;
     if (result == AcceptResult.success) {
       context.push('/driver/ride/$rideId');
     } else if (result == AcceptResult.successWithoutTracking) {
@@ -185,10 +186,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           duration: Duration(seconds: 8),
         ),
       );
-    } else if (result == AcceptResult.alreadyTaken) {
+    } else {
+      // alreadyTaken, notNearby and error all say why, in the server's words,
+      // in a snackbar that outlives the 15 s refresh.
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Ride already taken by another driver')),
+        SnackBar(
+          content: Text(outcome.message ?? 'Could not accept the ride'),
+          duration: const Duration(seconds: 6),
+        ),
       );
       ref.read(dashboardProvider.notifier).refresh();
     }

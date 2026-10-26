@@ -53,7 +53,7 @@ Each task: red test, fix, ruff, focused tests, commit. Size in brackets.
 ## Phase 5: Pending audits (append findings, then triage)
 
 - [ ] **T27** Flutter audit (reported). Fix list, each verified with `flutter analyze` + `flutter test`:
-  - [ ] T27a HIGH: accept errors are invisible (403 too far / 409 taken); `AcceptResult.error` has no UI branch and the next 15 s refresh clears the message.
+  - [x] T27a HIGH: accept errors are invisible (403 too far / 409 taken); `AcceptResult.error` has no UI branch and the next 15 s refresh clears the message.
   - [ ] T27b HIGH: driver socket ignores `ride_ended` (`onMessage: (_) {}`), so the driver keeps streaming after a cancel.
   - [ ] T27c HIGH: no way back into an active ride after an app restart (find it via `/rides/mine`).
   - [ ] T27d HIGH: ride cards have no keys, so a fresh ride can inherit another card's countdown.

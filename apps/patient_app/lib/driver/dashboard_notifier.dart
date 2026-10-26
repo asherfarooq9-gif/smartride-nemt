@@ -33,7 +33,38 @@ Future<HeartbeatResult> sendHeartbeat({
 
 /// [successWithoutTracking]: the ride is accepted but location sharing could
 /// not start, so the driver must be told the patient cannot see them.
-enum AcceptResult { success, successWithoutTracking, alreadyTaken, error }
+/// [notNearby]: the server refused because the ride is not within reach of this
+/// driver's last known position (or the position is unknown).
+enum AcceptResult {
+  success,
+  successWithoutTracking,
+  alreadyTaken,
+  notNearby,
+  error,
+}
+
+/// What an accept attempt came to, and the words to show the driver. Every
+/// failure carries a message: the next 15 s refresh clears `state.error`, so a
+/// refusal shown only there is gone before it can be read.
+class AcceptOutcome {
+  const AcceptOutcome(this.result, {this.message});
+  final AcceptResult result;
+  final String? message;
+}
+
+/// Maps a failed accept to an outcome. The server's own message is kept because
+/// a 409 does not always mean "taken" ("go online first" is also a 409).
+AcceptOutcome acceptOutcomeForError(core.AppError e) {
+  final message = e.message.isEmpty ? 'Could not accept the ride' : e.message;
+  switch (e.statusCode) {
+    case 409:
+      return AcceptOutcome(AcceptResult.alreadyTaken, message: message);
+    case 403:
+      return AcceptOutcome(AcceptResult.notNearby, message: message);
+    default:
+      return AcceptOutcome(AcceptResult.error, message: message);
+  }
+}
 
 class DashboardState {
   const DashboardState({
@@ -173,25 +204,25 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
     }
   }
 
-  Future<AcceptResult> acceptRide(String rideId) async {
+  Future<AcceptOutcome> acceptRide(String rideId) async {
     try {
       await core.acceptRide(rideId);
     } on core.AppError catch (e) {
-      if (e.statusCode == 409) return AcceptResult.alreadyTaken;
-      state = state.copyWith(error: e.message);
-      return AcceptResult.error;
+      return acceptOutcomeForError(e);
     } on Exception catch (e, st) {
       core.ErrorReporter.report('Accepting a ride failed', e, st);
-      state = state.copyWith(error: 'Failed to accept ride');
-      return AcceptResult.error;
+      return const AcceptOutcome(
+        AcceptResult.error,
+        message: 'Failed to accept ride',
+      );
     }
     final tracking =
         await _ref.read(gpsStreamProvider.notifier).startStreaming(rideId);
     final isSharing = tracking == GpsStartResult.started ||
         tracking == GpsStartResult.alreadyStreaming;
-    return isSharing
-        ? AcceptResult.success
-        : AcceptResult.successWithoutTracking;
+    return AcceptOutcome(
+      isSharing ? AcceptResult.success : AcceptResult.successWithoutTracking,
+    );
   }
 
   double _calcTodayEarnings(Map<String, dynamic> data) {
