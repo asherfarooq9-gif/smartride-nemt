@@ -11,7 +11,10 @@ services:
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     plan: free
-    healthCheckPath: /health
+    # /ready, not /health: /health always answers 200, so an instance with no database
+    # or Redis would still receive traffic. Render only switches a deploy over once
+    # this passes, so a missing REDIS_URL fails the deploy instead of breaking logins.
+    healthCheckPath: /ready
     envVars:
       - key: DATABASE_URL
         fromDatabase:

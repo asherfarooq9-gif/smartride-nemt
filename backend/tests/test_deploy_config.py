@@ -102,3 +102,12 @@ def test_release_waits_for_green_ci():
     assert re.search(r"needs:\s*\[?\s*require-green-ci", build), (
         "the build job must depend on the CI gate"
     )
+
+
+def test_render_checks_readiness_not_just_liveness():
+    """/health always answers 200, so a new instance with no database would still
+    receive traffic. Render's check is the deploy gate, so it must be /ready."""
+    if not (REPO_ROOT / "render.yaml").exists():
+        pytest.skip("render.yaml not present")
+    text = (REPO_ROOT / "render.yaml").read_text()
+    assert re.search(r"healthCheckPath:\s*/ready\b", text)
