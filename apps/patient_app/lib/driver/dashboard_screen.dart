@@ -129,6 +129,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           sliver: SliverList(
                             delegate: SliverChildBuilderDelegate(
                               (context, i) => _RideRequestCard(
+                                // Keyed by ride: each card owns a 30 s countdown in
+                                // its State. Without a key, declining card 0 left
+                                // the next ride with the old card's countdown.
+                                key: ValueKey(dash.pendingRides[i].id),
                                 ride: dash.pendingRides[i],
                                 driverLat: dash.driver?.currentLat,
                                 driverLng: dash.driver?.currentLng,
@@ -140,6 +144,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                         dash.pendingRides[i].id.toString()),
                               ),
                               childCount: dash.pendingRides.length,
+                              findChildIndexCallback: (key) {
+                                final index = dash.pendingRides.indexWhere(
+                                  (r) => ValueKey(r.id) == key,
+                                );
+                                return index < 0 ? null : index;
+                              },
                             ),
                           ),
                         )
@@ -691,6 +701,7 @@ class _NavItem extends StatelessWidget {
 
 class _RideRequestCard extends StatefulWidget {
   const _RideRequestCard({
+    super.key,
     required this.ride,
     required this.onAccept,
     required this.onDecline,
