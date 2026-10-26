@@ -77,13 +77,13 @@ Each task: red test, fix, ruff, focused tests, commit. Size in brackets.
   - Owner / clinical decisions, not code: unknown text defaults to severity 3 (finding 2), the gold set needs a native-speaker review and held-out cases (finding 3), a real Alertmanager receiver (finding 7), migration 0008's one-step drop is already applied (finding 9; RUNBOOK says the downgrade is lossy), image digest pinning.
 - [ ] **T29** Dashboard code audit (reported; no UI calls wallet top-up, so the new Idempotency-Key breaks nothing). Fix list:
   - [x] T29a HIGH: hospital form turns a blank/half-typed lat/lng into 0 and `saveEdit` has no validation; the backend accepts (0,0). Keep raw strings, parse on submit, reject empty/NaN/(0,0)/capacity < 1 client-side; reject (0,0) and capacity < 1 in `schemas/hospitals.py`.
-  - [ ] T29b MEDIUM: Verify/Deactivate in-flight guard holds one id, so a second click overwrites the first. Use a Set.
-  - [ ] T29c MEDIUM: no confirmation on Revoke driver or Deactivate hospital.
-  - [ ] T29d MEDIUM: "Export CSV" silently exports one page. Label it or export all filtered rows.
-  - [ ] T29e MEDIUM: a 401 clears the session and redirects with no message. Show "session expired" on /login.
-  - [ ] T29f MEDIUM: dragging a text selection onto the modal backdrop closes it and loses edits.
-  - [ ] T29g MEDIUM: a non-admin login leaves a valid server session (never calls logout).
-  - [ ] T29h LOW: csv `revokeObjectURL` runs before the download starts; `api.login` clears the token before the request; signed-in user on /login is not redirected; Write Snapshot has no in-flight guard; missing `aria-hidden` on decorative icons; no `autoComplete`/`inputMode` on phone/number fields. Contrast is unmeasured.
+  - [x] T29b MEDIUM: Verify/Deactivate in-flight guard holds one id, so a second click overwrites the first. Use a Set.
+  - [x] T29c MEDIUM: no confirmation on Revoke driver or Deactivate hospital.
+  - [x] T29d MEDIUM: "Export CSV" silently exports one page. Label it or export all filtered rows.
+  - [x] T29e MEDIUM: a 401 clears the session and redirects with no message. Show "session expired" on /login.
+  - [x] T29f MEDIUM: dragging a text selection onto the modal backdrop closes it and loses edits.
+  - [x] T29g MEDIUM: a non-admin login leaves a valid server session (never calls logout).
+  - [~] T29h LOW (done: csv download, login no longer clears the token, signed-in redirect, inputMode/autoComplete on hospital number fields; left: Write Snapshot guard, aria-hidden on decorative icons, contrast unmeasured): csv `revokeObjectURL` runs before the download starts; `api.login` clears the token before the request; signed-in user on /login is not redirected; Write Snapshot has no in-flight guard; missing `aria-hidden` on decorative icons; no `autoComplete`/`inputMode` on phone/number fields. Contrast is unmeasured.
   - Left to T30: JWT in `localStorage` (finding 5).
 
 ## Phase 6

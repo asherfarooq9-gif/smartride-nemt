@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { api, setToken } from '@/lib/api'
+import { api, setToken, takeSessionExpired } from '@/lib/api'
 import { Phone, Lock, AlertCircle } from 'lucide-react'
 
 export default function LoginPage() {
@@ -10,6 +10,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  // Read once, when the page mounts after the redirect from an expired session.
+  const [sessionExpired] = useState(takeSessionExpired)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -18,6 +20,8 @@ export default function LoginPage() {
     try {
       const data = await api.login(phone, password)
       if (data.role !== 'admin') {
+        // The server has now opened a session for this account; close it.
+        await api.logoutWithToken(data.access_token)
         setError('Admin access only.')
         return
       }
@@ -55,6 +59,11 @@ export default function LoginPage() {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="px-8 py-7 space-y-5">
+            {sessionExpired && !error && (
+              <div role="status" className="text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm">
+                Your session expired. Please sign in again.
+              </div>
+            )}
             {error && (
               <div role="alert" className="flex items-center gap-2 text-red-700 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm">
                 <AlertCircle size={15} className="shrink-0" />
