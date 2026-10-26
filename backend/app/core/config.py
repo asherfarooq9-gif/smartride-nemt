@@ -68,6 +68,9 @@ class Settings(BaseSettings):
     SESSION_MAX_DAYS: int = 30
     # Bearer token Prometheus must send to /metrics (open without it only in DEBUG)
     METRICS_TOKEN: str = ""
+    # Seconds the admin dashboard summary is cached (it runs several aggregate
+    # queries and every open dashboard polls it). 0 turns the cache off.
+    SUMMARY_CACHE_SECONDS: int = 15
     # Drivers farther than this from the pickup are not considered for dispatch
     DRIVER_SEARCH_RADIUS_KM: float = 50.0
     # Fares (flat base + per km) and the platform's share of each fare

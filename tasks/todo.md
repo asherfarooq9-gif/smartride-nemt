@@ -42,7 +42,7 @@ Each task: red test, fix, ruff, focused tests, commit. Size in brackets.
 ## Phase 4: Performance
 
 - [x] **T22 (S)** Trigram (GIN `gin_trgm_ops`) indexes for the three `ilike` searches (additive migration).
-- [ ] **T23 (S)** Cache `/analytics/summary` for 15s in Redis.
+- [x] **T23 (S)** Cache `/analytics/summary` for 15s in Redis.
 - [x] **T24 (S)** Dashboard: pause polling when the tab is hidden.
 - [x] **T25 (S)** Dashboard: dynamic import for Recharts; match skeleton to real layout (CLS).
 - [ ] **T26 (M)** Dashboard: server-render the shell instead of a blank auth gate (measure first with Lighthouse).
