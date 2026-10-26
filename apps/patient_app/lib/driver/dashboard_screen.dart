@@ -79,6 +79,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
+                              if (dash.activeRide != null) ...[
+                                _ResumeRideBanner(
+                                  statusLabel:
+                                      dash.activeRide!.status.displayLabel,
+                                  onResume: () => context.push(
+                                    '/driver/ride/${dash.activeRide!.id}',
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
                               _StatsRow(
                                 driver: dash.driver,
                                 todayEarningsPkr: dash.todayEarningsPkr,
@@ -208,6 +218,62 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       );
       ref.read(dashboardProvider.notifier).refresh();
     }
+  }
+}
+
+/// Shown while the driver has a ride in progress, so a crash or a closed app does
+/// not strand them: nothing else leads back to the ride screen.
+class _ResumeRideBanner extends StatelessWidget {
+  const _ResumeRideBanner({required this.statusLabel, required this.onResume});
+
+  final String statusLabel;
+  final VoidCallback onResume;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: _kBlue600,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onResume,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              const Icon(Icons.local_taxi, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'You have a ride in progress',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      statusLabel,
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                  ],
+                ),
+              ),
+              const Text(
+                'Resume',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: Colors.white),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

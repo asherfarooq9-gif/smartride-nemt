@@ -55,14 +55,14 @@ Each task: red test, fix, ruff, focused tests, commit. Size in brackets.
 - [ ] **T27** Flutter audit (reported). Fix list, each verified with `flutter analyze` + `flutter test`:
   - [x] T27a HIGH: accept errors are invisible (403 too far / 409 taken); `AcceptResult.error` has no UI branch and the next 15 s refresh clears the message.
   - [x] T27b HIGH: driver socket ignores `ride_ended` (`onMessage: (_) {}`), so the driver keeps streaming after a cancel.
-  - [ ] T27c HIGH: no way back into an active ride after an app restart (find it via `/rides/mine`).
+  - [x] T27c HIGH: no way back into an active ride after an app restart (find it via `/rides/mine`).
   - [x] T27d HIGH: ride cards have no keys, so a fresh ride can inherit another card's countdown.
   - [x] T27e HIGH: patient tracking does not refetch the ride on reconnect and misses `ride_ended`.
   - [x] T27f HIGH: `_advance` has no in-flight guard and does not refetch after a failure or the new 409.
   - [x] T27g HIGH: top-up screen shows "Almost done" with a green check but sends nothing; relabel it as "How to top up".
   - [x] T27h MEDIUM: wallet shows "−PKR -27" for commissions and truncates with `.toInt()`; use `abs()`, 2 decimals, server `low_balance`.
   - [x] T27i MEDIUM: WebSocket reconnect reuses the original token; read the current one in `_open`.
-  - [ ] T27j MEDIUM: swallowed errors and `state` set after dispose in the dashboard notifier.
+  - [~] T27j MEDIUM (dashboard refresh done: errors reported and mounted check; active_ride_screen catch still broad): swallowed errors and `state` set after dispose in the dashboard notifier.
   - [ ] T27k MEDIUM: wire `POST /auth/logout-all` ("Sign out of all devices"); surface `WsRetriesExhausted`.
   - [ ] T27l MEDIUM: Semantics/tooltips on tap targets, selection by colour only, 32 px Decline button; pause the 15 s poll under the active-ride screen.
 - [ ] **T28** Triage / CI / Docker audit (reported). Fix list:

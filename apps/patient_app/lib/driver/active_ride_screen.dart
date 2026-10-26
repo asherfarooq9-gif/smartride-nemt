@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 import 'package:patient_app/core/providers.dart';
+import 'package:patient_app/driver/dashboard_notifier.dart';
 import 'package:patient_app/driver/ride_events.dart';
 
 final _rideDetailProvider =
@@ -42,6 +43,13 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
     _refetch = Timer.periodic(_refetchEvery, (_) {
       if (mounted) ref.invalidate(_rideDetailProvider(widget.rideId));
     });
+    // Accepting starts location sharing; resuming after a restart does not, so
+    // make sure it is running (a no-op when it already is).
+    Future.microtask(() {
+      if (mounted) {
+        ref.read(gpsStreamProvider.notifier).startStreaming(widget.rideId);
+      }
+    });
   }
 
   @override
@@ -58,6 +66,7 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final router = GoRouter.of(context);
     await ref.read(gpsStreamProvider.notifier).stopStreaming();
+    ref.read(dashboardProvider.notifier).refresh();
     messenger.showSnackBar(SnackBar(content: Text(message)));
     router.go('/driver');
   }
@@ -71,6 +80,8 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
           next == core.RideStatus.cancelled) {
         await ref.read(gpsStreamProvider.notifier).stopStreaming();
         _left = true;
+        // Drop the "ride in progress" banner now instead of at the next poll.
+        ref.read(dashboardProvider.notifier).refresh();
         if (mounted) context.go('/driver');
       }
     } catch (e) {

@@ -66,9 +66,25 @@ AcceptOutcome acceptOutcomeForError(core.AppError e) {
   }
 }
 
+/// The ride this driver is in the middle of, from their ride history (newest
+/// first). The only way back into a ride after the app was closed or crashed.
+core.RideResponse? findActiveDriverRide(List<core.RideResponse> rides) {
+  const live = {
+    core.RideStatus.driverAssigned,
+    core.RideStatus.driverEnRoute,
+    core.RideStatus.patientPickedUp,
+    core.RideStatus.arrivedAtHospital,
+  };
+  for (final ride in rides) {
+    if (live.contains(ride.status)) return ride;
+  }
+  return null;
+}
+
 class DashboardState {
   const DashboardState({
     this.driver,
+    this.activeRide,
     this.pendingRides = const [],
     this.todayEarningsPkr = 0.0,
     this.isLoading = false,
@@ -76,6 +92,9 @@ class DashboardState {
   });
 
   final core.DriverResponse? driver;
+
+  /// A ride in progress for this driver, so the dashboard can offer to resume it.
+  final core.RideResponse? activeRide;
   final List<core.RideResponse> pendingRides;
   final double todayEarningsPkr;
   final bool isLoading;
@@ -85,6 +104,7 @@ class DashboardState {
 
   DashboardState copyWith({
     core.DriverResponse? driver,
+    core.RideResponse? activeRide,
     List<core.RideResponse>? pendingRides,
     double? todayEarningsPkr,
     bool? isLoading,
@@ -92,6 +112,7 @@ class DashboardState {
   }) =>
       DashboardState(
         driver: driver ?? this.driver,
+        activeRide: activeRide ?? this.activeRide,
         pendingRides: pendingRides ?? this.pendingRides,
         todayEarningsPkr: todayEarningsPkr ?? this.todayEarningsPkr,
         isLoading: isLoading ?? this.isLoading,
@@ -164,19 +185,37 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
         core.getDriverPendingRides(),
         core.getDriverEarnings(),
       ).wait;
+      final active = await _loadActiveRide();
+      if (!mounted) return; // signed out while this was in flight
       state = DashboardState(
         driver: driver,
+        activeRide: active,
         pendingRides:
             rides.where((r) => !_declined.contains(r.id.toString())).toList(),
         todayEarningsPkr: _calcTodayEarnings(earnings),
         isLoading: false,
       );
       _syncHeartbeat();
-    } catch (e) {
+    } catch (e, st) {
+      if (e is! core.AppError) {
+        // A parsing bug must not hide behind a bare "Failed to load".
+        core.ErrorReporter.report('Driver dashboard refresh failed', e, st);
+      }
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         error: e is core.AppError ? e.message : 'Failed to load',
       );
+    }
+  }
+
+  /// A failure here must not break the dashboard: keep what was shown before.
+  Future<core.RideResponse?> _loadActiveRide() async {
+    try {
+      final mine = await core.getMyRides(pageSize: 10);
+      return findActiveDriverRide(mine.items);
+    } on core.AppError {
+      return state.activeRide;
     }
   }
 
