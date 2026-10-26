@@ -538,6 +538,31 @@ async def get_pending_rides(driver: Driver, db: AsyncSession) -> list[Ride]:
     return [r for r, _ in nearby]
 
 
+async def _ensure_driver_is_near(
+    ride_id: str, driver: Driver, db: AsyncSession
+) -> None:
+    """Only a driver the ride could have been offered to may accept it.
+
+    The pending list shows rides within DRIVER_SEARCH_RADIUS_KM of the driver's
+    last position; accepting by id must follow the same rule, or anyone holding a
+    ride id (it is in the family SMS) could take a ride from across the country.
+    """
+    pickup = (
+        await db.execute(
+            select(Ride.pickup_lat, Ride.pickup_lng).where(Ride.id == ride_id)
+        )
+    ).first()
+    if pickup is None:
+        raise HTTPException(404, "Ride not found")
+    if driver.current_lat is None or driver.current_lng is None:
+        raise HTTPException(403, "Your location is unknown. Turn on location first.")
+    km = _haversine_km(
+        driver.current_lat, driver.current_lng, pickup.pickup_lat, pickup.pickup_lng
+    )
+    if km > settings.DRIVER_SEARCH_RADIUS_KM:
+        raise HTTPException(403, "This ride is too far from you")
+
+
 async def _hospital_placement(ride_id: str, db: AsyncSession) -> dict:
     """Hospital and estimated fare for a ride that dispatch has not placed yet.
 
@@ -579,6 +604,7 @@ async def accept_ride(ride_id: str, driver: Driver, db: AsyncSession) -> Ride:
     if requester_user_id == driver.user_id:
         raise HTTPException(403, "You cannot accept your own ride")
 
+    await _ensure_driver_is_near(ride_id, driver, db)
     placement = await _hospital_placement(ride_id, db)
 
     # Claim the driver first: only an available driver may take a ride, and two

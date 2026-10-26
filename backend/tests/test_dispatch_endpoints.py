@@ -120,6 +120,8 @@ async def test_accept_second_driver_gets_409(
     )
     driver2 = result.scalar_one()
     driver2.is_verified = True
+    driver2.current_lat = PICKUP["pickup_lat"] + 0.01  # near enough to be offered it
+    driver2.current_lng = PICKUP["pickup_lng"]
     await db.commit()
 
     patient_token = await _register(client, "+92300730012", "patient")
@@ -218,3 +220,39 @@ async def test_accept_sets_hospital_and_estimated_fare(
     assert ride.hospital_id == hospital_id
     assert ride.estimated_fare_pkr is not None
     assert ride.estimated_fare_pkr > 200  # more than the 0 km base fare
+
+
+async def _move_latest_driver(db: AsyncSession, lat, lng) -> None:
+    driver = (
+        await db.execute(select(Driver).order_by(Driver.created_at.desc()).limit(1))
+    ).scalar_one()
+    driver.current_lat, driver.current_lng = lat, lng
+    await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("where", ["far", "unknown"])
+async def test_a_driver_who_is_not_near_the_pickup_cannot_accept_it(
+    client: AsyncClient, verified_driver_token: str, db: AsyncSession, where
+):
+    """The ride id travels in SMS, so knowing it must not be enough to take the ride."""
+    patient_token = await _register(
+        client, f"+92300731{0 if where == 'far' else 1}01", "patient"
+    )
+    ride_id = await _create_emergency(client, patient_token)
+    if where == "far":
+        await _move_latest_driver(
+            db, PICKUP["pickup_lat"] + 5.0, PICKUP["pickup_lng"]
+        )  # ~550 km away
+    else:
+        await _move_latest_driver(db, None, None)
+
+    r = await client.post(
+        f"/api/v1/rides/{ride_id}/accept",
+        headers={"Authorization": f"Bearer {verified_driver_token}"},
+    )
+
+    assert r.status_code == 403, r.text
+    db.expire_all()
+    ride = (await db.execute(select(Ride).where(Ride.id == ride_id))).scalar_one()
+    assert ride.driver_id is None

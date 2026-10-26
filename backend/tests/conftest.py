@@ -207,5 +207,7 @@ async def verified_driver_token(client: AsyncClient, db: AsyncSession) -> str:
     ).scalar_one()
     driver.is_verified = True
     driver.status = DriverStatus.available  # only online drivers may take rides
+    # Near the test pickup (33.7215, 73.0433): accepting needs a known, nearby position.
+    driver.current_lat, driver.current_lng = 33.7315, 73.0433
     await db.commit()
     return resp.json()["access_token"]

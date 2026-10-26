@@ -13,7 +13,7 @@ Each task: red test, fix, ruff, focused tests, commit. Size in brackets.
 - [x] **T6 (S)** B5: mask patient phone and mobility needs for drivers once a ride is completed or cancelled. Files: `routers/rides.py`, tests.
 - [x] **T7 (M)** C5, C6: WebSocket ownership re-check, fewer DB queries per GPS frame, and `_release_driver` must not mark an offline driver available. Files: `ws.py`, `ride_service.py`, tests.
 - [x] **T8 (M)** C4: dispatch loop runs rides concurrently under a small semaphore in severity order; fix the lock docstring. Files: `dispatch_loop.py`, `tests/test_dispatch_races.py`.
-- [ ] **T9 (S)** Low items: WebSocket revocation re-checked on a timer, `accept_ride` offered-to check, `render.yaml` Twilio vars `sync: false`.
+- [x] **T9 (S)** Low items: WebSocket revocation re-checked on a timer, `accept_ride` offered-to check, `render.yaml` Twilio vars `sync: false`.
 
 ### Checkpoint 1
 - [ ] Full backend suite green, coverage at least 60%, ruff clean.
