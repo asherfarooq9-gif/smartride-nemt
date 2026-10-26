@@ -63,6 +63,9 @@ Optional integrations, all of which degrade gracefully when unset: `TWILIO_*`
      written to, so nothing is lost. Its downgrade recreates them empty.
    - `0009` adds `users.token_version`. The previous release ignores it, and tokens
      issued without a version count as 0, so nothing is signed out by the deploy.
+   - `0010` adds `pg_trgm` and five GIN indexes for the admin substring searches. The
+     previous release ignores them; the downgrade drops the indexes and keeps the
+     extension. Building them briefly blocks writes to each table.
 
    If you must go back, take a backup first (`scripts/db_backup.sh`), then step down
    one revision at a time (`alembic downgrade 0008`, and so on) and stop at the first
