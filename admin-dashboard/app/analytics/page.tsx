@@ -3,11 +3,26 @@ import { useCallback, useState } from 'react'
 import { api, errorMessage } from '@/lib/api'
 import { useApiData } from '@/lib/useApiData'
 import ErrorBanner from '@/components/ui/ErrorBanner'
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, Legend
-} from 'recharts'
+import dynamic from 'next/dynamic'
 import { RefreshCw, Download, BarChart2, TrendingUp, Database } from 'lucide-react'
+import { CHART_HEIGHT } from './chartHeight'
+
+// recharts is large and only needed once there is data to draw, so it is not part
+// of this page's first JavaScript. The placeholder has the chart's height, so the
+// page does not jump when it arrives.
+const ForecastCharts = dynamic(() => import('./ForecastCharts'), {
+  ssr: false,
+  loading: () => (
+    <div
+      className="flex items-center justify-center text-gray-500 animate-pulse"
+      style={{ height: CHART_HEIGHT }}
+      role="status"
+      aria-label="Loading chart"
+    >
+      <RefreshCw size={24} className="animate-spin" />
+    </div>
+  ),
+})
 
 const CITIES = ['Islamabad', 'Rawalpindi']
 const DEFAULT_CITY = CITIES[0]
@@ -139,30 +154,8 @@ export default function AnalyticsPage() {
               <Database size={14} /> Write Snapshot
             </button>
           </div>
-        ) : activeTab === 'forecast' ? (
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="time" tick={{ fontSize: 11, fill: '#9ca3af' }} />
-              <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} />
-              <Tooltip
-                contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', fontSize: 12 }}
-                formatter={(v: number) => [`${v} rides`, 'Predicted']}
-              />
-              <Bar dataKey="rides" fill="#3b82f6" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
         ) : (
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="time" tick={{ fontSize: 11, fill: '#9ca3af' }} />
-              <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} />
-              <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', fontSize: 12 }} />
-              <Legend />
-              <Line type="monotone" dataKey="rides" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} name="Predicted rides" />
-            </LineChart>
-          </ResponsiveContainer>
+          <ForecastCharts data={chartData} variant={activeTab} />
         )}
       </div>
 
