@@ -54,7 +54,16 @@ Each task: red test, fix, ruff, focused tests, commit. Size in brackets.
 
 - [ ] **T27** Flutter app audit, then fix (driver money screens, dispatch UI, docs/code mismatch on top-up).
 - [ ] **T28** Triage, CI, Docker audit, then fix.
-- [ ] **T29** Dashboard code audit, then fix (the top-up UI must send `Idempotency-Key` if it exists).
+- [ ] **T29** Dashboard code audit (reported; no UI calls wallet top-up, so the new Idempotency-Key breaks nothing). Fix list:
+  - [ ] T29a HIGH: hospital form turns a blank/half-typed lat/lng into 0 and `saveEdit` has no validation; the backend accepts (0,0). Keep raw strings, parse on submit, reject empty/NaN/(0,0)/capacity < 1 client-side; reject (0,0) and capacity < 1 in `schemas/hospitals.py`.
+  - [ ] T29b MEDIUM: Verify/Deactivate in-flight guard holds one id, so a second click overwrites the first. Use a Set.
+  - [ ] T29c MEDIUM: no confirmation on Revoke driver or Deactivate hospital.
+  - [ ] T29d MEDIUM: "Export CSV" silently exports one page. Label it or export all filtered rows.
+  - [ ] T29e MEDIUM: a 401 clears the session and redirects with no message. Show "session expired" on /login.
+  - [ ] T29f MEDIUM: dragging a text selection onto the modal backdrop closes it and loses edits.
+  - [ ] T29g MEDIUM: a non-admin login leaves a valid server session (never calls logout).
+  - [ ] T29h LOW: csv `revokeObjectURL` runs before the download starts; `api.login` clears the token before the request; signed-in user on /login is not redirected; Write Snapshot has no in-flight guard; missing `aria-hidden` on decorative icons; no `autoComplete`/`inputMode` on phone/number fields. Contrast is unmeasured.
+  - Left to T30: JWT in `localStorage` (finding 5).
 
 ## Phase 6
 
