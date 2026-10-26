@@ -52,8 +52,29 @@ Each task: red test, fix, ruff, focused tests, commit. Size in brackets.
 
 ## Phase 5: Pending audits (append findings, then triage)
 
-- [ ] **T27** Flutter app audit, then fix (driver money screens, dispatch UI, docs/code mismatch on top-up).
-- [ ] **T28** Triage, CI, Docker audit, then fix.
+- [ ] **T27** Flutter audit (reported). Fix list, each verified with `flutter analyze` + `flutter test`:
+  - [ ] T27a HIGH: accept errors are invisible (403 too far / 409 taken); `AcceptResult.error` has no UI branch and the next 15 s refresh clears the message.
+  - [ ] T27b HIGH: driver socket ignores `ride_ended` (`onMessage: (_) {}`), so the driver keeps streaming after a cancel.
+  - [ ] T27c HIGH: no way back into an active ride after an app restart (find it via `/rides/mine`).
+  - [ ] T27d HIGH: ride cards have no keys, so a fresh ride can inherit another card's countdown.
+  - [ ] T27e HIGH: patient tracking does not refetch the ride on reconnect and misses `ride_ended`.
+  - [ ] T27f HIGH: `_advance` has no in-flight guard and does not refetch after a failure or the new 409.
+  - [ ] T27g HIGH: top-up screen shows "Almost done" with a green check but sends nothing; relabel it as "How to top up".
+  - [ ] T27h MEDIUM: wallet shows "−PKR -27" for commissions and truncates with `.toInt()`; use `abs()`, 2 decimals, server `low_balance`.
+  - [ ] T27i MEDIUM: WebSocket reconnect reuses the original token; read the current one in `_open`.
+  - [ ] T27j MEDIUM: swallowed errors and `state` set after dispose in the dashboard notifier.
+  - [ ] T27k MEDIUM: wire `POST /auth/logout-all` ("Sign out of all devices"); surface `WsRetriesExhausted`.
+  - [ ] T27l MEDIUM: Semantics/tooltips on tap targets, selection by colour only, 32 px Decline button; pause the 15 s poll under the active-ride screen.
+- [ ] **T28** Triage / CI / Docker audit (reported). Fix list:
+  - [ ] T28a HIGH: backend trusts any service severity below 5; use `max(service, local rules)` and log a keyword-version mismatch.
+  - [ ] T28b HIGH: pin release.yml actions to commit SHAs, build job `contents: read` with a separate publish job, gate on the security checks and on the tag being on `main`.
+  - [ ] T28c HIGH: migrations have no `lock_timeout`, so a blocked migration stalls dispatch (set it after taking the advisory lock).
+  - [ ] T28d MEDIUM: triage call has a 10 s timeout and no breaker; add a short timeout, a circuit breaker and a `TriageServiceDown` alert.
+  - [ ] T28e MEDIUM: pin ruff in `requirements-dev.txt` and stop installing unpinned ruff/mypy in CI.
+  - [ ] T28f MEDIUM: add `.github/dependabot.yml` (pip, npm, pub, docker, actions).
+  - [ ] T28g MEDIUM: triage container: sync handler, `--limit-concurrency`, drop unused env.
+  - [ ] T28h LOW: `scripts/db_backup.sh` passes the password on the command line.
+  - Owner / clinical decisions, not code: unknown text defaults to severity 3 (finding 2), the gold set needs a native-speaker review and held-out cases (finding 3), a real Alertmanager receiver (finding 7), migration 0008's one-step drop is already applied (finding 9; RUNBOOK says the downgrade is lossy), image digest pinning.
 - [ ] **T29** Dashboard code audit (reported; no UI calls wallet top-up, so the new Idempotency-Key breaks nothing). Fix list:
   - [ ] T29a HIGH: hospital form turns a blank/half-typed lat/lng into 0 and `saveEdit` has no validation; the backend accepts (0,0). Keep raw strings, parse on submit, reject empty/NaN/(0,0)/capacity < 1 client-side; reject (0,0) and capacity < 1 in `schemas/hospitals.py`.
   - [ ] T29b MEDIUM: Verify/Deactivate in-flight guard holds one id, so a second click overwrites the first. Use a Set.
