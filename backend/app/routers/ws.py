@@ -83,6 +83,16 @@ def _expired(token: str) -> bool:
         return True
 
 
+async def _revoked(token: str) -> bool:
+    """True once the token has been logged out. Checked on a timer, not per frame:
+    the handshake checks it, but a socket lives for the whole ride."""
+    try:
+        jti = decode_token(token)["jti"]
+    except (jwt.PyJWTError, KeyError):
+        return True
+    return await is_token_blocked(jti)
+
+
 async def _auth_user(token: str) -> User | None:
     """Decode JWT, check blocklist, return the User or None."""
     try:
@@ -306,6 +316,9 @@ async def _stream_driver_gps(
         # Only a live ride may be streamed to; a finished one ends the socket.
         if last_persist is None or now - last_persist >= _GPS_PERSIST_INTERVAL_SECONDS:
             last_persist = now
+            if await _revoked(token):
+                await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+                return
             if not await _persist_location(ride_id, driver_id, lat, lng):
                 await websocket.send_json({"event": "ride_ended"})
                 await websocket.close(code=status.WS_1000_NORMAL_CLOSURE)
@@ -393,6 +406,9 @@ async def _relay_location(
             or now - last_checked >= _STATUS_RECHECK_SECONDS
         ):
             last_checked = now
+            if await _revoked(token):
+                await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+                return
             async with AsyncSessionLocal() as db:
                 current_status = (
                     await db.execute(select(Ride.status).where(Ride.id == ride_id))

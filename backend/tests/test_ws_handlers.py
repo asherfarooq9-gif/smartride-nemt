@@ -489,3 +489,50 @@ def ws_token_for_tests() -> str:
     from app.core.security import create_access_token
 
     return create_access_token({"sub": "x"})
+
+
+# ── a logged-out token must not keep streaming ───────────────────────────────
+
+
+async def _block(token: str) -> None:
+    from app.core.redis_client import block_token
+    from app.core.security import decode_token
+
+    assert await block_token(decode_token(token)["jti"], 600)
+
+
+async def test_watcher_socket_closes_once_its_token_is_revoked(
+    db, ws_factory, monkeypatch
+):
+    ride, *_ = await _seed_driver_ride(db)
+    monkeypatch.setattr(ws, "_STATUS_RECHECK_SECONDS", 0)
+    token = ws_token_for_tests()
+    await _block(token)
+    fake = FakeWebSocket([])
+
+    await ws._relay_location(
+        fake, str(ride.id), _ScriptedPubSub([{"data": "x"}]), token
+    )
+
+    assert fake.closed_with == [1008]
+    assert fake.sent == []
+
+
+async def test_driver_socket_closes_once_its_token_is_revoked(
+    db, ws_factory, fast_frames, monkeypatch
+):
+    monkeypatch.setattr(ws, "_GPS_PERSIST_INTERVAL_SECONDS", 0)
+    ride, driver, du, fake = await _drive(db, ws_factory, [])
+    driver_token = json.loads(fake._incoming[0])["token"]
+
+    async def driver_logs_out():
+        await _block(driver_token)
+
+    fake._incoming += [_frame(), driver_logs_out, _frame(33.73)]
+    publish = AsyncMock()
+
+    with patch.object(ws.location_manager, "publish", publish):
+        await ws.driver_location_ws(fake, str(ride.id))
+
+    assert 1008 in fake.closed_with
+    assert publish.await_count == 1
