@@ -21,6 +21,9 @@ const WIDTHS = { md: 'max-w-md', lg: 'max-w-lg', xl: 'max-w-xl', '2xl': 'max-w-2
 export default function Modal({ open, onClose, title, children, width = 'lg' }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const titleId = useId()
+  // Where the press began. Selecting text in an input and releasing over the backdrop
+  // fires a click on the dialog; closing then would throw away the admin's edits.
+  const pressStartedOnBackdrop = useRef(false)
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -40,8 +43,12 @@ export default function Modal({ open, onClose, title, children, width = 'lg' }: 
         e.preventDefault()
         onClose()
       }}
+      onMouseDown={e => {
+        pressStartedOnBackdrop.current = e.target === e.currentTarget
+      }}
       onClick={e => {
-        if (e.target === e.currentTarget) onClose() // click on the backdrop
+        // Only a press that both started and ended on the backdrop closes it.
+        if (e.target === e.currentTarget && pressStartedOnBackdrop.current) onClose()
       }}
       className={`m-auto w-[calc(100%-2rem)] ${WIDTHS[width]} rounded-2xl bg-white p-0 text-gray-900 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm`}
     >
