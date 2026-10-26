@@ -176,6 +176,20 @@ def _clamp_confidence(value) -> float:
     return confidence if 0.0 <= confidence <= 1.0 else 0.0
 
 
+def _note_keyword_mismatch(model_version) -> None:
+    """The service stamps its keyword hash into model_version. If it differs from
+    ours the two are scoring with different rules; the vendored copy is only
+    compared in CI, so say so at runtime too."""
+    if not isinstance(model_version, str) or not model_version.startswith("rules-v"):
+        return
+    if model_version.rsplit("-", 1)[-1] != KEYWORDS_VERSION[:8]:
+        metrics.dispatch_failures_total.labels(reason="triage_keywords_mismatch").inc()
+        log.warning(
+            "triage service keyword version differs from the backend copy (%s)",
+            model_version,
+        )
+
+
 def normalise_triage(raw: dict, symptom_text: str) -> dict:
     """The one place triage output is made safe; everything downstream uses this."""
     severity = str(raw.get("severity", "")).strip()
@@ -185,8 +199,14 @@ def normalise_triage(raw: dict, symptom_text: str) -> dict:
     if not isinstance(specialty, str) or specialty not in _VALID_SPECIALTIES:
         specialty = FAIL_SAFE_SPECIALTY
     rule_override = bool(raw.get("rule_override"))
+    # The service may only raise severity. A stale, buggy or tampered one that says
+    # "2" for a text our own rules score higher must not lower it.
+    local_severity, _ = compute_severity(symptom_text)
+    if int(local_severity) > int(severity):
+        severity = local_severity
     if detect_severity_override(symptom_text):
         severity, rule_override = FAIL_SAFE_SEVERITY, True
+    _note_keyword_mismatch(raw.get("model_version"))
     inference_ms = raw.get("inference_ms")
     return {
         "specialty": specialty,

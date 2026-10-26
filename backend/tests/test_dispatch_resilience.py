@@ -33,6 +33,7 @@ from app.services.dispatch_loop import (
     _symptoms,
     retry_pending_dispatches,
 )
+from app.services.triage_keywords import compute_severity
 from app.services.emergency_dispatch import (
     call_triage_service,
     dispatch_emergency,
@@ -841,7 +842,9 @@ async def test_every_severity_is_stored_and_acted_on_end_to_end(db, severity):
     ride, driver, _ = await _seed(db)
     ride_id = ride.id
     await _only_these_drivers(db, [driver.id])
-    # benign text so the life-threat rules cannot lift the service's own severity
+    # Benign text so the life-threat rules cannot force a 5. The local rules still
+    # set a floor, so the stored value is the higher of the two.
+    expected = str(max(int(severity), int(compute_severity("sore knee")[0])))
     service = AsyncMock(return_value={**TRIAGE_RESPONSE, "severity": severity})
 
     with patch("app.services.emergency_dispatch.call_triage_service", new=service):
@@ -853,6 +856,6 @@ async def test_every_severity_is_stored_and_acted_on_end_to_end(db, severity):
             {"r": ride_id},
         )
     ).scalar_one()
-    assert raw == severity
-    assert result["severity"] == severity
-    assert (await load_stored_triage(db, ride_id))["severity"] == severity
+    assert raw == expected
+    assert result["severity"] == expected
+    assert (await load_stored_triage(db, ride_id))["severity"] == expected

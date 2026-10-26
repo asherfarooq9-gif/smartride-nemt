@@ -66,7 +66,7 @@ Each task: red test, fix, ruff, focused tests, commit. Size in brackets.
   - [ ] T27k MEDIUM: wire `POST /auth/logout-all` ("Sign out of all devices"); surface `WsRetriesExhausted`.
   - [ ] T27l MEDIUM: Semantics/tooltips on tap targets, selection by colour only, 32 px Decline button; pause the 15 s poll under the active-ride screen.
 - [ ] **T28** Triage / CI / Docker audit (reported). Fix list:
-  - [ ] T28a HIGH: backend trusts any service severity below 5; use `max(service, local rules)` and log a keyword-version mismatch.
+  - [x] T28a HIGH: backend trusts any service severity below 5; use `max(service, local rules)` and log a keyword-version mismatch.
   - [ ] T28b HIGH: pin release.yml actions to commit SHAs, build job `contents: read` with a separate publish job, gate on the security checks and on the tag being on `main`.
   - [ ] T28c HIGH: migrations have no `lock_timeout`, so a blocked migration stalls dispatch (set it after taking the advisory lock).
   - [ ] T28d MEDIUM: triage call has a 10 s timeout and no breaker; add a short timeout, a circuit breaker and a `TriageServiceDown` alert.
