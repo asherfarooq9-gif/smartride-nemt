@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:patient_app/driver/ride_events.dart' show rideHasEnded;
 
 const _genericLoadError =
     'We could not load your ride. Please check your connection and try again.';
@@ -69,7 +70,12 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
         '${core.ApiClient.instance.wsBaseUrl}/ws/ride/${widget.rideId}');
     final ws = _ws ??= core.WsClient(
       onMessage: _handleWsMessage,
-      onConnected: () => _setConnection(isConnected: true),
+      onConnected: () {
+        _setConnection(isConnected: true);
+        // The ride may have finished while the socket was down; the server's
+        // 'ride_ended' only reaches a client that is connected when it is sent.
+        unawaited(_refreshRide());
+      },
       onDisconnected: () => _setConnection(isConnected: false),
       onError: _onWsError,
     );
@@ -88,6 +94,27 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
   void _onWsError(Object error) {
     if (!mounted || _ended || error is! core.WsRetriesExhausted) return;
     setState(() => _hasGivenUp = true);
+    unawaited(_refreshRide());
+  }
+
+  /// Reads the ride again and, if it is over, shows the same completion dialog the
+  /// socket would have. Without this a patient whose tunnel dropped at the wrong
+  /// moment stays on "help is on the way" for a ride that is already finished.
+  Future<void> _refreshRide() async {
+    try {
+      final ride = await core.getRideDetail(widget.rideId);
+      if (!mounted) return;
+      setState(() => _ride = ride);
+      if (rideHasEnded(ride.status) && !_ended) {
+        _ended = true;
+        unawaited(_ws?.disconnect());
+        _showCompletionDialog(
+          ride.status == core.RideStatus.completed ? 'completed' : 'cancelled',
+        );
+      }
+    } on core.AppError {
+      // Keep what is on screen; the socket or the next reconnect will say more.
+    }
   }
 
   void _handleWsMessage(Map<String, dynamic> msg) {

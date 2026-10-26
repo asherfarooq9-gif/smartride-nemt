@@ -56,8 +56,8 @@ Each task: red test, fix, ruff, focused tests, commit. Size in brackets.
   - [x] T27a HIGH: accept errors are invisible (403 too far / 409 taken); `AcceptResult.error` has no UI branch and the next 15 s refresh clears the message.
   - [x] T27b HIGH: driver socket ignores `ride_ended` (`onMessage: (_) {}`), so the driver keeps streaming after a cancel.
   - [ ] T27c HIGH: no way back into an active ride after an app restart (find it via `/rides/mine`).
-  - [ ] T27d HIGH: ride cards have no keys, so a fresh ride can inherit another card's countdown.
-  - [ ] T27e HIGH: patient tracking does not refetch the ride on reconnect and misses `ride_ended`.
+  - [x] T27d HIGH: ride cards have no keys, so a fresh ride can inherit another card's countdown.
+  - [x] T27e HIGH: patient tracking does not refetch the ride on reconnect and misses `ride_ended`.
   - [x] T27f HIGH: `_advance` has no in-flight guard and does not refetch after a failure or the new 409.
   - [ ] T27g HIGH: top-up screen shows "Almost done" with a green check but sends nothing; relabel it as "How to top up".
   - [ ] T27h MEDIUM: wallet shows "−PKR -27" for commissions and truncates with `.toInt()`; use `abs()`, 2 decimals, server `low_balance`.
