@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, patch
 import pytest_asyncio
 from sqlalchemy import select, update
 
+from app.core.config import settings
 from app.core.database import engine
 from app.models.models import (
     Driver,
@@ -209,3 +210,35 @@ async def test_dispatch_records_triage_and_pushes_to_the_driver(db):
     assert any(
         c.kwargs["fcm_token"] == "driver-device-token" for c in push.call_args_list
     )
+
+
+async def test_expired_ride_also_texts_the_patient_to_call_1122(client, db):
+    from app.services import dispatch_loop
+    from tests.test_dispatch_endpoints import _create_emergency, _register
+
+    patient_token = await _register(client, _phone(), "patient")
+    ride_id = await _create_emergency(client, patient_token)
+    await db.execute(
+        update(Ride)
+        .where(Ride.id == ride_id)
+        .values(queued_at=_ago(settings.DISPATCH_MAX_AGE_SECONDS + 60))
+    )
+    await db.commit()
+    patient_id = (
+        await db.execute(select(Ride.patient_id).where(Ride.id == ride_id))
+    ).scalar_one()
+
+    with (
+        patch(
+            "app.services.dispatch_loop.notify_user", new=AsyncMock(return_value=True)
+        ),
+        patch(
+            "app.services.dispatch_loop.send_sms_to_patient",
+            new=AsyncMock(return_value=True),
+        ) as sms,
+    ):
+        await dispatch_loop._expire(db, datetime.now(timezone.utc))
+
+    assert (await _ride(db, ride_id)).status == RideStatus.cancelled
+    texted = {c.kwargs["patient_id"]: c.kwargs["body"] for c in sms.await_args_list}
+    assert "1122" in texted[patient_id]

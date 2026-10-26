@@ -115,6 +115,43 @@ async def test_hospital_sms_says_when_the_ed_reports_full():
     assert "ED FULL" not in await send(False)
 
 
+async def test_sms_to_patient_goes_to_the_account_phone(client, db):
+    from app.models.models import Patient, User
+    from sqlalchemy import select
+    from tests.test_dispatch_endpoints import _register
+
+    phone = "+923007770001"
+    await _register(client, phone, "patient")
+    patient_id = (
+        await db.execute(
+            select(Patient.id)
+            .join(User, User.id == Patient.user_id)
+            .where(User.phone == phone)
+        )
+    ).scalar_one()
+    sent = []
+
+    with patch.object(
+        notifications, "_send_sms", lambda to, body: sent.append((to, body)) or True
+    ):
+        ok = await notifications.send_sms_to_patient(
+            db, patient_id=patient_id, body="Please call 1122."
+        )
+
+    assert ok is True
+    assert sent == [(phone, "Please call 1122.")]
+
+
+async def test_sms_to_unknown_patient_reports_failure_without_raising(db):
+    import uuid
+
+    ok = await notifications.send_sms_to_patient(
+        db, patient_id=uuid.uuid4(), body="Please call 1122."
+    )
+
+    assert ok is False
+
+
 async def test_password_hashing_does_not_block_the_event_loop():
     ticks = await _ticks_while(hash_password_async("correct horse battery"))
     assert ticks >= 3, f"bcrypt blocked the event loop (ticks={ticks})"

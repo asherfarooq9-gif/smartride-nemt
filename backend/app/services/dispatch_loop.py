@@ -25,7 +25,11 @@ from app.models.models import (
     TriageEvent,
 )
 from app.services.emergency_dispatch import dispatch_emergency
-from app.services.notifications import notify_user, tell_hospital_ride_stopped
+from app.services.notifications import (
+    notify_user,
+    send_sms_to_patient,
+    tell_hospital_ride_stopped,
+)
 
 log = logging.getLogger("smartride.dispatch_loop")
 BATCH = 20
@@ -88,7 +92,14 @@ async def _expire(db, now: datetime) -> None:
             body="We could not find a driver. Please call 1122.",
             data={"ride_id": str(ride_id)},
         )
-        if not told:
+        # A push can fail silently (stale token, FCM down) or go unseen, and
+        # this is the one message that must arrive, so also send an SMS.
+        texted = await send_sms_to_patient(
+            db,
+            patient_id=patient_id,
+            body="SmartRide: we could not find a driver. Please call 1122 now.",
+        )
+        if not (told or texted):
             log.error("patient NOT told to call 1122 after expiry ride_id=%s", ride_id)
 
 

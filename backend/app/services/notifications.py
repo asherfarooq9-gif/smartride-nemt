@@ -236,6 +236,33 @@ async def send_hospital_alert(*, ride, triage: dict, hospital, patient) -> bool:
     return bool(sent)
 
 
+async def send_sms_to_patient(db, *, patient_id, body: str) -> bool:
+    """SMS the phone number on the patient's account. Never raises.
+
+    For messages that must not depend on a push token being valid, such as the
+    instruction to call 1122 when no driver could be found. True only when the
+    SMS was handed to the sender.
+    """
+    from sqlalchemy import select
+
+    from app.models.models import Patient, User
+
+    try:
+        phone = (
+            await db.execute(
+                select(User.phone)
+                .join(Patient, Patient.user_id == User.id)
+                .where(Patient.id == patient_id)
+            )
+        ).scalar_one_or_none()
+    except Exception as exc:
+        log.error("patient phone lookup failed (%s)", type(exc).__name__)
+        return False
+    if not phone:
+        return False
+    return bool(await asyncio.to_thread(_send_sms, phone, body))
+
+
 async def tell_hospital_ride_stopped(db, *, ride_id, hospital_id) -> bool:
     """SMS the hospital coordinator that an earlier pre-alert no longer applies.
 
