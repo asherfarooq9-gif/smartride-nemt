@@ -7,6 +7,7 @@ import 'package:smartride_core/smartride_core.dart' as core;
 import 'package:patient_app/core/providers.dart';
 import 'package:patient_app/driver/dashboard_notifier.dart';
 import 'package:patient_app/shared/role_switcher.dart';
+import 'package:patient_app/driver/money_format.dart';
 
 const Color _kBlue600 = Color(0xFF0B5980);
 const Color _kTeal600 = Color(0xFF0B7777);
@@ -354,7 +355,7 @@ class _StatsRow extends StatelessWidget {
         ? driver!.rating!.toStringAsFixed(1)
         : '—';
     final earningsText = todayEarningsPkr > 0
-        ? 'PKR ${_fmtPkr(todayEarningsPkr)}'
+        ? formatPkr(todayEarningsPkr)
         : 'PKR 0';
     return Row(
       children: [
@@ -382,13 +383,6 @@ class _StatsRow extends StatelessWidget {
     );
   }
 
-  static String _fmtPkr(double v) => v
-      .toInt()
-      .toString()
-      .replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-        (m) => '${m[1]},',
-      );
 }
 
 class _StatCard extends StatelessWidget {
@@ -459,13 +453,7 @@ class _WalletStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final formatted = balance
-        .toInt()
-        .toString()
-        .replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (m) => '${m[1]},',
-        );
+    final formatted = formatPkr(balance);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
@@ -489,7 +477,7 @@ class _WalletStrip extends StatelessWidget {
                 ),
               ),
               Text(
-                'PKR $formatted',
+                formatted,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
@@ -889,7 +877,7 @@ class _RideRequestCardState extends State<_RideRequestCard> {
                           _InfoChip(
                             icon: Icons.payments_outlined,
                             label: widget.ride.estimatedFarePkr != null
-                                ? 'PKR ${widget.ride.estimatedFarePkr!.toInt()}'
+                                ? formatPkr(widget.ride.estimatedFarePkr!)
                                 : 'PKR —',
                           ),
                         ],

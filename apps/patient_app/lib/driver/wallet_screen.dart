@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart';
+import 'package:patient_app/driver/money_format.dart';
 
 final _walletProvider = FutureProvider.autoDispose<Map<String, dynamic>>(
   (_) => getDriverWallet(),
@@ -107,13 +108,7 @@ class _BalanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final formatted = balance
-        .toInt()
-        .toString()
-        .replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (m) => '${m[1]},',
-        );
+    final formatted = formatPkr(balance);
     return Container(
       padding: const EdgeInsets.all(kSpaceXL),
       decoration: BoxDecoration(
@@ -138,7 +133,7 @@ class _BalanceCard extends StatelessWidget {
           ),
           const SizedBox(height: kSpaceSM),
           Text(
-            'PKR $formatted',
+            formatted,
             style: const TextStyle(
               fontSize: kFontDisplay,
               fontWeight: FontWeight.w700,
@@ -278,7 +273,7 @@ class _WeekSummaryRow extends StatelessWidget {
           Expanded(
             child: _SummaryItem(
               label: 'Commission paid',
-              value: 'PKR ${weeklyCommission.toInt()}',
+              value: formatPkr(weeklyCommission),
               valueColor: kRed600,
             ),
           ),
@@ -286,7 +281,7 @@ class _WeekSummaryRow extends StatelessWidget {
           Expanded(
             child: _SummaryItem(
               label: 'Net earnings',
-              value: 'PKR ${weeklyNet.toInt()}',
+              value: formatPkr(weeklyNet),
               valueColor: kOnlineGreen,
             ),
           ),
@@ -368,9 +363,10 @@ class _TransactionsList extends StatelessWidget {
                 (txMap['amount_pkr'] as num?)?.toDouble() ?? 0;
             final description =
                 txMap['description'] as String? ?? '';
-            final type = txMap['type'] as String? ?? '';
             final createdAt = txMap['created_at'] as String? ?? '';
-            final isCredit = type == 'topup';
+            // By the sign of the amount, not the type: commissions are stored
+            // negative and an opening 'adjustment' can be either.
+            final isCredit = isCreditAmount(amount);
             return _TransactionRow(
               amount: amount,
               description: description,
@@ -400,9 +396,7 @@ class _TransactionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final amountColor = isCredit ? kOnlineGreen : kRed600;
-    final amountText = isCredit
-        ? '+PKR ${amount.toInt()}'
-        : '−PKR ${amount.toInt()}';
+    final amountText = formatSignedPkr(amount);
     final icon =
         isCredit ? Icons.add_circle_outline : Icons.remove_circle_outline;
 
