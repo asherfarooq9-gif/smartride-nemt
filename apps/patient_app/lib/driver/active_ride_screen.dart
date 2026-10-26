@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 import 'package:patient_app/core/providers.dart';
+import 'package:patient_app/driver/ride_events.dart';
 
 final _rideDetailProvider =
     FutureProvider.autoDispose.family<core.RideDetailResponse, String>(
@@ -24,20 +27,50 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
   final MapController _mapController = MapController();
   LatLng? _myPos;
   bool _cancelling = false;
+  // One status change at a time: a double tap used to send two PATCHes.
+  bool _busy = false;
+  bool _left = false;
+  Timer? _refetch;
+
+  // The GPS socket tells the driver when a ride ends, but it can be down exactly
+  // when the patient cancels. Reading the ride again every so often is the backstop.
+  static const _refetchEvery = Duration(seconds: 20);
+
+  @override
+  void initState() {
+    super.initState();
+    _refetch = Timer.periodic(_refetchEvery, (_) {
+      if (mounted) ref.invalidate(_rideDetailProvider(widget.rideId));
+    });
+  }
 
   @override
   void dispose() {
+    _refetch?.cancel();
     _mapController.dispose();
     super.dispose();
   }
 
+  /// Leaves the ride screen once, saying why, and stops sharing location.
+  Future<void> _leave(String message) async {
+    if (_left || !mounted) return;
+    _left = true;
+    final messenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.of(context);
+    await ref.read(gpsStreamProvider.notifier).stopStreaming();
+    messenger.showSnackBar(SnackBar(content: Text(message)));
+    router.go('/driver');
+  }
+
   Future<void> _advance(core.RideStatus next) async {
+    if (_busy) return;
+    setState(() => _busy = true);
     try {
       await core.updateRideStatus(widget.rideId, next);
-      ref.invalidate(_rideDetailProvider(widget.rideId));
       if (next == core.RideStatus.completed ||
           next == core.RideStatus.cancelled) {
         await ref.read(gpsStreamProvider.notifier).stopStreaming();
+        _left = true;
         if (mounted) context.go('/driver');
       }
     } catch (e) {
@@ -48,6 +81,13 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
             backgroundColor: core.kError,
           ),
         );
+      }
+    } finally {
+      // Success or failure, read the ride again: after a timeout or a refusal
+      // (the 409 'call dispatch') the screen must show what the server holds.
+      if (mounted) {
+        ref.invalidate(_rideDetailProvider(widget.rideId));
+        setState(() => _busy = false);
       }
     }
   }
@@ -82,6 +122,20 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
   Widget build(BuildContext context) {
     final rideAsync = ref.watch(_rideDetailProvider(widget.rideId));
     final gpsStatus = ref.watch(gpsStreamProvider);
+
+    ref.listen<String?>(rideEndedByServerProvider, (_, endedId) {
+      if (endedId != widget.rideId) return;
+      ref.read(rideEndedByServerProvider.notifier).state = null;
+      _leave('This ride has ended.');
+    });
+    ref.listen(_rideDetailProvider(widget.rideId), (_, next) {
+      final ride = next.valueOrNull;
+      if (ride != null && rideLeftThisDriver(ride.status)) {
+        _leave(rideHasEnded(ride.status)
+            ? 'This ride has ended.'
+            : 'This ride is no longer assigned to you.');
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -148,6 +202,7 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
               _ActionPanel(
                 ride: ride,
                 cancelling: _cancelling,
+                busy: _busy,
                 onAdvance: _advance,
                 onCancel: _cancel,
               ),
@@ -186,12 +241,14 @@ class _ActionPanel extends StatelessWidget {
   const _ActionPanel({
     required this.ride,
     required this.cancelling,
+    required this.busy,
     required this.onAdvance,
     required this.onCancel,
   });
 
   final core.RideDetailResponse ride;
   final bool cancelling;
+  final bool busy;
   final Future<void> Function(core.RideStatus) onAdvance;
   final Future<void> Function() onCancel;
 
@@ -250,6 +307,7 @@ class _ActionPanel extends StatelessWidget {
           if (next != null)
             core.PrimaryButton(
               label: _nextLabel,
+              isLoading: busy,
               onPressed: () => onAdvance(next),
               height: core.kMinTapTarget,
             ),
@@ -259,7 +317,7 @@ class _ActionPanel extends StatelessWidget {
               width: double.infinity,
               height: core.kMinTapTarget,
               child: OutlinedButton(
-                onPressed: cancelling ? null : onCancel,
+                onPressed: (cancelling || busy) ? null : onCancel,
                 style: OutlinedButton.styleFrom(
                   foregroundColor: core.kError,
                   side: const BorderSide(color: core.kError),

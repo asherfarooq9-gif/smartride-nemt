@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 import 'package:patient_app/core/location.dart';
 import 'package:patient_app/core/notifications.dart';
+import 'package:patient_app/driver/ride_events.dart';
 
 // ── Role state (drives which portal is shown) ──────────────────────────────────
 
@@ -362,14 +363,24 @@ extension GpsStreamStatusX on GpsStreamStatus {
 
 enum GpsStartResult { started, alreadyStreaming, permissionDenied, notSignedIn, cancelled }
 
+/// Set to the ride id when the server tells the driver's GPS socket that the ride
+/// has ended, so the active ride screen can leave it. Cleared by the screen.
+final rideEndedByServerProvider = StateProvider<String?>((ref) => null);
+
 final gpsStreamProvider =
     StateNotifierProvider<GpsStreamNotifier, GpsStreamStatus>((ref) {
   ref.watch(sessionTokenProvider);
-  return GpsStreamNotifier();
+  return GpsStreamNotifier(
+    onRideEnded: (rideId) =>
+        ref.read(rideEndedByServerProvider.notifier).state = rideId,
+  );
 });
 
 class GpsStreamNotifier extends StateNotifier<GpsStreamStatus> {
-  GpsStreamNotifier() : super(GpsStreamStatus.idle);
+  GpsStreamNotifier({this.onRideEnded}) : super(GpsStreamStatus.idle);
+
+  final void Function(String rideId)? onRideEnded;
+  String? _rideId;
 
   static const _restInterval = Duration(seconds: 5);
 
@@ -393,9 +404,10 @@ class GpsStreamNotifier extends StateNotifier<GpsStreamStatus> {
     }
     if (state != GpsStreamStatus.starting) return GpsStartResult.cancelled;
 
+    _rideId = rideId;
     final uri = Uri.parse('${core.ApiClient.instance.wsBaseUrl}/ws/driver/$rideId');
     final ws = core.WsClient(
-      onMessage: (_) {},
+      onMessage: _onSocketMessage,
       onConnected: () => _setIfActive(GpsStreamStatus.live),
       onDisconnected: () => _setIfActive(GpsStreamStatus.degraded),
       onError: _onSocketError,
@@ -419,6 +431,16 @@ class GpsStreamNotifier extends StateNotifier<GpsStreamStatus> {
 
   void _setIfActive(GpsStreamStatus next) {
     if (mounted && state.isActive) state = next;
+  }
+
+  /// The server ends the stream with {"event": "ride_ended"} when the ride is
+  /// cancelled or completed. Ignoring it left the driver streaming location for a
+  /// ride that no longer existed, and the dashboard heartbeat paused for it.
+  void _onSocketMessage(Map<String, dynamic> message) {
+    if (!isRideEndedMessage(message)) return;
+    final rideId = _rideId;
+    unawaited(stopStreaming());
+    if (rideId != null) onRideEnded?.call(rideId);
   }
 
   void _onSocketError(Object error) {
@@ -462,6 +484,7 @@ class GpsStreamNotifier extends StateNotifier<GpsStreamStatus> {
     _posSub = null;
     _ws = null;
     _lastRest = null;
+    _rideId = null;
     _isRestFailing = false;
     await sub?.cancel();
     await ws?.disconnect();
