@@ -67,8 +67,11 @@ Optional integrations, all of which degrade gracefully when unset: `TWILIO_*`
    If you must go back, take a backup first (`scripts/db_backup.sh`), then step down
    one revision at a time (`alembic downgrade 0008`, and so on) and stop at the first
    refusal. A downgrade past `0006` is never needed to undo a bad release.
-5. The backend runs `alembic upgrade head` on every start. With more than one
-   instance, start one first and wait for it to be healthy before scaling out.
+5. The backend runs `alembic upgrade head` on every start. Instances that start together
+   queue on a PostgreSQL advisory lock, so only one applies a migration and the others
+   find nothing left to do. A migration that hangs holds the lock, so check for a stuck
+   `alembic` session (`SELECT * FROM pg_locks WHERE locktype = 'advisory'`) before
+   restarting every instance.
 
 ## Incidents
 

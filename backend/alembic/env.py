@@ -2,7 +2,7 @@ import asyncio
 import os
 from logging.config import fileConfig
 
-from sqlalchemy import pool
+from sqlalchemy import pool, text
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
@@ -21,6 +21,7 @@ if db_url:
 # Import all models so autogenerate can detect them
 from app.core.database import Base  # noqa: E402
 import app.models.models  # noqa: E402, F401
+from app.core.migration_lock import MIGRATION_LOCK_ID  # noqa: E402
 
 target_metadata = Base.metadata
 
@@ -40,6 +41,13 @@ def run_migrations_offline() -> None:
 def do_run_migrations(connection: Connection) -> None:
     context.configure(connection=connection, target_metadata=target_metadata)
     with context.begin_transaction():
+        # The app runs `alembic upgrade head` on every start. Two instances starting
+        # together would both try to create the same tables. A transaction-level
+        # advisory lock makes the second one wait, then find nothing left to do. It
+        # is released when this transaction commits or rolls back.
+        connection.execute(
+            text("SELECT pg_advisory_xact_lock(:id)"), {"id": MIGRATION_LOCK_ID}
+        )
         context.run_migrations()
 
 

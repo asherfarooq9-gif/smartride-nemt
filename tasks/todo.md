@@ -21,7 +21,7 @@ Each task: red test, fix, ruff, focused tests, commit. Size in brackets.
 ## Phase 2: Operations
 
 - [x] **T10 (S)** D7: `/ready` used by orchestrator probes; `/health` stays liveness. Update `render.yaml`, Dockerfile healthcheck, compose, tests.
-- [ ] **T11 (S)** D4: advisory lock around `alembic upgrade head` in `entrypoint.sh`/`alembic/env.py`. Test: two concurrent upgrades do not race.
+- [x] **T11 (S)** D4: advisory lock around `alembic upgrade head` in `entrypoint.sh`/`alembic/env.py`. Test: two concurrent upgrades do not race.
 - [x] **T12 (S)** D3: rewrite the RUNBOOK rollback section (migrations 0007/0008, backup first, roll forward preferred).
 - [ ] **T13 (S)** D5: `render.yaml` plan comments and triage service decision documented; remove `sync` conflicts. Owner decides the plan.
 - [x] **T14 (M)** D1: Prometheus alert rules for DB/Redis down, stuck dispatch loop, aged pending rides, failed SMS/FHIR/push (add the metrics), ledger mismatch; add an Alertmanager config with a placeholder receiver. Receiver is a placeholder until the owner picks who is paged.
