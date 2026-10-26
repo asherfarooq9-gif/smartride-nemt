@@ -5,11 +5,15 @@ driver or a missing hospital used to strand the ride. This loop re-dispatches
 stale pending rides (most severe first), promotes scheduled rides that fall due,
 takes rides back from drivers who never acknowledged them, and closes rides
 nobody accepted in time. Safe to run on several instances at once: assignment
-is a guarded UPDATE, so only one dispatch can win a given ride or driver.
+is a guarded UPDATE, so only one dispatch can win a given ride or driver. The
+row locks taken to pick ride ids are released before dispatching starts, so two
+instances can both triage the same ride; only the guarded UPDATEs stop a double
+assignment, and the loser's work is discarded.
 """
 
 import asyncio
 import logging
+from itertools import groupby
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import and_, or_, select, update
@@ -161,8 +165,8 @@ async def _requeue_unacknowledged(db, now: datetime) -> None:
             )
 
 
-async def _pending_ride_ids(db, now: datetime) -> list:
-    """Ids of rides to retry: most severe first, then longest waiting.
+async def _pending_rides(db, now: datetime) -> list:
+    """(id, severity) of rides to retry: most severe first, then longest waiting.
 
     Rides with no triage yet sort as the most severe (we know nothing, so we
     assume the worst). SKIP LOCKED keeps two instances from picking the same
@@ -172,7 +176,7 @@ async def _pending_ride_ids(db, now: datetime) -> list:
     stale = now - timedelta(seconds=settings.DISPATCH_RETRY_AFTER_SECONDS)
     lead = now + timedelta(minutes=settings.SCHEDULED_DISPATCH_LEAD_MINUTES)
     result = await db.execute(
-        select(Ride.id)
+        select(Ride.id, TriageEvent.severity_level)
         .outerjoin(TriageEvent, TriageEvent.ride_id == Ride.id)
         .where(
             Ride.status == RideStatus.pending,
@@ -186,7 +190,7 @@ async def _pending_ride_ids(db, now: datetime) -> list:
         .limit(BATCH)
         .with_for_update(skip_locked=True, of=Ride)
     )
-    return list(result.scalars().all())
+    return [(ride_id, severity) for ride_id, severity in result.all()]
 
 
 async def _dispatch_one(ride_id) -> None:
@@ -213,9 +217,18 @@ async def retry_pending_dispatches() -> None:
     async with AsyncSessionLocal() as db:
         await _expire(db, now)
         await _requeue_unacknowledged(db, now)
-        ride_ids = await _pending_ride_ids(db, now)
-    for ride_id in ride_ids:
-        await _dispatch_one(ride_id)
+        pending = await _pending_rides(db, now)
+    slots = asyncio.Semaphore(max(1, settings.DISPATCH_CONCURRENCY))
+
+    async def dispatch_when_free(ride_id) -> None:
+        async with slots:
+            await _dispatch_one(ride_id)
+
+    # Rides of one severity run together, but a less severe group starts only
+    # after the more severe one has finished: when drivers are scarce, the most
+    # severe patient must be the one who gets the nearest driver.
+    for _, group in groupby(pending, key=lambda row: row[1]):
+        await asyncio.gather(*(dispatch_when_free(ride_id) for ride_id, _ in group))
 
 
 async def run_forever() -> None:

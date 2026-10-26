@@ -242,3 +242,47 @@ async def test_expired_ride_also_texts_the_patient_to_call_1122(client, db):
     assert (await _ride(db, ride_id)).status == RideStatus.cancelled
     texted = {c.kwargs["patient_id"]: c.kwargs["body"] for c in sms.await_args_list}
     assert "1122" in texted[patient_id]
+
+
+async def test_a_severity_level_runs_together_and_the_next_waits_for_it(monkeypatch):
+    """A surge must not make rides of one severity queue behind each other, but a
+    less severe ride must never start before the more severe ones have finished."""
+    import asyncio
+
+    from app.models.models import SeverityLevel
+    from app.services import dispatch_loop
+
+    pending = [(f"s5-{i}", SeverityLevel.five) for i in range(4)] + [
+        (f"s4-{i}", SeverityLevel.four) for i in range(2)
+    ]
+    started, finished, running, peak = [], [], 0, 0
+
+    async def slow_dispatch(ride_id):
+        nonlocal running, peak
+        started.append(ride_id)
+        running += 1
+        peak = max(peak, running)
+        await asyncio.sleep(0.05)
+        running -= 1
+        finished.append(ride_id)
+
+    async def no_op(*_args, **_kwargs):
+        return None
+
+    async def fixed(*_args, **_kwargs):
+        return pending
+
+    monkeypatch.setattr(dispatch_loop, "_expire", no_op)
+    monkeypatch.setattr(dispatch_loop, "_requeue_unacknowledged", no_op)
+    monkeypatch.setattr(dispatch_loop, "_pending_rides", fixed)
+    monkeypatch.setattr(dispatch_loop, "_dispatch_one", slow_dispatch)
+    monkeypatch.setattr(settings, "DISPATCH_CONCURRENCY", 3)
+
+    await dispatch_loop.retry_pending_dispatches()
+
+    assert 1 < peak <= 3
+    first_sev4 = started.index("s4-0")
+    assert {r for r in started[:first_sev4]} == {f"s5-{i}" for i in range(4)}
+    assert {f"s5-{i}" for i in range(4)} <= set(
+        finished[:4]
+    )  # all done before sev4 began

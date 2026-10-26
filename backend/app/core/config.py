@@ -78,6 +78,9 @@ class Settings(BaseSettings):
     DISPATCH_LOOP_ENABLED: bool = True
     DISPATCH_LOOP_INTERVAL_SECONDS: float = 15.0
     DISPATCH_RETRY_AFTER_SECONDS: int = 30
+    # Rides dispatched at the same time. Each can wait on triage, FHIR and SMS, so
+    # one at a time makes the last of a surge wait minutes.
+    DISPATCH_CONCURRENCY: int = 4
     DISPATCH_MAX_AGE_SECONDS: int = 900
     SCHEDULED_DISPATCH_LEAD_MINUTES: int = 30
     LOG_LEVEL: str = "INFO"
