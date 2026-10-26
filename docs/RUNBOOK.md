@@ -49,11 +49,26 @@ Optional integrations, all of which degrade gracefully when unset: `TWILIO_*`
 1. Merge to `main` only when CI is green (backend, Flutter, triage, admin build, Playwright).
 2. Tag `vX.Y.Z` to build the signed Android APK. The workflow refuses to run without
    the signing secrets (`KEYSTORE_*`, `KEY_*`, `API_BASE_URL`).
-3. Roll the backend by deploying the previous image tag.
-4. Database: migrations only add. `0006` converts `wallet_balance_pkr` from float to
-   `NUMERIC(12,2)` and adds the `wallet_transactions` ledger. To go back:
-   `alembic downgrade 0005` (the ledger table is dropped, balances are kept). Take a
-   backup first (`scripts/db_backup.sh`).
+3. Roll the backend back by redeploying the previous release (on Render, roll back to
+   the previous deploy). Do this first; it is almost always enough.
+4. Database: prefer rolling forward. Every migration is additive for the previous
+   release, so release N-1 runs on schema N:
+   - `0006` converts `wallet_balance_pkr` to `NUMERIC(12,2)` and adds the
+     `wallet_transactions` ledger.
+   - `0007` adds ledger guards, a unique idempotency key and indexes. **Its downgrade
+     refuses to run** once the ledger holds idempotency keys, admin ids or payment
+     methods, or once rides carry `symptom_text`. That is deliberate: it would destroy
+     audit data. Do not force it.
+   - `0008` **dropped** `hospital_alerts` and `family_notifications`. They were never
+     written to, so nothing is lost. Its downgrade recreates them empty.
+   - `0009` adds `users.token_version`. The previous release ignores it, and tokens
+     issued without a version count as 0, so nothing is signed out by the deploy.
+
+   If you must go back, take a backup first (`scripts/db_backup.sh`), then step down
+   one revision at a time (`alembic downgrade 0008`, and so on) and stop at the first
+   refusal. A downgrade past `0006` is never needed to undo a bad release.
+5. The backend runs `alembic upgrade head` on every start. With more than one
+   instance, start one first and wait for it to be healthy before scaling out.
 
 ## Incidents
 
@@ -67,8 +82,17 @@ Optional integrations, all of which degrade gracefully when unset: `TWILIO_*`
 loop restarts itself each interval; a repeating error is almost always the database.
 Restarting the backend is safe.
 
-**A user is locked out.** Five wrong passwords lock a phone number for 15 minutes.
-Clear it early with `redis-cli DEL login_fail:+92300xxxxxxx`.
+**A user is locked out.** Five wrong passwords from one address lock that address for
+15 minutes for that phone number. 25 wrong passwords from any addresses also lock
+addresses that have never logged in to that account; an address that has logged in
+within the last 30 days is exempt from that second limit, so the owner is not locked
+out by someone else's guessing. Clear it early with
+`redis-cli --scan --pattern 'login_fail:*+92300xxxxxxx*' | xargs redis-cli DEL`.
+
+**Sign a user out everywhere** (a stolen phone, a leaked token). The user can call
+`POST /api/v1/auth/logout-all`. Support can do the same in SQL:
+`UPDATE users SET token_version = token_version + 1 WHERE phone = '+92300xxxxxxx';`
+Every token issued before that stops working immediately.
 
 **Redis is down.** Every authenticated request fails (token revocation cannot be
 checked) and `/ready` reports `redis: false`. Restore Redis; nothing else needs a restart.
