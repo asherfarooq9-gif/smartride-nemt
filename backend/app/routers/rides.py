@@ -279,10 +279,14 @@ async def _authorize_ride_access(ride: Ride, user: User, db: AsyncSession) -> st
     raise HTTPException(403, "Forbidden")
 
 
-def _patient_info(ride: Ride) -> Optional[RidePatientInfo]:
+def _patient_info(ride: Ride, authorized_as: str) -> Optional[RidePatientInfo]:
     if not ride.patient:
         return None
     p = ride.patient
+    # The driver needs the patient's number and mobility needs to complete the
+    # ride, not afterwards: once it is over, minimum necessary applies.
+    if authorized_as == "driver" and ride.status in ride_service.TERMINAL_STATUSES:
+        return RidePatientInfo(full_name=p.full_name)
     return RidePatientInfo(
         full_name=p.full_name, phone=p.user.phone, mobility_needs=p.mobility_needs
     )
@@ -334,7 +338,7 @@ async def get_ride_detail(
 
     return RideDetailResponse(
         **_to_response(ride).model_dump(),
-        patient=_patient_info(ride),
+        patient=_patient_info(ride, authorized_as),
         driver=_driver_info(ride),
         hospital=_hospital_info(ride),
         triage=_triage_info(triage, authorized_as),

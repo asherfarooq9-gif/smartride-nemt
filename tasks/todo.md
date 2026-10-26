@@ -10,7 +10,7 @@ Each task: red test, fix, ruff, focused tests, commit. Size in brackets.
 - [x] **T3 (S)** C3: SMS fallback for the "call 1122" expiry. AC: when the push is not delivered, the patient (or emergency contact) gets an SMS; log says what actually reached them. Files: `dispatch_loop.py`, `notifications.py`, tests.
 - [x] **T4 (S)** B2: guessing from many addresses must not lock the owner out. AC: the per-phone ceiling skips addresses that already logged in to the account (30 days); unknown addresses stay locked; the per-(phone, address) streak still applies. Files: `redis_client.py`, `routers/auth.py`, `tests/security`.
 - [x] **T5 (M)** B3: per-user token invalidation. AC: nullable `users.token_version` (migration, additive); tokens carry it; mismatch is 401; change-password and logout-everywhere bump it; refresh fails when the revoke cannot be recorded. Files: `models.py`, migration, `security.py`, `routers/auth.py`, tests.
-- [ ] **T6 (S)** B5: mask patient phone and mobility needs for drivers once a ride is completed or cancelled. Files: `routers/rides.py`, tests.
+- [x] **T6 (S)** B5: mask patient phone and mobility needs for drivers once a ride is completed or cancelled. Files: `routers/rides.py`, tests.
 - [ ] **T7 (M)** C5, C6: WebSocket ownership re-check, fewer DB queries per GPS frame, and `_release_driver` must not mark an offline driver available. Files: `ws.py`, `ride_service.py`, tests.
 - [ ] **T8 (M)** C4: dispatch loop runs rides concurrently under a small semaphore in severity order; fix the lock docstring. Files: `dispatch_loop.py`, `tests/test_dispatch_races.py`.
 - [ ] **T9 (S)** Low items: WebSocket revocation re-checked on a timer, `accept_ride` offered-to check, `render.yaml` Twilio vars `sync: false`.
