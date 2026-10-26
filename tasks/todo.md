@@ -70,8 +70,8 @@ Each task: red test, fix, ruff, focused tests, commit. Size in brackets.
   - [x] T28b HIGH: pin release.yml actions to commit SHAs, build job `contents: read` with a separate publish job, gate on the security checks and on the tag being on `main`.
   - [x] T28c HIGH: migrations have no `lock_timeout`, so a blocked migration stalls dispatch (set it after taking the advisory lock).
   - [ ] T28d MEDIUM: triage call has a 10 s timeout and no breaker; add a short timeout, a circuit breaker and a `TriageServiceDown` alert.
-  - [ ] T28e MEDIUM: pin ruff in `requirements-dev.txt` and stop installing unpinned ruff/mypy in CI.
-  - [ ] T28f MEDIUM: add `.github/dependabot.yml` (pip, npm, pub, docker, actions).
+  - [x] T28e MEDIUM: pin ruff in `requirements-dev.txt` and stop installing unpinned ruff/mypy in CI.
+  - [x] T28f MEDIUM: add `.github/dependabot.yml` (pip, npm, pub, docker, actions).
   - [ ] T28g MEDIUM: triage container: sync handler, `--limit-concurrency`, drop unused env.
   - [ ] T28h LOW: `scripts/db_backup.sh` passes the password on the command line.
   - Owner / clinical decisions, not code: unknown text defaults to severity 3 (finding 2), the gold set needs a native-speaker review and held-out cases (finding 3), a real Alertmanager receiver (finding 7), migration 0008's one-step drop is already applied (finding 9; RUNBOOK says the downgrade is lossy), image digest pinning.

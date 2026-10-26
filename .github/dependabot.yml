@@ -1,0 +1,36 @@
+# Version bumps arrive as pull requests, so pinned dependencies and pinned action
+# SHAs do not go stale. CI must pass on each before it is merged.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /backend
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+  - package-ecosystem: pip
+    directory: /ai-services/triage
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 3
+  - package-ecosystem: npm
+    directory: /admin-dashboard
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+  - package-ecosystem: pub
+    directory: /apps/patient_app
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+  - package-ecosystem: pub
+    directory: /packages/smartride_core
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 3
+  - package-ecosystem: docker
+    directory: /backend
+    schedule: { interval: weekly }
+  - package-ecosystem: docker
+    directory: /ai-services/triage
+    schedule: { interval: weekly }
+  - package-ecosystem: docker
+    directory: /admin-dashboard
+    schedule: { interval: weekly }
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }

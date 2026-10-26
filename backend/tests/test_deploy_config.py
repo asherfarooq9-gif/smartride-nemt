@@ -202,3 +202,19 @@ def test_the_release_gate_requires_security_checks_and_a_tag_on_main():
     ):
         assert required in gate, f"the gate does not require '{required}'"
     assert "merge-base --is-ancestor" in gate
+
+
+def test_ci_lints_with_a_pinned_ruff_and_has_dependency_updates():
+    """An unpinned `pip install ruff` lets a new release turn main red with no code
+    change; Dependabot is how pinned versions and actions still get bumped."""
+    ci = REPO_ROOT / ".github" / "workflows" / "ci.yml"
+    if not ci.exists():
+        pytest.skip("ci.yml not present (running outside the repo)")
+    assert not re.search(r"pip install\s+ruff", ci.read_text(encoding="utf-8")), (
+        "install ruff pinned"
+    )
+    dev = (REPO_ROOT / "backend" / "requirements-dev.txt").read_text(encoding="utf-8")
+    assert re.search(r"^ruff==\d+\.\d+\.\d+$", dev, re.M)
+    dependabot = (REPO_ROOT / ".github" / "dependabot.yml").read_text(encoding="utf-8")
+    for ecosystem in ("pip", "npm", "pub", "docker", "github-actions"):
+        assert f"package-ecosystem: {ecosystem}" in dependabot, ecosystem
