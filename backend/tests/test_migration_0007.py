@@ -151,6 +151,6 @@ async def test_downgrade_refuses_to_drop_ledger_audit_data(scratch_db):
 
     assert down.returncode != 0
     assert "Refusing to downgrade 0007" in down.stderr
-    # The whole downgrade is one transaction, so 0008's step is rolled back too.
-    assert (await _alembic_current()) == "0008"
+    # The whole downgrade is one transaction, so the later steps are rolled back too.
+    assert (await _alembic_current()) == "0009"
     assert await _scalars("SELECT idempotency_key FROM wallet_transactions") == {"k"}

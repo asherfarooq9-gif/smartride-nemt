@@ -61,6 +61,7 @@ def _make_token(
             "role": active_role,
             "roles": roles,
             "auth_time": auth_time or int(datetime.now(timezone.utc).timestamp()),
+            "tv": user.token_version,
         }
     )
 
@@ -362,6 +363,21 @@ async def logout(
         )
 
 
+@router.post("/logout-all", status_code=status.HTTP_204_NO_CONTENT)
+async def logout_everywhere(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Sign this account out on every device: all earlier tokens stop working."""
+    await db.execute(
+        update(User)
+        .where(User.id == user.id)
+        .values(token_version=User.token_version + 1)
+        .execution_options(synchronize_session="fetch")
+    )
+    await db.commit()
+
+
 @router.post("/refresh", response_model=RefreshResponse)
 @limiter.limit("20/minute")
 async def refresh_token(
@@ -376,7 +392,12 @@ async def refresh_token(
     auth_time = int(payload.get("auth_time") or payload.get("iat") or now)
     if now - auth_time > settings.SESSION_MAX_DAYS * 86400:
         raise HTTPException(status_code=401, detail="Session expired. Sign in again.")
-    await _revoke(credentials)
+    if not await _revoke(credentials):
+        # Fail closed: handing out a new token while the old one stays valid would
+        # let a stolen token multiply.
+        raise HTTPException(
+            status_code=503, detail="Could not refresh the session. Please try again."
+        )
 
     roles = await _held_roles(db, user.id)
     new_token = _make_token(user, roles, user.role.value, auth_time)

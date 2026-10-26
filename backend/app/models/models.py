@@ -98,6 +98,11 @@ class User(Base):
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     fcm_token: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # Bumped to sign the user out everywhere: tokens issued under an older
+    # version are rejected.
+    token_version: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

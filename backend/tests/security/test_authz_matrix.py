@@ -32,6 +32,7 @@ POLICY = {
     ("GET", "/api/v1/auth/me"): ANY,
     ("POST", "/api/v1/auth/fcm-token"): ANY,
     ("POST", "/api/v1/auth/logout"): ANY,
+    ("POST", "/api/v1/auth/logout-all"): ANY,
     ("POST", "/api/v1/auth/refresh"): ANY,
     ("GET", "/api/v1/rides/mine"): {P, D},
     ("GET", "/api/v1/rides/{ride_id}"): ANY,
