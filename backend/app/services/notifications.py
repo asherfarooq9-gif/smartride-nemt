@@ -6,6 +6,7 @@ Falls back gracefully when credentials are absent.
 import asyncio
 import httpx
 import logging
+import os
 from datetime import datetime, timezone
 from urllib.parse import urlsplit
 
@@ -65,6 +66,20 @@ async def send_push(
             resp.raise_for_status()
     except Exception as exc:
         log.warning("FCM push failed: %s", exc)
+
+
+def push_setup_problem() -> str | None:
+    """Why push notifications cannot be delivered, or None when they can.
+
+    Without a project id or the key file, send_push quietly does nothing, so a
+    production deploy that forgot either looks healthy while no driver or patient
+    ever receives a push.
+    """
+    if not settings.FIREBASE_PROJECT_ID:
+        return "FIREBASE_PROJECT_ID is not set"
+    if not os.path.isfile(settings.FIREBASE_CREDENTIALS_PATH):
+        return f"credentials file not found at {settings.FIREBASE_CREDENTIALS_PATH}"
+    return None
 
 
 _pending_pushes: set[asyncio.Task] = set()

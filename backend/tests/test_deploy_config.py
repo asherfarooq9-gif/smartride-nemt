@@ -111,3 +111,49 @@ def test_render_checks_readiness_not_just_liveness():
         pytest.skip("render.yaml not present")
     text = (REPO_ROOT / "render.yaml").read_text()
     assert re.search(r"healthCheckPath:\s*/ready\b", text)
+
+
+def test_prod_compose_configures_and_mounts_the_firebase_key():
+    """The prod override has a read-only root filesystem and no volumes. Without a
+    mount for the key and the project id, every push silently does nothing."""
+    path = REPO_ROOT / "docker-compose.prod.yml"
+    if not path.exists():
+        pytest.skip("docker-compose.prod.yml not present")
+    text = path.read_text()
+    assert re.search(r"^\s+FIREBASE_PROJECT_ID:", text, re.M)
+    assert re.search(r"^\s+FIREBASE_CREDENTIALS_PATH:", text, re.M)
+    assert re.search(r"FIREBASE_CREDENTIALS_FILE.*:/run/secrets/\S+:ro", text)
+
+
+def test_a_missing_firebase_key_is_reported_not_silent(monkeypatch, tmp_path):
+    from app.core.config import settings
+    from app.services.notifications import push_setup_problem
+
+    monkeypatch.setattr(settings, "FIREBASE_PROJECT_ID", "")
+    assert "FIREBASE_PROJECT_ID" in push_setup_problem()
+
+    monkeypatch.setattr(settings, "FIREBASE_PROJECT_ID", "demo")
+    monkeypatch.setattr(settings, "FIREBASE_CREDENTIALS_PATH", str(tmp_path / "x.json"))
+    assert "not found" in push_setup_problem()
+
+    key = tmp_path / "key.json"
+    key.write_text("{}")
+    monkeypatch.setattr(settings, "FIREBASE_CREDENTIALS_PATH", str(key))
+    assert push_setup_problem() is None
+
+
+def test_startup_warns_when_push_is_not_set_up_in_production(monkeypatch, caplog):
+    import main
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "DEBUG", False)
+    monkeypatch.setattr(settings, "FIREBASE_PROJECT_ID", "")
+    with caplog.at_level("WARNING"):
+        main._warn_if_push_not_set_up()
+    assert any("push" in r.message.lower() for r in caplog.records)
+
+    caplog.clear()
+    monkeypatch.setattr(settings, "DEBUG", True)
+    with caplog.at_level("WARNING"):
+        main._warn_if_push_not_set_up()
+    assert not caplog.records
