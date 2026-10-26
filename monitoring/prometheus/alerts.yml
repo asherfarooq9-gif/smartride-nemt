@@ -88,6 +88,30 @@ groups:
           summary: "A ride has been waiting over 2 minutes for a driver"
           description: "Check available drivers and the dispatch failure reasons. Tell the patient to call 1122 if it keeps waiting."
 
+  - name: smartride-triage
+    rules:
+      - alert: TriageServiceDown
+        # Dispatch keeps working on the built-in rules, so this is a warning, but the
+        # model-based answer is gone and a hung service costs time on every ride.
+        expr: |
+          sum(increase(smartride_dispatch_failures_total{
+            reason=~"triage_fallback|triage_circuit_open"
+          }[5m])) > 3
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Triage service unreachable; dispatch is using local rules"
+          description: "More than 3 triage calls fell back to the local rules in 5m. After repeated failures the circuit breaker stops calling it for TRIAGE_BREAKER_SECONDS."
+      - alert: TriageKeywordsOutOfSync
+        expr: increase(smartride_dispatch_failures_total{reason="triage_keywords_mismatch"}[30m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Triage service and backend use different keyword lists"
+          description: "The backend now raises severity to its own score, but redeploy so the two copies match."
+
   - name: smartride-notifications
     rules:
       - alert: PatientOrHospitalNotNotified

@@ -28,6 +28,13 @@ class Settings(BaseSettings):
 
     # AI Services
     TRIAGE_SERVICE_URL: str = "http://triage:8001"
+    # The service is rules-only, so a slow answer is a sick service, not a hard
+    # question. Seconds to wait before using the local rules instead.
+    TRIAGE_TIMEOUT_SECONDS: float = 3.0
+    # After this many failures in a row, stop calling it for TRIAGE_BREAKER_SECONDS
+    # (local rules answer meanwhile), then let one probe call through.
+    TRIAGE_BREAKER_FAILURES: int = 3
+    TRIAGE_BREAKER_SECONDS: int = 30
 
     # Twilio
     TWILIO_ACCOUNT_SID: str = ""

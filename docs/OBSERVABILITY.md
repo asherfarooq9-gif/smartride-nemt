@@ -49,6 +49,8 @@ Prometheus rules (`monitoring/prometheus/alerts.yml`):
 | `RedisUnreachable` | `smartride_dependency_up{dependency="redis"}` is 0 for 1m | critical |
 | `DispatchLoopStalled` | no clean dispatch loop pass for 2m | critical |
 | `RideWaitingForDriver` | longest-waiting pending emergency ride over 2m | critical |
+| `TriageServiceDown` | more than 3 triage calls fell back to local rules in 5m | warning |
+| `TriageKeywordsOutOfSync` | the service reports a different keyword version than the backend | warning |
 | `PatientOrHospitalNotNotified` | a driver, hospital pre-alert or hospital cancel notice failed to send | critical |
 | `WalletLedgerMismatch` | a driver's balance differs from the sum of their ledger rows | critical |
 

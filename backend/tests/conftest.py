@@ -60,6 +60,16 @@ def create_tables():
 
 
 @pytest.fixture(autouse=True)
+def _reset_triage_breaker():
+    """The breaker is process-wide state; failures in one test must not open it for the next."""
+    from app.services.emergency_dispatch import reset_triage_breaker
+
+    reset_triage_breaker()
+    yield
+    reset_triage_breaker()
+
+
+@pytest.fixture(autouse=True)
 def _summary_cache_off(monkeypatch):
     """The dashboard summary is cached in production. Tests that read it right after
     changing data need the live numbers, so the cache is off unless a test asks."""

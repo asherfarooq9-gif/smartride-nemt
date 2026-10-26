@@ -61,7 +61,6 @@ CANDIDATE_LIMIT = 200
 # A driver whose last location report is older than this is treated as gone
 # (app killed, no signal): dispatching to them wastes the patient's minutes.
 DRIVER_FRESH_SECONDS = 120
-TRIAGE_TIMEOUT_SECONDS = 10.0
 # Unusable severity is escalated, never downgraded: over-triage costs a faster
 # ambulance, under-triage costs a life.
 FAIL_SAFE_SEVERITY = SeverityLevel.five.value
@@ -147,17 +146,50 @@ def fallback_triage(symptom_text: str) -> dict:
     }
 
 
+class _TriageBreaker:
+    """Counts consecutive failures; while open, the service is not called at all."""
+
+    failures = 0
+    open_until = 0.0
+
+
+_breaker = _TriageBreaker()
+
+
+def reset_triage_breaker() -> None:
+    _breaker.failures = 0
+    _breaker.open_until = 0.0
+
+
 async def call_triage_service(symptom_text: str, ride_id=None) -> dict:
-    """Call the AI triage microservice; fall back to local rules if it is unusable."""
+    """Call the AI triage microservice; fall back to local rules if it is unusable.
+
+    A hung service would otherwise spend its whole timeout on every emergency, out
+    of a 60 second budget. After TRIAGE_BREAKER_FAILURES failures in a row it is
+    skipped for TRIAGE_BREAKER_SECONDS; then one call probes it again.
+    """
+    if _breaker.open_until > time.monotonic():
+        metrics.dispatch_failures_total.labels(reason="triage_circuit_open").inc()
+        return fallback_triage(symptom_text)
     try:
-        async with httpx.AsyncClient(timeout=TRIAGE_TIMEOUT_SECONDS) as client:
+        async with httpx.AsyncClient(timeout=settings.TRIAGE_TIMEOUT_SECONDS) as client:
             resp = await client.post(
                 f"{settings.TRIAGE_SERVICE_URL}/triage",
                 json={"text": symptom_text},
             )
             resp.raise_for_status()
-            return TriageServiceResponse.model_validate(resp.json()).model_dump()
+            answer = TriageServiceResponse.model_validate(resp.json()).model_dump()
+        _breaker.failures = 0
+        return answer
     except (httpx.HTTPError, ValueError) as exc:  # ValueError covers bad JSON/shape
+        _breaker.failures += 1
+        if _breaker.failures >= settings.TRIAGE_BREAKER_FAILURES:
+            _breaker.open_until = time.monotonic() + settings.TRIAGE_BREAKER_SECONDS
+            log.error(
+                "triage service failed %d times in a row; using local rules for %ds",
+                _breaker.failures,
+                settings.TRIAGE_BREAKER_SECONDS,
+            )
         # Exception type only: the message text can echo the symptom text (PHI).
         log.warning(
             "triage service unusable ride_id=%s (%s); using local rules",
