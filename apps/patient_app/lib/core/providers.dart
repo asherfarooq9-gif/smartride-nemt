@@ -408,6 +408,7 @@ class GpsStreamNotifier extends StateNotifier<GpsStreamStatus> {
     final uri = Uri.parse('${core.ApiClient.instance.wsBaseUrl}/ws/driver/$rideId');
     final ws = core.WsClient(
       onMessage: _onSocketMessage,
+      tokenProvider: core.SecureStorage.instance.readToken,
       onConnected: () => _setIfActive(GpsStreamStatus.live),
       onDisconnected: () => _setIfActive(GpsStreamStatus.degraded),
       onError: _onSocketError,

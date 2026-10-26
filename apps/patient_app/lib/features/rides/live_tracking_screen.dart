@@ -70,6 +70,7 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
         '${core.ApiClient.instance.wsBaseUrl}/ws/ride/${widget.rideId}');
     final ws = _ws ??= core.WsClient(
       onMessage: _handleWsMessage,
+      tokenProvider: core.SecureStorage.instance.readToken,
       onConnected: () {
         _setConnection(isConnected: true);
         // The ride may have finished while the socket was down; the server's

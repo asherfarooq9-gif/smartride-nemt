@@ -29,6 +29,7 @@ class WsClient {
     this.onConnected,
     this.onDisconnected,
     this.onError,
+    this.tokenProvider,
     this.maxRetries = 8,
     this.baseDelay = const Duration(seconds: 1),
     this.maxDelay = const Duration(seconds: 30),
@@ -39,6 +40,12 @@ class WsClient {
   final void Function()? onConnected;
   final void Function()? onDisconnected;
   final void Function(Object error)? onError;
+
+  /// Returns the current access token each time the socket (re)opens. The REST
+  /// client renews the JWT in secure storage, and a ride can outlast the one the
+  /// socket first used, so a reconnect with the original would be refused. When it
+  /// returns null the user has signed out and the client stops reconnecting.
+  final Future<String?> Function()? tokenProvider;
   final int maxRetries;
   final Duration baseDelay;
   final Duration maxDelay;
@@ -71,6 +78,16 @@ class WsClient {
     if (_stopped) return;
     await _closeChannel();
     final generation = ++_generation;
+    final provider = tokenProvider;
+    if (provider != null) {
+      final fresh = await provider();
+      if (_stopped || generation != _generation) return;
+      if (fresh == null) {
+        _stopped = true; // signed out: nothing to reconnect as
+        return;
+      }
+      _token = fresh;
+    }
     try {
       final channel = _channelFactory(_uri!);
       _channel = channel;
