@@ -27,6 +27,7 @@ from app.core.redis_client import (
     clear_login_failures,
     count_login_failure,
     is_login_locked,
+    remember_login_ip,
 )
 from app.models.models import User, Patient, Driver, UserRole, UserRoleLink
 from app.schemas.auth import (
@@ -197,6 +198,7 @@ async def login(
         await count_login_failure(body.phone, client_ip, settings.LOGIN_LOCK_SECONDS)
         raise HTTPException(status_code=401, detail="Invalid credentials")
     await clear_login_failures(body.phone, client_ip)
+    await remember_login_ip(body.phone, client_ip)
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account disabled")
 

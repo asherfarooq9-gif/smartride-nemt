@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     # without letting one stranger lock the real owner out.
     LOGIN_PHONE_MAX_FAILURES: int = 25
     LOGIN_LOCK_SECONDS: int = 900
+    # An address that has logged in to an account is remembered this long. The
+    # per-phone ceiling does not apply to it, so guessing from elsewhere cannot
+    # lock the real owner out.
+    LOGIN_KNOWN_ADDRESS_SECONDS: int = 60 * 60 * 24 * 30
     SESSION_MAX_DAYS: int = 30
     # Bearer token Prometheus must send to /metrics (open without it only in DEBUG)
     METRICS_TOKEN: str = ""
