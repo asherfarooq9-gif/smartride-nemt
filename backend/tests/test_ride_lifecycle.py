@@ -140,3 +140,29 @@ async def test_driver_cannot_go_available_while_on_a_ride(
         headers=_auth(verified_driver_token),
     )
     assert r.status_code == 200, r.text
+
+
+async def test_a_driver_who_went_offline_mid_ride_stays_offline_after_completing(
+    client, db, verified_driver_token
+):
+    """Finishing a ride must not make an offline driver dispatchable again."""
+    from sqlalchemy import update
+
+    from app.models.models import Driver, DriverStatus
+
+    _, ride_id = await _assigned_ride(client, _phone(), verified_driver_token)
+    for step in ("driver_en_route", "patient_picked_up", "arrived_at_hospital"):
+        r = await _set_ride_status(client, verified_driver_token, ride_id, step)
+        assert r.status_code == 200, r.text
+    me = await client.get("/api/v1/drivers/me", headers=_auth(verified_driver_token))
+    await db.execute(
+        update(Driver)
+        .where(Driver.id == me.json()["id"])
+        .values(status=DriverStatus.offline)
+    )
+    await db.commit()
+
+    r = await _set_ride_status(client, verified_driver_token, ride_id, "completed")
+
+    assert r.status_code == 200, r.text
+    assert await _driver_status(client, verified_driver_token) == "offline"

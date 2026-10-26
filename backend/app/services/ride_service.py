@@ -272,7 +272,11 @@ async def _lock_ride(db: AsyncSession, ride: Ride) -> None:
 
 
 async def _release_driver(db: AsyncSession, driver_id, ride_id) -> None:
-    """Mark the driver available unless they have since taken another live ride."""
+    """Free a busy driver unless they have since taken another live ride.
+
+    Only a busy driver is touched: one who went offline mid-ride chose to stop
+    taking rides and must not become dispatchable again by finishing this one.
+    """
     on_another_ride = exists().where(
         Ride.driver_id == driver_id,
         Ride.id != ride_id,
@@ -280,7 +284,9 @@ async def _release_driver(db: AsyncSession, driver_id, ride_id) -> None:
     )
     await db.execute(
         update(Driver)
-        .where(Driver.id == driver_id, ~on_another_ride)
+        .where(
+            Driver.id == driver_id, Driver.status == DriverStatus.busy, ~on_another_ride
+        )
         .values(status=DriverStatus.available)
         .execution_options(synchronize_session="fetch")
     )
