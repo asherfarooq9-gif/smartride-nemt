@@ -75,6 +75,9 @@ Optional integrations, all of which degrade gracefully when unset: `TWILIO_*`
    find nothing left to do. A migration that hangs holds the lock, so check for a stuck
    `alembic` session (`SELECT * FROM pg_locks WHERE locktype = 'advisory'`) before
    restarting every instance.
+   Each migration statement waits at most 5 seconds for a table lock; if a long
+   transaction holds one, the migration fails and the container restarts and retries,
+   instead of queueing behind it and stalling every query on that table.
 
 ## Incidents
 

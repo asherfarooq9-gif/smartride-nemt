@@ -71,3 +71,45 @@ async def test_upgrade_waits_for_the_migration_lock_then_finishes():
             proc.kill()
         await engine.dispose()
         await _admin(f'DROP DATABASE IF EXISTS "{SCRATCH_DB}" WITH (FORCE)')
+
+
+def _alembic_run(*args):
+    binary = Path(sys.executable).parent / (
+        "alembic.exe" if os.name == "nt" else "alembic"
+    )
+    return subprocess.run(
+        [str(binary), *args],
+        cwd=BACKEND_DIR,
+        env={**os.environ, "DATABASE_URL": _url_for(SCRATCH_DB)},
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+
+
+async def test_a_blocked_migration_gives_up_instead_of_stalling_the_app():
+    """Old instances keep serving during a rolling deploy. A migration queued behind
+    a long transaction on `rides` would also queue every new query on that table,
+    so it must fail fast and let the container restart and retry."""
+    await _admin(f'DROP DATABASE IF EXISTS "{SCRATCH_DB}" WITH (FORCE)')
+    await _admin(f'CREATE DATABASE "{SCRATCH_DB}"')
+    engine = create_async_engine(_url_for(SCRATCH_DB), poolclass=NullPool)
+    try:
+        assert (
+            await asyncio.to_thread(_alembic_run, "upgrade", "0009")
+        ).returncode == 0
+        holder = await engine.connect()
+        await holder.execute(text("LOCK TABLE rides IN ACCESS EXCLUSIVE MODE"))
+
+        blocked = await asyncio.to_thread(_alembic_run, "upgrade", "head")
+
+        assert blocked.returncode != 0
+        assert "lock timeout" in blocked.stderr.lower(), blocked.stderr[-1500:]
+
+        await holder.rollback()  # the long transaction ends
+        await holder.close()
+        retry = await asyncio.to_thread(_alembic_run, "upgrade", "head")
+        assert retry.returncode == 0, retry.stderr[-1500:]
+    finally:
+        await engine.dispose()
+        await _admin(f'DROP DATABASE IF EXISTS "{SCRATCH_DB}" WITH (FORCE)')

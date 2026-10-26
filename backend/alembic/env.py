@@ -21,7 +21,7 @@ if db_url:
 # Import all models so autogenerate can detect them
 from app.core.database import Base  # noqa: E402
 import app.models.models  # noqa: E402, F401
-from app.core.migration_lock import MIGRATION_LOCK_ID  # noqa: E402
+from app.core.migration_lock import LOCK_TIMEOUT, MIGRATION_LOCK_ID  # noqa: E402
 
 target_metadata = Base.metadata
 
@@ -48,6 +48,11 @@ def do_run_migrations(connection: Connection) -> None:
         connection.execute(
             text("SELECT pg_advisory_xact_lock(:id)"), {"id": MIGRATION_LOCK_ID}
         )
+        # Set after the advisory lock, which may legitimately wait for another
+        # instance's migration. A DDL statement queued behind a long transaction
+        # also queues every later query on that table, so give up quickly: the
+        # container restarts and retries, and the old instances keep serving.
+        connection.execute(text(f"SET LOCAL lock_timeout = '{LOCK_TIMEOUT}'"))
         context.run_migrations()
 
 
