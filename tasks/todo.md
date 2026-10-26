@@ -25,7 +25,7 @@ Each task: red test, fix, ruff, focused tests, commit. Size in brackets.
 - [x] **T12 (S)** D3: rewrite the RUNBOOK rollback section (migrations 0007/0008, backup first, roll forward preferred).
 - [ ] **T13 (S)** D5: `render.yaml` plan comments and triage service decision documented; remove `sync` conflicts. Owner decides the plan.
 - [ ] **T14 (M)** D1: Prometheus alert rules for DB/Redis down, stuck dispatch loop, aged pending rides, failed SMS/FHIR/push (add the metrics), ledger mismatch; add an Alertmanager config with a placeholder receiver.
-- [ ] **T15 (S)** D2: `release.yml` waits for CI on the tagged commit; add a backend image build/push job gated on CI.
+- [x] **T15 (S)** D2: `release.yml` waits for CI on the tagged commit (`require-green-ci`). Dropped: a backend image build/push job, because Render builds from the repo and no registry has been chosen (owner decision).
 - [ ] **T16 (S)** D6: prod compose mount for `FIREBASE_CREDENTIALS_PATH`; log a warning at startup when push is configured but the file is missing.
 - [x] **T17 (S)** Document every `config.py` variable in `.env.example`.
 

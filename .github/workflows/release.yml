@@ -9,8 +9,37 @@ permissions:
   contents: write  # create the GitHub Release
 
 jobs:
+  # A tag can be pushed on any commit. Refuse to build and publish unless CI has
+  # already passed on exactly this commit.
+  require-green-ci:
+    name: Require green CI
+    runs-on: ubuntu-latest
+    permissions:
+      checks: read
+      contents: read
+    steps:
+      - name: Check CI results for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          runs=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?per_page=100"             --jq '[.check_runs[] | select(.name != "Require green CI" and .name != "Build Release APKs")]')
+          for name in "Backend Lint" "Backend Tests" "Triage Service Tests"                       "Admin Dashboard Lint + Typecheck + Build"; do
+            result=$(echo "$runs" | jq -r --arg n "$name" '[.[] | select(.name == $n)][0].conclusion // "missing"')
+            if [ "$result" != "success" ]; then
+              echo "::error::CI check '$name' is '$result' on $GITHUB_SHA. Merge to main and wait for CI before tagging."
+              exit 1
+            fi
+          done
+          bad=$(echo "$runs" | jq -r '[.[] | select(.status != "completed" or (.conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral"))] | length')
+          if [ "$bad" != "0" ]; then
+            echo "::error::$bad CI check(s) on $GITHUB_SHA are failing or still running."
+            exit 1
+          fi
+
   build-release-apks:
     name: Build Release APKs
+    needs: require-green-ci
     runs-on: ubuntu-latest
 
     steps:

@@ -89,3 +89,16 @@ def test_every_setting_is_documented_in_env_example():
     documented = set(re.findall(r"^\s*#?\s*([A-Z][A-Z0-9_]+)=", path.read_text(), re.M))
     missing = sorted(set(Settings.model_fields) - documented)
     assert not missing, f".env.example does not mention: {missing}"
+
+
+def test_release_waits_for_green_ci():
+    """A tag push must not build and publish an APK from a commit CI has not passed."""
+    path = REPO_ROOT / ".github" / "workflows" / "release.yml"
+    if not path.exists():
+        pytest.skip("release.yml not present (running outside the repo)")
+    text = path.read_text()
+    assert re.search(r"^\s+require-green-ci:", text, re.M), "no CI gate job"
+    build = text[text.index("build-release-apks:") :]
+    assert re.search(r"needs:\s*\[?\s*require-green-ci", build), (
+        "the build job must depend on the CI gate"
+    )
