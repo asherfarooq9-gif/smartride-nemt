@@ -1,29 +1,16 @@
 'use client'
 import { useCallback, useState } from 'react'
-import { api, errorMessage, type Hospital, type HospitalInput } from '@/lib/api'
+import { api, errorMessage, type Hospital } from '@/lib/api'
 import { useApiData } from '@/lib/useApiData'
 import Modal from '@/components/ui/Modal'
 import DataTable from '@/components/ui/DataTable'
 import EmptyState from '@/components/ui/EmptyState'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import HospitalFields from './HospitalFields'
+import { EMPTY_FORM, parseHospitalForm, toForm, type HospitalFormState } from './hospitalForm'
 import { Building2, Plus, CheckCircle, XCircle, Activity } from 'lucide-react'
 
 const PAGE_SIZE = 50
-
-const EMPTY_FORM: HospitalInput = {
-  name: '', address: '', city: 'Islamabad',
-  lat: 33.6844, lng: 73.0479, ed_capacity: 100,
-  specialties: [], phone: '', coordinator_phone: '',
-}
-
-function toForm(h: Hospital): HospitalInput {
-  return {
-    name: h.name, address: h.address, city: h.city, lat: h.lat, lng: h.lng,
-    ed_capacity: h.ed_capacity, phone: h.phone ?? '', coordinator_phone: h.coordinator_phone ?? '',
-    specialties: [...h.specialties],
-  }
-}
 
 function EdLoadBar({ current, capacity }: { current: number; capacity: number }) {
   const pct = capacity > 0 ? Math.min((current / capacity) * 100, 100) : 0
@@ -53,11 +40,11 @@ export default function HospitalsPage() {
   const hospitals = data?.items ?? []
 
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState<HospitalInput>(EMPTY_FORM)
+  const [form, setForm] = useState<HospitalFormState>(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
   const [selected, setSelected] = useState<Hospital | null>(null)
-  const [editForm, setEditForm] = useState<HospitalInput>(EMPTY_FORM)
+  const [editForm, setEditForm] = useState<HospitalFormState>(EMPTY_FORM)
   const [editSaving, setEditSaving] = useState(false)
   const [editError, setEditError] = useState('')
   const [toggling, setToggling] = useState<string | null>(null)
@@ -70,14 +57,15 @@ export default function HospitalsPage() {
   }
 
   async function save() {
-    if (!form.name.trim() || !form.address.trim() || !form.city.trim()) {
-      setFormError('Name, address and city are required')
+    const parsed = parseHospitalForm(form)
+    if (!parsed.ok) {
+      setFormError(parsed.error)
       return
     }
     setSaving(true)
     setFormError('')
     try {
-      await api.createHospital(form)
+      await api.createHospital(parsed.value)
       reload()
       setShowForm(false)
       setForm(EMPTY_FORM)
@@ -90,10 +78,15 @@ export default function HospitalsPage() {
 
   async function saveEdit() {
     if (!selected) return
+    const parsed = parseHospitalForm(editForm)
+    if (!parsed.ok) {
+      setEditError(parsed.error)
+      return
+    }
     setEditSaving(true)
     setEditError('')
     try {
-      const updated = await api.updateHospital(selected.id, editForm)
+      const updated = await api.updateHospital(selected.id, parsed.value)
       setSelected(updated)
       reload()
     } catch (e: unknown) {
