@@ -310,6 +310,15 @@ async def _apply_driver_transition(
             ride.driver_assigned_at = None
             ride.hospital_id = None
             driver.status = DriverStatus.offline
+        elif ride.status in (
+            RideStatus.patient_picked_up,
+            RideStatus.arrived_at_hospital,
+        ):
+            # The patient is on board: cancelling would strand them with no
+            # requeue. Dispatch (an admin) decides what happens to the ride.
+            raise HTTPException(
+                409, "The patient is on board. Call dispatch to cancel this ride."
+            )
         else:
             ride.status = RideStatus.cancelled
             ride.cancelled_at = datetime.now(timezone.utc)
