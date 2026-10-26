@@ -9,6 +9,8 @@ import DataTable from '@/components/ui/DataTable'
 import EmptyState from '@/components/ui/EmptyState'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import { Search, Filter, Users, CheckCircle, XCircle, MapPin, Clock } from 'lucide-react'
+import { useInFlight } from '@/lib/useInFlight'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 const STATUS_OPTS = ['available', 'busy', 'offline']
 const PAGE_SIZE = 20
@@ -25,7 +27,8 @@ export default function DriversPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [verifiedFilter, setVerifiedFilter] = useState('')
   const [selected, setSelected] = useState<Driver | null>(null)
-  const [verifying, setVerifying] = useState<string | null>(null)
+  const { isBusy: isVerifying, run: runVerify } = useInFlight()
+  const [revoking, setRevoking] = useState<Driver | null>(null)
   const [verifyError, setVerifyError] = useState('')
 
   const fetchDrivers = useCallback(
@@ -36,17 +39,16 @@ export default function DriversPage() {
   const total = data?.total ?? 0
 
   async function verify(id: string, verified: boolean) {
-    setVerifying(id)
     setVerifyError('')
-    try {
-      const updated = await api.verifyDriver(id, verified)
-      if (selected?.id === id) setSelected(updated)
-      reload()
-    } catch (e: unknown) {
-      setVerifyError(errorMessage(e, 'Error updating driver'))
-    } finally {
-      setVerifying(null)
-    }
+    await runVerify(id, async () => {
+      try {
+        const updated = await api.verifyDriver(id, verified)
+        if (selected?.id === id) setSelected(updated)
+        reload()
+      } catch (e: unknown) {
+        setVerifyError(errorMessage(e, 'Error updating driver'))
+      }
+    })
   }
 
   const hasFilters = Boolean(search || statusFilter || verifiedFilter)
@@ -119,15 +121,16 @@ export default function DriversPage() {
             render: d => (
               <button
                 type="button"
-                onClick={() => verify(d.id, !d.is_verified)}
-                disabled={verifying === d.id}
+                // Revoking takes the driver out of dispatch, so it asks first; verifying does not.
+                onClick={() => (d.is_verified ? setRevoking(d) : verify(d.id, true))}
+                disabled={isVerifying(d.id)}
                 className={`text-xs px-3 py-1.5 rounded-lg font-medium disabled:opacity-40 transition ${
                   d.is_verified
                     ? 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200'
                     : 'bg-blue-600 text-white hover:bg-blue-700'
                 }`}
               >
-                {verifying === d.id ? '…' : d.is_verified ? 'Revoke' : 'Verify'}
+                {isVerifying(d.id) ? '…' : d.is_verified ? 'Revoke' : 'Verify'}
               </button>
             ),
           },
@@ -147,12 +150,26 @@ export default function DriversPage() {
         onPageChange={setPage}
       />
 
+      <ConfirmDialog
+        open={revoking !== null}
+        title="Revoke verification"
+        message={`${revoking?.full_name ?? 'This driver'} will stop receiving ride requests until verified again.`}
+        confirmLabel="Yes, revoke"
+        cancelLabel="Keep verified"
+        onCancel={() => setRevoking(null)}
+        onConfirm={() => {
+          const driver = revoking
+          setRevoking(null)
+          if (driver) void verify(driver.id, false)
+        }}
+      />
+
       <Modal open={selected !== null} onClose={() => setSelected(null)} title="Driver Details" width="lg">
         {selected && (
           <DriverDetail
             driver={selected}
-            onVerify={v => verify(selected.id, v)}
-            isVerifying={verifying === selected.id}
+            onVerify={v => (v ? verify(selected.id, true) : setRevoking(selected))}
+            isVerifying={isVerifying(selected.id)}
           />
         )}
       </Modal>

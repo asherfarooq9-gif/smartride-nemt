@@ -9,6 +9,8 @@ import ErrorBanner from '@/components/ui/ErrorBanner'
 import HospitalFields from './HospitalFields'
 import { EMPTY_FORM, parseHospitalForm, toForm, type HospitalFormState } from './hospitalForm'
 import { Building2, Plus, CheckCircle, XCircle, Activity } from 'lucide-react'
+import { useInFlight } from '@/lib/useInFlight'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 const PAGE_SIZE = 50
 
@@ -47,7 +49,8 @@ export default function HospitalsPage() {
   const [editForm, setEditForm] = useState<HospitalFormState>(EMPTY_FORM)
   const [editSaving, setEditSaving] = useState(false)
   const [editError, setEditError] = useState('')
-  const [toggling, setToggling] = useState<string | null>(null)
+  const { isBusy: isToggling, run: runToggle } = useInFlight()
+  const [deactivating, setDeactivating] = useState<Hospital | null>(null)
   const [actionError, setActionError] = useState('')
 
   function openDetail(h: Hospital) {
@@ -97,20 +100,25 @@ export default function HospitalsPage() {
   }
 
   async function toggleActive(h: Hospital) {
-    setToggling(h.id)
     setActionError('')
     setEditError('')
-    try {
-      const updated = await api.updateHospital(h.id, { is_active: !h.is_active })
-      if (selected?.id === h.id) setSelected(updated)
-      reload()
-    } catch (e: unknown) {
-      const message = errorMessage(e, 'Could not update the hospital')
-      if (selected?.id === h.id) setEditError(message)
-      else setActionError(message)
-    } finally {
-      setToggling(null)
-    }
+    await runToggle(h.id, async () => {
+      try {
+        const updated = await api.updateHospital(h.id, { is_active: !h.is_active })
+        if (selected?.id === h.id) setSelected(updated)
+        reload()
+      } catch (e: unknown) {
+        const message = errorMessage(e, 'Could not update the hospital')
+        if (selected?.id === h.id) setEditError(message)
+        else setActionError(message)
+      }
+    })
+  }
+
+  /** Deactivating takes a hospital out of matching, so it asks first; activating does not. */
+  function requestToggle(h: Hospital) {
+    if (h.is_active) setDeactivating(h)
+    else void toggleActive(h)
   }
 
   function toggleForm() {
@@ -183,12 +191,12 @@ export default function HospitalsPage() {
             render: h => (
               <button
                 type="button"
-                onClick={() => toggleActive(h)}
-                disabled={toggling === h.id}
+                onClick={() => requestToggle(h)}
+                disabled={isToggling(h.id)}
                 aria-label={`${h.is_active ? 'Deactivate' : 'Activate'} ${h.name}`}
                 className={`text-xs px-3 py-1.5 rounded-lg font-medium disabled:opacity-40 transition ${h.is_active ? 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200' : 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'}`}
               >
-                {toggling === h.id ? '…' : h.is_active ? 'Deactivate' : 'Activate'}
+                {isToggling(h.id) ? '…' : h.is_active ? 'Deactivate' : 'Activate'}
               </button>
             ),
           },
@@ -228,8 +236,8 @@ export default function HospitalsPage() {
               </button>
               <button
                 type="button"
-                onClick={() => toggleActive(selected)}
-                disabled={toggling === selected.id}
+                onClick={() => requestToggle(selected)}
+                disabled={isToggling(selected.id)}
                 className={`px-5 py-2.5 rounded-xl text-sm font-medium disabled:opacity-40 transition ${selected.is_active ? 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200' : 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'}`}
               >
                 {selected.is_active ? 'Deactivate' : 'Activate'}
@@ -238,6 +246,20 @@ export default function HospitalsPage() {
           </div>
         )}
       </Modal>
+
+      <ConfirmDialog
+        open={deactivating !== null}
+        title="Deactivate hospital"
+        message={`${deactivating?.name ?? 'This hospital'} will no longer be matched to emergency patients until it is activated again.`}
+        confirmLabel="Yes, deactivate"
+        cancelLabel="Keep active"
+        onCancel={() => setDeactivating(null)}
+        onConfirm={() => {
+          const hospital = deactivating
+          setDeactivating(null)
+          if (hospital) void toggleActive(hospital)
+        }}
+      />
     </div>
   )
 }
