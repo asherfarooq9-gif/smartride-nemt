@@ -18,6 +18,7 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import and_, or_, select, update
 
+from app.core import metrics
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.models.models import (
@@ -29,6 +30,7 @@ from app.models.models import (
     TriageEvent,
 )
 from app.services.emergency_dispatch import dispatch_emergency
+from app.services.health_metrics import record_health_metrics
 from app.services.notifications import (
     notify_user,
     send_sms_to_patient,
@@ -231,10 +233,19 @@ async def retry_pending_dispatches() -> None:
         await asyncio.gather(*(dispatch_when_free(ride_id) for ride_id, _ in group))
 
 
+async def run_pass() -> None:
+    """One loop pass. The success stamp moves only when the pass finished cleanly,
+    so DispatchLoopStalled fires on a loop that keeps failing as well as on one that
+    has stopped. The health gauges are refreshed either way."""
+    try:
+        await retry_pending_dispatches()
+        metrics.dispatch_loop_last_success_timestamp.set_to_current_time()
+    except Exception:
+        log.exception("dispatch loop pass failed")
+    await record_health_metrics()
+
+
 async def run_forever() -> None:
     while True:
-        try:
-            await retry_pending_dispatches()
-        except Exception:
-            log.exception("dispatch loop pass failed")
+        await run_pass()
         await asyncio.sleep(settings.DISPATCH_LOOP_INTERVAL_SECONDS)

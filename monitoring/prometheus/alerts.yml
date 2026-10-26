@@ -45,3 +45,72 @@ groups:
         annotations:
           summary: "Emergency dispatch p95 over 60s target"
           description: "95th-percentile dispatch time exceeded the 60s SLO for 5m."
+
+  - name: smartride-dependencies
+    rules:
+      - alert: DatabaseUnreachable
+        # Set by the dispatch loop every pass (15s); see app/services/dispatch_loop.py.
+        expr: smartride_dependency_up{dependency="database"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend cannot reach PostgreSQL"
+          description: "Rides cannot be created or dispatched. Check the database first (docs/RUNBOOK.md)."
+
+      - alert: RedisUnreachable
+        expr: smartride_dependency_up{dependency="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend cannot reach Redis"
+          description: "Every authenticated request fails while Redis is down (token revocation cannot be checked)."
+
+      - alert: DispatchLoopStalled
+        # The loop runs every 15s. No successful pass for 2 minutes means rides are
+        # not being retried, expired or requeued.
+        expr: time() - smartride_dispatch_loop_last_success_timestamp_seconds > 120
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Dispatch retry loop has stopped"
+          description: "No successful pass in over 2 minutes. Look for 'dispatch loop pass failed' in the backend logs."
+
+      - alert: RideWaitingForDriver
+        # An emergency ride that has had no driver for 2 minutes.
+        expr: smartride_oldest_pending_ride_age_seconds > 120
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "A ride has been waiting over 2 minutes for a driver"
+          description: "Check available drivers and the dispatch failure reasons. Tell the patient to call 1122 if it keeps waiting."
+
+  - name: smartride-notifications
+    rules:
+      - alert: PatientOrHospitalNotNotified
+        # These reasons mean a person who needed to be told was not.
+        expr: |
+          sum(increase(smartride_dispatch_failures_total{
+            reason=~"driver_not_notified|hospital_not_prealerted|hospital_not_told_ride_stopped"
+          }[10m])) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "A driver or hospital was not notified"
+          description: "SMS, FHIR or push failed for a live ride. Check Twilio, the hospital FHIR endpoint and FCM, and call the hospital if a ride is active."
+
+  - name: smartride-money
+    rules:
+      - alert: WalletLedgerMismatch
+        # drivers.wallet_balance_pkr must equal the sum of that driver's ledger rows.
+        expr: smartride_wallet_ledger_mismatch_drivers > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "A driver's wallet balance does not match the ledger"
+          description: "Do not top up or settle until it is understood. Compare wallet_transactions with drivers.wallet_balance_pkr."

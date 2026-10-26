@@ -131,6 +131,15 @@ services:
       resources:
         limits: { cpus: "1.0", memory: 512m, pids: 256 }
 
+  alertmanager:
+    <<: *hardened
+    restart: unless-stopped
+    ports: !override
+      - "127.0.0.1:9093:9093"
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 256m, pids: 128 }
+
   grafana:
     <<: *hardened
     restart: unless-stopped

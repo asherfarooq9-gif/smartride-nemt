@@ -121,6 +121,18 @@ services:
       - prometheus_data:/prometheus
     depends_on:
       - backend
+      - alertmanager
+
+  # Routes alerts to people. The receiver in alertmanager.yml is a placeholder that
+  # discards everything until you configure one (see docs/OBSERVABILITY.md).
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: smartride_alertmanager
+    ports:
+      - "127.0.0.1:9093:9093"
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
 
   grafana:
     image: grafana/grafana:11.1.0
@@ -142,4 +154,5 @@ volumes:
   postgres_data:
   triage_model:
   prometheus_data:
+  alertmanager_data:
   grafana_data:

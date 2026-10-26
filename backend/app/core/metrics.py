@@ -8,7 +8,7 @@ and accepted, and how often does the dispatch race conflict.
 All series are exposed on the same /metrics endpoint.
 """
 
-from prometheus_client import Counter, Histogram
+from prometheus_client import Counter, Gauge, Histogram
 
 rides_created_total = Counter(
     "smartride_rides_created_total",
@@ -36,4 +36,27 @@ emergency_dispatch_seconds = Histogram(
     "smartride_emergency_dispatch_seconds",
     "Wall-clock time of the emergency dispatch pipeline.",
     buckets=(1, 2, 5, 10, 20, 30, 45, 60, 90, 120),
+)
+
+# Gauges the alert rules watch (monitoring/prometheus/alerts.yml). They are
+# refreshed by the dispatch loop each pass, so a stopped loop is itself alertable.
+dependency_up = Gauge(
+    "smartride_dependency_up",
+    "1 when the backend can reach the dependency, else 0.",
+    ["dependency"],
+)
+
+dispatch_loop_last_success_timestamp = Gauge(
+    "smartride_dispatch_loop_last_success_timestamp_seconds",
+    "Unix time of the last dispatch loop pass that finished without an error.",
+)
+
+oldest_pending_ride_age_seconds = Gauge(
+    "smartride_oldest_pending_ride_age_seconds",
+    "Seconds the longest-waiting pending emergency ride has been without a driver.",
+)
+
+wallet_ledger_mismatch_drivers = Gauge(
+    "smartride_wallet_ledger_mismatch_drivers",
+    "Drivers whose wallet balance differs from the sum of their ledger entries.",
 )
