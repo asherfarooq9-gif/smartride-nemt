@@ -20,4 +20,6 @@ USER app
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health', timeout=4)"
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
+# Beyond 100 requests in flight uvicorn answers 503 at once; the backend then uses its
+# own copy of the rules rather than queueing behind a saturated service.
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--limit-concurrency", "100"]

@@ -64,15 +64,8 @@ services:
     container_name: smartride_triage
     ports:
       - "127.0.0.1:8001:8001"
-    environment:
-      MODEL_PATH: /app/model
-      REDIS_URL: redis://redis:6379/1
-    depends_on:
-      redis:
-        condition: service_healthy
     volumes:
       - ./ai-services/triage:/app
-      - triage_model:/app/model
     command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
 
   admin_dashboard:
@@ -153,7 +146,6 @@ services:
 
 volumes:
   postgres_data:
-  triage_model:
   prometheus_data:
   alertmanager_data:
   grafana_data:

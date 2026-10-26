@@ -72,8 +72,8 @@ Each task: red test, fix, ruff, focused tests, commit. Size in brackets.
   - [x] T28d MEDIUM: triage call has a 10 s timeout and no breaker; add a short timeout, a circuit breaker and a `TriageServiceDown` alert.
   - [x] T28e MEDIUM: pin ruff in `requirements-dev.txt` and stop installing unpinned ruff/mypy in CI.
   - [x] T28f MEDIUM: add `.github/dependabot.yml` (pip, npm, pub, docker, actions).
-  - [ ] T28g MEDIUM: triage container: sync handler, `--limit-concurrency`, drop unused env.
-  - [ ] T28h LOW: `scripts/db_backup.sh` passes the password on the command line.
+  - [x] T28g MEDIUM: triage container: sync handler, `--limit-concurrency`, drop unused env.
+  - [x] T28h LOW: `scripts/db_backup.sh` passes the password on the command line.
   - Owner / clinical decisions, not code: unknown text defaults to severity 3 (finding 2), the gold set needs a native-speaker review and held-out cases (finding 3), a real Alertmanager receiver (finding 7), migration 0008's one-step drop is already applied (finding 9; RUNBOOK says the downgrade is lossy), image digest pinning.
 - [ ] **T29** Dashboard code audit (reported; no UI calls wallet top-up, so the new Idempotency-Key breaks nothing). Fix list:
   - [ ] T29a HIGH: hospital form turns a blank/half-typed lat/lng into 0 and `saveEdit` has no validation; the backend accepts (0,0). Keep raw strings, parse on submit, reject empty/NaN/(0,0)/capacity < 1 client-side; reject (0,0) and capacity < 1 in `schemas/hospitals.py`.

@@ -10,8 +10,10 @@
 # objects before recreating them.
 set -eu
 
-DB_URL="${DATABASE_URL:-postgresql://smartride:password@localhost:5432/smartride}"
-DB_URL="$(printf '%s' "$DB_URL" | sed 's#+asyncpg##; s#postgresql+psycopg2#postgresql#')"
+# Splits DATABASE_URL into PG* variables so the password is not on the command line
+# or in the prompt below.
+. "$(dirname "$0")/_pgenv.sh"
+load_database_url
 
 BACKUP_DIR="${BACKUP_DIR:-./backups}"
 FILE="${1:-}"
@@ -25,7 +27,7 @@ fi
 
 if [ "${CONFIRM:-}" != "yes" ]; then
   echo "[restore] About to --clean restore ${FILE} into:" >&2
-  echo "          ${DB_URL%%\?*}" >&2
+  echo "          ${DB_DISPLAY}" >&2
   echo "[restore] This DROPS and recreates existing objects." >&2
   echo "[restore] Re-run with CONFIRM=yes to proceed." >&2
   exit 1
@@ -35,6 +37,6 @@ echo "[restore] restoring ${FILE}"
 # --clean --if-exists makes the restore idempotent; --exit-on-error catches a
 # genuinely broken dump instead of silently leaving a half-restored DB.
 pg_restore --clean --if-exists --no-owner --no-privileges \
-  --exit-on-error --dbname="$DB_URL" "$FILE"
+  --exit-on-error --dbname="$DB_NAME" "$FILE"
 
 echo "[restore] done."
