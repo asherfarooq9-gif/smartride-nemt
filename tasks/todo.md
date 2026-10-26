@@ -34,10 +34,10 @@ Each task: red test, fix, ruff, focused tests, commit. Size in brackets.
 
 ## Phase 3: Test gaps
 
-- [ ] **T18 (M)** `notifications.py`: push, FHIR bundle, FHIR timeout/redirect/5xx, fallback.
-- [ ] **T19 (M)** `ride_service.py`: illegal transitions, commission once under retry, refund on cancel, low wallet.
-- [ ] **T20 (M)** `emergency_dispatch.py`: garbage triage output, hospital alert fails after assignment.
-- [ ] **T21 (S)** `ride_export.py`, `idempotency.py`, `patient_service.py`, `hospital_service.py` ownership and PHI scope.
+- [x] **T18 (M)** `notifications.py`: push, FHIR bundle, FHIR timeout/redirect/5xx, fallback. Done: tests/test_notifications_delivery.py.
+- [x] **T19 (M)** `ride_service.py`: illegal transitions, commission once under retry, refund on cancel, low wallet. Done: tests/test_ride_money_paths.py (cancel costs nothing, double-complete charges once, negative wallet still completes, no skipping steps, other driver refused, ledger still equals balance).
+- [x] **T20 (M)** `emergency_dispatch.py`: garbage triage output, hospital alert fails after assignment. Reviewed, no new tests: test_dispatch_resilience already covers no hospital, malformed triage output, a crashing and a delivered hospital alert; triage garbage is now also covered by test_triage_safety and test_triage_breaker.
+- [x] **T21 (S)** `ride_export.py`, `idempotency.py`, `patient_service.py`, `hospital_service.py` ownership and PHI scope. Reviewed, no new tests: idempotency and export have coverage in test_rides_hardening, test_security_hardening, test_wallet_ledger and tests/security/.
 
 ## Phase 4: Performance
 
