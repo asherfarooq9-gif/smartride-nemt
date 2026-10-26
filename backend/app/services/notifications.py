@@ -236,6 +236,46 @@ async def send_hospital_alert(*, ride, triage: dict, hospital, patient) -> bool:
     return bool(sent)
 
 
+async def tell_hospital_ride_stopped(db, *, ride_id, hospital_id) -> bool:
+    """SMS the hospital coordinator that an earlier pre-alert no longer applies.
+
+    Used when a ride is cancelled or goes back to the queue after the hospital
+    was already alerted, so staff do not hold a bay for a patient who is not
+    coming. Never raises. True only when the SMS was handed to the sender.
+    """
+    from sqlalchemy import select
+
+    from app.core import metrics
+    from app.models.models import Hospital
+
+    try:
+        phone = (
+            await db.execute(
+                select(Hospital.coordinator_phone).where(Hospital.id == hospital_id)
+            )
+        ).scalar_one_or_none()
+    except Exception as exc:
+        log.error(
+            "hospital lookup failed, NOT told ride stopped ride_id=%s (%s)",
+            ride_id,
+            type(exc).__name__,
+        )
+        phone = None
+    sent = False
+    if phone:
+        body = (
+            f"SmartRide Update: Ride {ride_id} was cancelled or re-assigned. "
+            "Disregard the earlier pre-alert."
+        )
+        sent = bool(await asyncio.to_thread(_send_sms, phone, body))
+    if not sent:
+        metrics.dispatch_failures_total.labels(
+            reason="hospital_not_told_ride_stopped"
+        ).inc()
+        log.error("hospital NOT told the ride stopped ride_id=%s", ride_id)
+    return sent
+
+
 def _build_fhir_bundle(*, ride, triage: dict, patient, ed_full: bool = False) -> dict:
     tags = [{"code": f"severity-{triage.get('severity', '3')}"}]
     if ed_full:

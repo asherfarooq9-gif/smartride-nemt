@@ -25,7 +25,7 @@ from app.models.models import (
     TriageEvent,
 )
 from app.services.emergency_dispatch import dispatch_emergency
-from app.services.notifications import notify_user
+from app.services.notifications import notify_user, tell_hospital_ride_stopped
 
 log = logging.getLogger("smartride.dispatch_loop")
 BATCH = 20
@@ -97,7 +97,7 @@ async def _requeue_unacknowledged(db, now: datetime) -> None:
     cutoff = now - timedelta(seconds=DRIVER_ACK_TIMEOUT_SECONDS)
     stuck = (
         await db.execute(
-            select(Ride.id, Ride.driver_id, Ride.patient_id)
+            select(Ride.id, Ride.driver_id, Ride.patient_id, Ride.hospital_id)
             .where(
                 Ride.status == RideStatus.driver_assigned,
                 Ride.driver_assigned_at < cutoff,
@@ -108,7 +108,7 @@ async def _requeue_unacknowledged(db, now: datetime) -> None:
         )
     ).all()
     requeued = []
-    for ride_id, driver_id, patient_id in stuck:
+    for ride_id, driver_id, patient_id, hospital_id in stuck:
         # Guarded: the driver may have just moved the ride on or cancelled.
         result = await db.execute(
             update(Ride)
@@ -131,9 +131,9 @@ async def _requeue_unacknowledged(db, now: datetime) -> None:
                 .where(Driver.id == driver_id)
                 .values(status=DriverStatus.offline)
             )
-            requeued.append((ride_id, patient_id))
+            requeued.append((ride_id, patient_id, hospital_id))
     await db.commit()
-    for ride_id, patient_id in requeued:
+    for ride_id, patient_id, hospital_id in requeued:
         log.warning("driver never acknowledged, ride requeued ride_id=%s", ride_id)
         told = await notify_user(
             db,
@@ -144,6 +144,10 @@ async def _requeue_unacknowledged(db, now: datetime) -> None:
         )
         if not told:
             log.warning("patient NOT told about the requeue ride_id=%s", ride_id)
+        if hospital_id is not None:
+            await tell_hospital_ride_stopped(
+                db, ride_id=ride_id, hospital_id=hospital_id
+            )
 
 
 async def _pending_ride_ids(db, now: datetime) -> list:

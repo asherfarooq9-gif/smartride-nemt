@@ -16,7 +16,7 @@ from app.services.driver_service import ACTIVE_RIDE_STATUSES, apply_balance_delt
 from app.services.emergency_dispatch import match_hospital_for_ride
 from app.services.fare import commission_for, fare_for
 from app.services.hospital_matching import haversine_km
-from app.services.notifications import notify_user
+from app.services.notifications import notify_user, tell_hospital_ride_stopped
 
 from app.models.models import (
     Ride,
@@ -342,6 +342,40 @@ async def _apply_driver_transition(
         await _release_driver(db, driver.id, ride.id)
 
 
+async def _tell_ride_stopped(
+    db: AsyncSession, ride: Ride, role: str, driver_id, hospital_id
+) -> None:
+    """Tell the hospital (and the driver, unless they did it) the ride is off.
+
+    Runs after the commit and never raises: the state change already happened,
+    a lost notification must not turn it into an error. Failures are logged and
+    counted by the senders.
+    """
+    try:
+        if hospital_id is not None:
+            await tell_hospital_ride_stopped(
+                db, ride_id=ride.id, hospital_id=hospital_id
+            )
+        if driver_id is not None and role != "driver":
+            driver_user_id = (
+                await db.execute(select(Driver.user_id).where(Driver.id == driver_id))
+            ).scalar_one_or_none()
+            if driver_user_id is not None:
+                await notify_user(
+                    db,
+                    user_id=driver_user_id,
+                    title="Ride cancelled",
+                    body=ride.cancel_reason or "This ride was cancelled.",
+                    data={"ride_id": str(ride.id)},
+                )
+    except Exception as exc:
+        log.error(
+            "could not tell the hospital or driver the ride stopped ride_id=%s (%s)",
+            ride.id,
+            type(exc).__name__,
+        )
+
+
 async def update_ride_status(
     ride: Ride,
     body: RideStatusUpdate,
@@ -352,6 +386,8 @@ async def update_ride_status(
 ) -> Ride:
     new_status = body.status
     await _lock_ride(db, ride)
+    # A requeue or cancel clears these, so remember who was told about the ride.
+    alerted_driver_id, alerted_hospital_id = ride.driver_id, ride.hospital_id
 
     if new_status == RideStatus.cancelled and ride.status in TERMINAL_STATUSES:
         raise HTTPException(400, f"Cannot cancel a {ride.status.value} ride")
@@ -380,6 +416,9 @@ async def update_ride_status(
 
     await db.commit()
     await db.refresh(ride)
+
+    if ride.status in (RideStatus.cancelled, RideStatus.pending):
+        await _tell_ride_stopped(db, ride, role, alerted_driver_id, alerted_hospital_id)
 
     # Push notification to patient on status change
     labels = {
