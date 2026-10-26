@@ -79,3 +79,13 @@ def test_render_does_not_overwrite_twilio_secrets_on_sync():
         block = re.search(rf"key:\s*{name}\s*\n\s*(\S[^\n]*)", text)
         assert block, f"{name} missing from render.yaml"
         assert block.group(1).startswith("sync: false"), f"{name} must be sync: false"
+
+
+def test_every_setting_is_documented_in_env_example():
+    """A variable that exists only in config.py cannot be found by whoever deploys."""
+    path = REPO_ROOT / ".env.example"
+    if not path.exists():
+        pytest.skip(".env.example not present (running outside the repo)")
+    documented = set(re.findall(r"^\s*#?\s*([A-Z][A-Z0-9_]+)=", path.read_text(), re.M))
+    missing = sorted(set(Settings.model_fields) - documented)
+    assert not missing, f".env.example does not mention: {missing}"
