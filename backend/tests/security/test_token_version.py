@@ -72,15 +72,35 @@ async def test_tokens_issued_before_the_column_existed_still_work(client):
     assert (await client.get(ME, headers=_auth(legacy))).status_code == 200
 
 
-async def test_refresh_fails_when_the_old_token_cannot_be_revoked(client):
+async def test_refresh_still_works_when_the_revocation_cannot_be_stored(client):
+    """Deliberate fail-open: a Redis blip must not sign a patient out mid-emergency."""
     token = await _register(client, f"+92300{str(uuid.uuid4().int)[:7]}", "patient")
 
     with patch("app.routers.auth.block_token", new=AsyncMock(return_value=False)):
         r = await client.post("/api/v1/auth/refresh", headers=_auth(token))
 
-    assert r.status_code == 503, r.text
-    # Nothing was handed out, so the original token is still the only one.
-    assert (await client.get(ME, headers=_auth(token))).status_code == 200
+    assert r.status_code == 200, r.text
+    assert (
+        await client.get(ME, headers=_auth(r.json()["access_token"]))
+    ).status_code == 200
+
+
+async def test_logout_everywhere_ends_a_refreshed_chain(client):
+    """The answer to a stolen token that keeps refreshing, even if a revoke was lost."""
+    phone = f"+92300{str(uuid.uuid4().int)[:7]}"
+    token = await _register(client, phone, "patient")
+    with patch("app.routers.auth.block_token", new=AsyncMock(return_value=False)):
+        renewed = (
+            await client.post("/api/v1/auth/refresh", headers=_auth(token))
+        ).json()["access_token"]
+    assert (
+        await client.get(ME, headers=_auth(token))
+    ).status_code == 200  # never revoked
+
+    await client.post("/api/v1/auth/logout-all", headers=_auth(renewed))
+
+    assert (await client.get(ME, headers=_auth(token))).status_code == 401
+    assert (await client.get(ME, headers=_auth(renewed))).status_code == 401
 
 
 async def test_a_refreshed_token_carries_the_current_version(client, db):

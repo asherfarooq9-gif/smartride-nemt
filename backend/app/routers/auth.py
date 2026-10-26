@@ -392,12 +392,11 @@ async def refresh_token(
     auth_time = int(payload.get("auth_time") or payload.get("iat") or now)
     if now - auth_time > settings.SESSION_MAX_DAYS * 86400:
         raise HTTPException(status_code=401, detail="Session expired. Sign in again.")
-    if not await _revoke(credentials):
-        # Fail closed: handing out a new token while the old one stays valid would
-        # let a stolen token multiply.
-        raise HTTPException(
-            status_code=503, detail="Could not refresh the session. Please try again."
-        )
+    # Fail open, on purpose, like the blocklist lookup: if Redis cannot store the
+    # revocation the user still gets a new token (a patient in an emergency must not
+    # be signed out by a Redis blip). _revoke has logged and counted the failure,
+    # and POST /auth/logout-all ends any chain a stolen token has spawned.
+    await _revoke(credentials)
 
     roles = await _held_roles(db, user.id)
     new_token = _make_token(user, roles, user.role.value, auth_time)

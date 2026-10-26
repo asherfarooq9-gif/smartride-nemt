@@ -14,7 +14,7 @@ Tasks are tracked in `tasks/todo.md` (default target).
 - **Defaults I chose where the audit left a decision open** (change them if wrong):
   - C2: a driver cannot cancel after pickup. They get a 409 telling them to call dispatch; an admin can still cancel.
   - B2: the per-phone ceiling skips addresses that have already logged in to that account; the per-(phone, address) streak still applies to them. (The audit's "let a correct password through behind a delay" would have weakened brute-force protection.)
-  - B3: tokens carry a `token_version`; changing it logs a user out everywhere. Refresh fails closed when Redis cannot record the revocation.
+  - B3: tokens carry a `token_version`; changing it logs a user out everywhere. Refresh stays fail-open when Redis cannot record the revocation (matching the blocklist, and a patient must not be signed out mid-emergency by a Redis blip); logout-all is the remedy for a stolen chain. The audit asked for fail-closed; this is a deliberate departure.
   - B5: drivers keep ride access only while it is active; after completion the patient phone and mobility needs are masked.
   - B4 (admin token in `localStorage`) is a cross-cutting rewrite to httpOnly cookies. It is its own phase at the end, and the admin TTL is shortened first.
 
