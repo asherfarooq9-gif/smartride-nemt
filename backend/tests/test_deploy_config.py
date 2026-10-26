@@ -157,3 +157,48 @@ def test_startup_warns_when_push_is_not_set_up_in_production(monkeypatch, caplog
     with caplog.at_level("WARNING"):
         main._warn_if_push_not_set_up()
     assert not caplog.records
+
+
+RELEASE = REPO_ROOT / ".github" / "workflows" / "release.yml"
+
+
+def _release_text() -> str:
+    if not RELEASE.exists():
+        pytest.skip("release.yml not present (running outside the repo)")
+    return RELEASE.read_text()
+
+
+def test_release_actions_are_pinned_to_commit_shas():
+    """The release job holds the signing keystore. A moved tag on any action it uses
+    would run attacker code with it, so each `uses:` names an immutable commit."""
+    uses = re.findall(r"^\s*-?\s*uses:\s*(\S+)", _release_text(), re.M)
+    assert uses
+    unpinned = [
+        u for u in uses if not re.fullmatch(r"[\w.-]+/[\w./-]+@[0-9a-f]{40}", u)
+    ]
+    assert not unpinned, f"pin these to a commit SHA: {unpinned}"
+
+
+def test_only_the_publish_job_can_write_to_the_repository():
+    text = _release_text()
+    top = text.split("jobs:")[0]
+    assert re.search(r"^permissions:\s*\n\s+contents:\s*read\b", top, re.M)
+    build = text[text.index("build-release-apks:") : text.index("publish-release:")]
+    assert "contents: write" not in build
+    publish = text[text.index("publish-release:") :]
+    assert "contents: write" in publish
+
+
+def test_the_release_gate_requires_security_checks_and_a_tag_on_main():
+    text = _release_text()
+    gate = text[text.index("require-green-ci:") : text.index("build-release-apks:")]
+    for required in (
+        "Flutter Analyze + Test + APK",
+        "Admin Dashboard E2E (Playwright)",
+        "Python Dependency Audit",
+        "Python Static Analysis (Bandit)",
+        "Secret Scan",
+        "Container Image Scan (Trivy)",
+    ):
+        assert required in gate, f"the gate does not require '{required}'"
+    assert "merge-base --is-ancestor" in gate
