@@ -31,7 +31,7 @@ Checkpoint after each phase: full backend suite green, coverage at least 60%, `r
 
 ## Owner actions (not code, cannot be done by me)
 
-Domain and TLS, Firebase project and credentials file, Twilio account and sender, Android release keystore, privacy policy and PHI review, hospital agreements, third-party penetration test, load test sign-off, real-phone testing, paid hosting plan decision, Alertmanager receiver (who gets paged, on what channel). Confirm the CI jobs listed as "never run" are green on `main`.
+Domain and TLS, Firebase project and credentials file, Twilio account and sender, Android release keystore, privacy policy and PHI review, hospital agreements, third-party penetration test, load test sign-off, real-phone testing, paid hosting plan decision, Alertmanager receiver (who gets paged, on what channel), and the JazzCash/EasyPaisa/bank account drivers should pay into (the top-up instructions tell them to pay and email a receipt but cannot name an account until you supply one). The 'Card' payment option on the top-up screen is not backed by anything and should be removed or built. Confirm the CI jobs listed as "never run" are green on `main`.
 
 ## Risks
 

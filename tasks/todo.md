@@ -59,7 +59,7 @@ Each task: red test, fix, ruff, focused tests, commit. Size in brackets.
   - [x] T27d HIGH: ride cards have no keys, so a fresh ride can inherit another card's countdown.
   - [x] T27e HIGH: patient tracking does not refetch the ride on reconnect and misses `ride_ended`.
   - [x] T27f HIGH: `_advance` has no in-flight guard and does not refetch after a failure or the new 409.
-  - [ ] T27g HIGH: top-up screen shows "Almost done" with a green check but sends nothing; relabel it as "How to top up".
+  - [x] T27g HIGH: top-up screen shows "Almost done" with a green check but sends nothing; relabel it as "How to top up".
   - [ ] T27h MEDIUM: wallet shows "−PKR -27" for commissions and truncates with `.toInt()`; use `abs()`, 2 decimals, server `low_balance`.
   - [ ] T27i MEDIUM: WebSocket reconnect reuses the original token; read the current one in `_open`.
   - [ ] T27j MEDIUM: swallowed errors and `state` set after dispose in the dashboard notifier.

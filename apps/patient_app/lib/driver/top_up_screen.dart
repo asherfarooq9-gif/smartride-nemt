@@ -60,6 +60,9 @@ const _paymentMethods = [
 
 const _quickAmounts = [500, 1000, 2000, 5000];
 
+// Same address as the Contact screen; wallet top-ups are confirmed by hand.
+const _supportEmail = 'support@smartride.pk';
+
 class TopUpScreen extends StatefulWidget {
   const TopUpScreen({super.key});
 
@@ -109,10 +112,11 @@ class _TopUpScreenState extends State<TopUpScreen> {
         : _plans[_selectedPlan!].price.toString();
     showDialog<void>(
       context: context,
-      builder: (_) => _SuccessDialog(
-        title: 'Almost done',
-        message: 'Send PKR $amount by $_paymentMethod, then send the receipt '
-            'to SmartRide support. Your wallet is credited once an admin '
+      builder: (_) => _InstructionsDialog(
+        title: 'How to top up',
+        message: 'Nothing has been charged. Send PKR $amount by '
+            '$_paymentMethod, then send the receipt to SmartRide support '
+            '($_supportEmail). Your wallet is credited once an admin '
             'confirms the payment.',
         onDone: () {
           Navigator.of(context).pop();
@@ -496,12 +500,15 @@ class _PaymentMethodRow extends StatelessWidget {
   }
 }
 
-class _SuccessDialog extends StatelessWidget {
+/// Explains a manual step. It is not a confirmation, so it must not look like one:
+/// an earlier version showed "Almost done" with a green check, and a driver could
+/// reasonably believe a payment had been taken.
+class _InstructionsDialog extends StatelessWidget {
   final String title;
   final String message;
   final VoidCallback onDone;
 
-  const _SuccessDialog({
+  const _InstructionsDialog({
     required this.title,
     required this.message,
     required this.onDone,
@@ -522,12 +529,12 @@ class _SuccessDialog extends StatelessWidget {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: kOnlineGreen.withValues(alpha: 0.10),
+                color: kBlue600.withValues(alpha: 0.10),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
-                Icons.check_circle_outline,
-                color: kOnlineGreen,
+                Icons.info_outline,
+                color: kBlue600,
                 size: 40,
               ),
             ),
