@@ -30,7 +30,8 @@ class PortalDrawer extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  const Icon(Icons.local_hospital, color: Colors.white, size: 40),
+                  const Icon(Icons.local_hospital,
+                      color: Colors.white, size: 40),
                   const SizedBox(height: core.kSpaceSM),
                   const Text('SmartRide',
                       style: TextStyle(
@@ -141,8 +142,8 @@ class PortalDrawer extends ConsumerWidget {
             const Divider(),
             ListTile(
               leading: const Icon(Icons.logout, color: core.kError),
-              title: const Text('Sign Out',
-                  style: TextStyle(color: core.kError)),
+              title:
+                  const Text('Sign Out', style: TextStyle(color: core.kError)),
               onTap: () async {
                 await ref.read(gpsStreamProvider.notifier).stopStreaming();
                 await ref.read(authProvider.notifier).signOut();
@@ -156,49 +157,60 @@ class PortalDrawer extends ConsumerWidget {
   }
 
   Future<void> _switch(
-      BuildContext context, WidgetRef ref, String role, String home) async {
-    // Edge case: warn if a ride is being driven (GPS streaming) before leaving.
-    if (ref.read(gpsStreamProvider).isActive) {
-      final leave = await showDialog<bool>(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Active ride in progress'),
-          content: const Text(
-              'You are currently driving a ride. Switching portals will keep '
-              'the ride active in the background. Continue?'),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Stay')),
-            TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Switch')),
-          ],
-        ),
-      );
-      if (leave != true) return;
-    }
-    try {
-      await ref.read(authProvider.notifier).switchActiveRole(role);
-    } on core.AppError catch (e) {
-      if (context.mounted) _showSwitchError(context, e.message);
-      return;
-    } on Exception catch (e, st) {
-      core.ErrorReporter.report('Switching portal failed', e, st);
-      if (context.mounted) {
-        _showSwitchError(context, 'Could not switch portals. Please try again.');
-      }
-      return;
-    }
-    if (context.mounted) {
-      Navigator.pop(context);
-      context.go(home);
-    }
-  }
+          BuildContext context, WidgetRef ref, String role, String home) =>
+      switchPortal(context, ref, role, home, closeDrawer: true);
+}
 
-  void _showSwitchError(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: core.kError),
+/// Flips the active portal and goes to its home screen. Pass [closeDrawer] when
+/// called from the portal drawer so the drawer is closed first.
+Future<void> switchPortal(
+  BuildContext context,
+  WidgetRef ref,
+  String role,
+  String home, {
+  bool closeDrawer = false,
+}) async {
+  // Edge case: warn if a ride is being driven (GPS streaming) before leaving.
+  if (ref.read(gpsStreamProvider).isActive) {
+    final leave = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Active ride in progress'),
+        content: const Text(
+            'You are currently driving a ride. Switching portals will keep '
+            'the ride active in the background. Continue?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Stay')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Switch')),
+        ],
+      ),
     );
+    if (leave != true) return;
   }
+  try {
+    await ref.read(authProvider.notifier).switchActiveRole(role);
+  } on core.AppError catch (e) {
+    if (context.mounted) _showSwitchError(context, e.message);
+    return;
+  } on Exception catch (e, st) {
+    core.ErrorReporter.report('Switching portal failed', e, st);
+    if (context.mounted) {
+      _showSwitchError(context, 'Could not switch portals. Please try again.');
+    }
+    return;
+  }
+  if (context.mounted) {
+    if (closeDrawer) Navigator.pop(context);
+    context.go(home);
+  }
+}
+
+void _showSwitchError(BuildContext context, String message) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(message), backgroundColor: core.kError),
+  );
 }

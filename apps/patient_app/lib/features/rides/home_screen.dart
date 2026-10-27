@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:smartride_core/smartride_core.dart';
-import 'package:patient_app/core/providers.dart';
 import 'package:patient_app/features/rides/emergency_button.dart';
+import 'package:patient_app/features/rides/home_top_bar.dart';
 import 'package:patient_app/features/rides/rides_notifier.dart';
 import 'package:patient_app/shared/pale_map_tiles.dart';
 import 'package:patient_app/shared/role_switcher.dart';
@@ -32,31 +32,9 @@ class HomeScreen extends ConsumerWidget {
             ),
             children: [paleTileLayer()],
           ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: kSpaceLG, vertical: kSpaceMD),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      Builder(
-                        builder: (ctx) => _MapOverlayButton(
-                          tooltip: 'Open menu',
-                          icon: Icons.menu,
-                          onPressed: () => Scaffold.of(ctx).openDrawer(),
-                        ),
-                      ),
-                      const Spacer(),
-                      const _NotificationBell(),
-                    ],
-                  ),
-                  const SizedBox(height: kSpaceSM),
-                  _PortalChip(ref: ref),
-                ],
-              ),
+          Builder(
+            builder: (ctx) => HomeTopBar(
+              onMenu: () => Scaffold.of(ctx).openDrawer(),
             ),
           ),
           Align(
@@ -64,8 +42,8 @@ class HomeScreen extends ConsumerWidget {
             child: Container(
               decoration: const BoxDecoration(
                 color: kSurface,
-                borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(kRadiusSheet)),
+                borderRadius:
+                    BorderRadius.vertical(top: Radius.circular(kRadiusSheet)),
                 boxShadow: [
                   BoxShadow(color: Colors.black12, blurRadius: 16),
                 ],
@@ -128,8 +106,7 @@ class HomeScreen extends ConsumerWidget {
                       children: [
                         Expanded(child: Divider()),
                         Padding(
-                          padding:
-                              EdgeInsets.symmetric(horizontal: kSpaceSM),
+                          padding: EdgeInsets.symmetric(horizontal: kSpaceSM),
                           child: Text(
                             'or',
                             style: TextStyle(color: kText400),
@@ -144,8 +121,7 @@ class HomeScreen extends ConsumerWidget {
                       icon: const Icon(Icons.calendar_today, size: 18),
                       label: const Text('Book a Ride'),
                       style: OutlinedButton.styleFrom(
-                        minimumSize:
-                            const Size(double.infinity, kButtonHeight),
+                        minimumSize: const Size(double.infinity, kButtonHeight),
                         side: const BorderSide(color: kTeal600),
                         foregroundColor: kTeal600,
                         shape: RoundedRectangleBorder(
@@ -184,113 +160,6 @@ final _meProvider = FutureProvider.autoDispose<String>((ref) async {
     return 'there';
   }
 });
-
-/// 48dp round button floating over the map; the tooltip is also the screen
-/// reader label.
-class _MapOverlayButton extends StatelessWidget {
-  const _MapOverlayButton({
-    required this.tooltip,
-    required this.icon,
-    required this.onPressed,
-    this.hasBadge = false,
-  });
-
-  final String tooltip;
-  final IconData icon;
-  final VoidCallback onPressed;
-  final bool hasBadge;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: kSurface,
-      shape: const CircleBorder(),
-      elevation: 3,
-      child: Stack(
-        children: [
-          IconButton(
-            tooltip: tooltip,
-            onPressed: onPressed,
-            icon: Icon(icon, color: kText900),
-            constraints: const BoxConstraints(
-                minWidth: kMinTapTarget, minHeight: kMinTapTarget),
-          ),
-          if (hasBadge)
-            const Positioned(
-              top: 10,
-              right: 10,
-              child: DecoratedBox(
-                decoration:
-                    BoxDecoration(color: kRed600, shape: BoxShape.circle),
-                child: SizedBox(width: 10, height: 10),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NotificationBell extends ConsumerWidget {
-  const _NotificationBell();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final hasUnread = ref
-        .watch(notificationsProvider('patient'))
-        .any((n) => !n.isRead);
-    return _MapOverlayButton(
-      tooltip: hasUnread ? 'Notifications, you have unread' : 'Notifications',
-      icon: Icons.notifications_outlined,
-      hasBadge: hasUnread,
-      onPressed: () => context.push('/notifications'),
-    );
-  }
-}
-
-class _PortalChip extends StatelessWidget {
-  const _PortalChip({required this.ref});
-  final WidgetRef ref;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: 'Patient portal. Open portal menu',
-      excludeSemantics: true,
-      child: Material(
-        color: kSurface,
-        elevation: 3,
-        borderRadius: BorderRadius.circular(kRadiusPill),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(kRadiusPill),
-          onTap: () => Scaffold.of(context).openDrawer(),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: kMinTapTarget),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: kSpaceMD),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Patient',
-                    style: TextStyle(
-                      fontSize: kFontSmall,
-                      fontWeight: FontWeight.w600,
-                      color: kTeal600,
-                    ),
-                  ),
-                  SizedBox(width: 2),
-                  Icon(Icons.keyboard_arrow_down, size: 18, color: kTeal600),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _ActiveRideBanner extends StatelessWidget {
   const _ActiveRideBanner({required this.ride});
