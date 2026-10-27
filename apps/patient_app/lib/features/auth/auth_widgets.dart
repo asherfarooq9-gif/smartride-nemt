@@ -65,7 +65,7 @@ class AuthField extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(kRadiusLG),
-              borderSide: const BorderSide(color: kAuthTeal, width: 1.5),
+              borderSide: const BorderSide(color: kAuthAccent, width: 1.5),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(kRadiusLG),

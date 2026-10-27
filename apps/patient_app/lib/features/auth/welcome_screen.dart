@@ -75,13 +75,13 @@ class WelcomeScreen extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(kRadiusPill),
-                            border: Border.all(color: kTeal600),
+                            border: Border.all(color: kPatient600),
                           ),
                           child: Text(
                             'Islamabad · Rawalpindi',
                             style: GoogleFonts.dmSans(
                               fontSize: kFontSmall,
-                              color: kTeal600,
+                              color: kPatient600,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -133,7 +133,7 @@ class WelcomeScreen extends StatelessWidget {
                         child: ElevatedButton(
                           onPressed: () => context.push('/signup'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: kTeal600,
+                            backgroundColor: kPatient600,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(kRadiusLG),
@@ -142,7 +142,7 @@ class WelcomeScreen extends StatelessWidget {
                             shadowColor: Colors.transparent,
                           ).copyWith(
                             shadowColor: WidgetStateProperty.all(
-                              kTeal600.withValues(alpha: 0.40),
+                              kPatient600.withValues(alpha: 0.40),
                             ),
                             elevation: WidgetStateProperty.all(8),
                           ),
@@ -162,8 +162,8 @@ class WelcomeScreen extends StatelessWidget {
                         child: OutlinedButton(
                           onPressed: () => context.push('/login'),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: kTeal600,
-                            side: const BorderSide(color: kTeal600),
+                            foregroundColor: kPatient600,
+                            side: const BorderSide(color: kPatient600),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(kRadiusLG),
                             ),
@@ -173,7 +173,7 @@ class WelcomeScreen extends StatelessWidget {
                             style: GoogleFonts.dmSans(
                               fontSize: kFontBody,
                               fontWeight: FontWeight.w600,
-                              color: kTeal600,
+                              color: kPatient600,
                             ),
                           ),
                         ),

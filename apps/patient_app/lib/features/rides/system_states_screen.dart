@@ -57,7 +57,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Icon(Icons.location_on_outlined, size: 64, color: kTeal600),
+            const Icon(Icons.location_on_outlined, size: 64, color: kPatient600),
             const SizedBox(height: kSpaceXL),
             const Text(
               'Enable Location',
@@ -85,7 +85,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
               label:
                   _permanentlyDenied ? 'Open App Settings' : 'Allow Access',
               onPressed: _requestOrOpenSettings,
-              color: kTeal600,
+              color: kPatient600,
               height: kButtonHeight,
             ),
             const SizedBox(height: kSpaceMD),
@@ -161,7 +161,7 @@ class NoDriversScreen extends StatelessWidget {
             PrimaryButton(
               label: 'Keep Searching',
               onPressed: () => Navigator.of(context).pop(),
-              color: kTeal600,
+              color: kPatient600,
               height: kButtonHeight,
             ),
             const SizedBox(height: kSpaceMD),
@@ -227,7 +227,7 @@ class NoInternetScreen extends StatelessWidget {
             PrimaryButton(
               label: 'Retry',
               onPressed: () => Navigator.of(context).pop(),
-              color: kTeal600,
+              color: kPatient600,
               height: kButtonHeight,
             ),
           ],

@@ -97,11 +97,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   icon: const Icon(
                     Icons.arrow_back_ios,
                     size: 16,
-                    color: kAuthTeal,
+                    color: kAuthAccent,
                   ),
                   label: Text(
                     'Back',
-                    style: GoogleFonts.dmSans(color: kAuthTeal),
+                    style: GoogleFonts.dmSans(color: kAuthAccent),
                   ),
                   style: TextButton.styleFrom(alignment: Alignment.centerLeft),
                 ),
@@ -238,7 +238,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   child: ElevatedButton(
                     onPressed: isLoading ? null : _submit,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: kAuthTeal,
+                      backgroundColor: kAuthAccent,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(kRadiusLG),
@@ -282,7 +282,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       child: Text(
                         'Log in',
                         style: GoogleFonts.dmSans(
-                          color: kAuthTeal,
+                          color: kAuthAccent,
                           fontSize: kFontSmall,
                           fontWeight: FontWeight.w600,
                         ),
@@ -334,11 +334,11 @@ class _VehicleTypeChips extends StatelessWidget {
                 constraints: const BoxConstraints(minHeight: kMinTapTarget),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? kAuthTeal.withValues(alpha: 0.15)
+                      ? kAuthAccent.withValues(alpha: 0.15)
                       : kAuthFieldBg,
                   borderRadius: BorderRadius.circular(kRadiusMD),
                   border: Border.all(
-                    color: isSelected ? kAuthTeal : kAuthFieldBorder,
+                    color: isSelected ? kAuthAccent : kAuthFieldBorder,
                     width: isSelected ? 1.5 : 1.0,
                   ),
                 ),
@@ -347,7 +347,7 @@ class _VehicleTypeChips extends StatelessWidget {
                   style: GoogleFonts.dmSans(
                     fontSize: kFontSmall,
                     fontWeight: FontWeight.w600,
-                    color: isSelected ? kAuthTeal : kAuthMuted,
+                    color: isSelected ? kAuthAccent : kAuthMuted,
                   ),
                 ),
               ),
@@ -436,10 +436,10 @@ class _RoleCard extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             color:
-                isSelected ? kAuthTeal.withValues(alpha: 0.15) : kAuthFieldBg,
+                isSelected ? kAuthAccent.withValues(alpha: 0.15) : kAuthFieldBg,
             borderRadius: BorderRadius.circular(kRadiusMD),
             border: Border.all(
-              color: isSelected ? kAuthTeal : kAuthFieldBorder,
+              color: isSelected ? kAuthAccent : kAuthFieldBorder,
               width: isSelected ? 1.5 : 1.0,
             ),
           ),
@@ -470,7 +470,7 @@ class _RoleCard extends StatelessWidget {
                 ),
               ),
               if (isSelected)
-                const Icon(Icons.check_circle, color: kAuthTeal, size: 20),
+                const Icon(Icons.check_circle, color: kAuthAccent, size: 20),
             ],
           ),
         ),

@@ -13,8 +13,8 @@ class NotificationsScreen extends ConsumerWidget {
     final notifications = ref.watch(notificationsProvider(portal));
     final hasUnread = notifications.any((n) => !n.isRead);
     final isPatient = portal == 'patient';
-    final primary = isPatient ? kTeal600 : kBlue600;
-    final unreadBg = isPatient ? kTeal50 : kBlue100;
+    final primary = isPatient ? kPatient600 : kBlue600;
+    final unreadBg = isPatient ? kPatient50 : kBlue100;
 
     return Scaffold(
       appBar: AppBar(

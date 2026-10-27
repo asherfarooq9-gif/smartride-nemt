@@ -262,7 +262,7 @@ class _PlanCard extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: kTeal600.withValues(alpha: 0.12),
+                            color: kDriverPrimary.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(kRadiusPill),
                           ),
                           child: const Text(
@@ -270,7 +270,7 @@ class _PlanCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: kFontCaption,
                               fontWeight: FontWeight.w700,
-                              color: kTeal600,
+                              color: kDriverPrimary,
                             ),
                           ),
                         ),

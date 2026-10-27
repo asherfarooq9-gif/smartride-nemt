@@ -199,7 +199,7 @@ class _PulsingTaxi extends StatelessWidget {
           height: 120 + (animation.value * 20),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: core.kAuthTeal
+            color: core.kAuthAccent
                 .withValues(alpha: 0.1 + animation.value * 0.15),
           ),
           child: child,
@@ -208,7 +208,7 @@ class _PulsingTaxi extends StatelessWidget {
           margin: const EdgeInsets.all(16),
           decoration: const BoxDecoration(
             shape: BoxShape.circle,
-            color: core.kAuthTeal,
+            color: core.kAuthAccent,
           ),
           child: const Icon(Icons.local_taxi, size: 48, color: Colors.white),
         ),
@@ -328,11 +328,11 @@ class _EmergencyCallButton extends StatelessWidget {
       style: TextButton.styleFrom(
         minimumSize: const Size.fromHeight(core.kMinTapTarget),
       ),
-      icon: const Icon(Icons.phone, color: core.kDarkTeal, size: 20),
+      icon: const Icon(Icons.phone, color: core.kDarkAccent, size: 20),
       label: const Text(
         'Call 1122 directly',
         style: TextStyle(
-          color: core.kDarkTeal,
+          color: core.kDarkAccent,
           fontWeight: FontWeight.w600,
           fontSize: core.kFontSmall,
         ),

@@ -33,10 +33,10 @@ class AppTheme {
       // rows, so screens never reach for light-only constants.
       primaryContainer: isDriver
           ? (dark ? kDarkBlueContainer : kBlue100)
-          : (dark ? kDarkTealContainer : kTeal100),
+          : (dark ? kDarkPatientContainer : kPatient100),
       onPrimaryContainer: isDriver
           ? (dark ? kDarkOnBlueContainer : kBlue800)
-          : (dark ? kDarkOnTealContainer : kTeal800),
+          : (dark ? kDarkOnPatientContainer : kPatient800),
       onSurfaceVariant: dark ? kDarkText2 : kText600,
       surfaceContainerLow: dark ? kDarkSurface2 : kCanvas,
       outlineVariant: dark ? kDarkBorder : kBorder,

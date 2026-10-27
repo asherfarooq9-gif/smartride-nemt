@@ -20,9 +20,9 @@ void main() {
       final patient = AppTheme.patient().colorScheme;
       final driver = AppTheme.driver().colorScheme;
 
-      expect(patient.primaryContainer, kTeal100);
+      expect(patient.primaryContainer, kPatient100);
       expect(driver.primaryContainer, kBlue100);
-      expect(patient.onPrimaryContainer, kTeal800);
+      expect(patient.onPrimaryContainer, kPatient800);
       expect(driver.onPrimaryContainer, kBlue800);
       expect(patient.onSurfaceVariant, kText600);
       expect(patient.surfaceContainerLow, kCanvas);
@@ -34,7 +34,7 @@ void main() {
       final patient = AppTheme.patient(dark: true).colorScheme;
       final driver = AppTheme.driver(dark: true).colorScheme;
 
-      expect(patient.primaryContainer, isNot(kTeal100));
+      expect(patient.primaryContainer, isNot(kPatient100));
       expect(patient.primaryContainer, isNot(driver.primaryContainer));
       expect(patient.onSurfaceVariant, kDarkText2);
       expect(patient.surfaceContainerLow, kDarkSurface2);

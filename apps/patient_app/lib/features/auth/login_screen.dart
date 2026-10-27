@@ -63,11 +63,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   icon: const Icon(
                     Icons.arrow_back_ios,
                     size: 16,
-                    color: kAuthTeal,
+                    color: kAuthAccent,
                   ),
                   label: Text(
                     'Back',
-                    style: GoogleFonts.dmSans(color: kAuthTeal),
+                    style: GoogleFonts.dmSans(color: kAuthAccent),
                   ),
                   style: TextButton.styleFrom(alignment: Alignment.centerLeft),
                 ),
@@ -141,7 +141,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     child: Text(
                       'Forgot password?',
                       style: GoogleFonts.dmSans(
-                        color: kAuthTeal,
+                        color: kAuthAccent,
                         fontSize: kFontSmall,
                       ),
                     ),
@@ -153,7 +153,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: ElevatedButton(
                     onPressed: isLoading ? null : _submit,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: kAuthTeal,
+                      backgroundColor: kAuthAccent,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(kRadiusLG),
@@ -197,7 +197,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       child: Text(
                         'Sign up',
                         style: GoogleFonts.dmSans(
-                          color: kAuthTeal,
+                          color: kAuthAccent,
                           fontSize: kFontSmall,
                           fontWeight: FontWeight.w600,
                         ),

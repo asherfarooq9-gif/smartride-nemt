@@ -16,7 +16,7 @@ class SavedPlacesScreen extends ConsumerWidget {
         leading: const BackButton(),
       ),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: kTeal600,
+        backgroundColor: kPatient600,
         foregroundColor: Colors.white,
         onPressed: () => _openSheet(context, ref),
         child: const Icon(Icons.add),
@@ -118,10 +118,10 @@ class _PlaceCard extends StatelessWidget {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: kTeal600.withValues(alpha: 0.10),
+            color: kPatient600.withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(kRadiusMD),
           ),
-          child: Icon(place.icon, color: kTeal600, size: 22),
+          child: Icon(place.icon, color: kPatient600, size: 22),
         ),
         title: Text(
           place.label,
@@ -177,7 +177,7 @@ class _AddPlaceButton extends StatelessWidget {
         style: TextStyle(
           fontSize: kFontSmall,
           fontWeight: FontWeight.w600,
-          color: kTeal600,
+          color: kPatient600,
         ),
       ),
     );
@@ -205,7 +205,7 @@ class _EmptyState extends StatelessWidget {
             onPressed: onAdd,
             child: const Text('Add your first place',
                 style: TextStyle(
-                    color: kTeal600, fontWeight: FontWeight.w600)),
+                    color: kPatient600, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -314,14 +314,14 @@ class _PlaceSheetState extends State<_PlaceSheet> {
                         Icon(icon,
                             size: 15,
                             color: _iconType == type
-                                ? kTeal600
+                                ? kPatient600
                                 : kText600),
                         const SizedBox(width: 4),
                         Text(lbl),
                       ],
                     ),
                     selected: _iconType == type,
-                    selectedColor: kTeal600.withValues(alpha: 0.12),
+                    selectedColor: kPatient600.withValues(alpha: 0.12),
                     onSelected: (_) => setState(() => _iconType = type),
                   ),
               ],
