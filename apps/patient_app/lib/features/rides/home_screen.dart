@@ -7,6 +7,7 @@ import 'package:smartride_core/smartride_core.dart';
 import 'package:patient_app/core/providers.dart';
 import 'package:patient_app/features/rides/emergency_button.dart';
 import 'package:patient_app/features/rides/rides_notifier.dart';
+import 'package:patient_app/shared/pale_map_tiles.dart';
 import 'package:patient_app/shared/role_switcher.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -29,12 +30,7 @@ class HomeScreen extends ConsumerWidget {
                 flags: InteractiveFlag.none,
               ),
             ),
-            children: [
-              TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.smartride.patient',
-              ),
-            ],
+            children: [paleTileLayer()],
           ),
           SafeArea(
             child: Padding(
