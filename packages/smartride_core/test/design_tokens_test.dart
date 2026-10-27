@@ -57,9 +57,8 @@ void main() {
         ...kRaisedCardShadow,
         ...kSheetShadow,
       ]) {
-        final isPureBlack = shadow.color.r == 0 &&
-            shadow.color.g == 0 &&
-            shadow.color.b == 0;
+        final isPureBlack =
+            shadow.color.r == 0 && shadow.color.g == 0 && shadow.color.b == 0;
         expect(isPureBlack, isFalse);
       }
     });
