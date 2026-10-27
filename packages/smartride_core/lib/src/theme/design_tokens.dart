@@ -111,7 +111,7 @@ const double kRadiusPill = 99; // pills
 // ── Component sizes ───────────────────────────────────────────────────────────
 const double kMinTapTarget = 48;
 const double kButtonHeight = 54;
-const double kEmergencyButtonSize = 158; // circle diameter
+const double kEmergencyButtonSize = 140; // circle diameter
 const double kCardElevation = 0;
 const double kModalElevation = 8;
 const double kBottomNavHeight = 64;

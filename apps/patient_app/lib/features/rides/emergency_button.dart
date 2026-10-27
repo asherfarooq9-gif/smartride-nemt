@@ -60,7 +60,7 @@ class _EmergencyButtonState extends State<EmergencyButton>
     final diameter = MediaQuery.textScalerOf(context)
         .scale(kEmergencyButtonSize)
         .clamp(kEmergencyButtonSize, kEmergencyButtonSize * 1.5);
-    final outer = diameter * 1.45;
+    final outer = diameter * 1.3;
 
     return Semantics(
       label: 'Request emergency ride',

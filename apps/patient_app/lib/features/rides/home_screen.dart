@@ -1,40 +1,74 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:latlong2/latlong.dart';
-import 'package:patient_app/features/rides/home_top_bar.dart';
+import 'package:smartride_core/smartride_core.dart';
+import 'package:patient_app/features/rides/home_map.dart';
 import 'package:patient_app/features/rides/home_sheet.dart';
-import 'package:patient_app/shared/pale_map_tiles.dart';
+import 'package:patient_app/features/rides/home_top_bar.dart';
+import 'package:patient_app/features/rides/map_controls.dart';
 import 'package:patient_app/shared/patient_nav_bar.dart';
 import 'package:patient_app/shared/role_switcher.dart';
 
-class HomeScreen extends ConsumerWidget {
-  const HomeScreen({super.key});
+/// The patient home screen: a full-screen, interactive map; two round glass
+/// buttons on top; a draggable sheet with the emergency button, Book a Ride and
+/// quick cards; and a floating tab bar.
+class HomeScreen extends ConsumerStatefulWidget {
+  const HomeScreen({super.key, this.tileLayer});
+
+  /// Overridable so tests can avoid the network.
+  final TileLayer? tileLayer;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  final _map = MapController();
+  final _sheetExtent = ValueNotifier<double>(kHomeSheetRestSize);
+
+  @override
+  void dispose() {
+    _map.dispose();
+    _sheetExtent.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final height = MediaQuery.sizeOf(context).height;
+
     return Scaffold(
-      // The map and sheet continue behind the frosted tab bar.
+      // The map and sheet continue behind the floating tab bar.
       extendBody: true,
       drawer: const PortalDrawer(),
       body: Stack(
         children: [
-          FlutterMap(
-            options: const MapOptions(
-              initialCenter: LatLng(33.6844, 73.0479),
-              initialZoom: 13,
-              interactionOptions: InteractionOptions(
-                flags: InteractiveFlag.none,
-              ),
-            ),
-            children: [paleTileLayer()],
-          ),
+          HomeMap(controller: _map, tileLayer: widget.tileLayer),
           Builder(
             builder: (ctx) => HomeTopBar(
               onMenu: () => Scaffold.of(ctx).openDrawer(),
             ),
           ),
-          const HomeSheet(),
+          // Under the top buttons, only when location is not working.
+          const SafeArea(
+            child: Padding(
+              padding: EdgeInsets.only(top: kMinTapTarget + kSpaceXL),
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: LocationHint(),
+              ),
+            ),
+          ),
+          HomeSheet(onExtentChanged: (e) => _sheetExtent.value = e),
+          // Rides just above the sheet, whatever position it is in.
+          ValueListenableBuilder<double>(
+            valueListenable: _sheetExtent,
+            builder: (context, extent, _) => Positioned(
+              right: kSpaceLG,
+              bottom: extent * height + kSpaceMD,
+              child: RecenterButton(controller: _map),
+            ),
+          ),
         ],
       ),
       bottomNavigationBar: const PatientNavBar(currentIndex: 0, glass: true),
