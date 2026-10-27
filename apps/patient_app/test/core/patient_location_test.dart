@@ -152,6 +152,35 @@ void main() {
     expect(gateway.settingsOpened, 1);
   });
 
+  test('prompting for permission never opens settings by itself', () async {
+    final gateway = _FakeGateway(current: LocationPermission.deniedForever);
+    final c = _container(gateway);
+
+    await c.read(patientLocationProvider.notifier).prompt();
+
+    expect(gateway.settingsOpened, 0);
+    expect(gateway.requests, 0);
+    expect(
+      c.read(patientLocationProvider).status,
+      LocationStatus.deniedForever,
+    );
+  });
+
+  test('prompting shows the permission dialog when it is merely denied',
+      () async {
+    final gateway = _FakeGateway(
+      current: LocationPermission.denied,
+      afterRequest: LocationPermission.whileInUse,
+      fix: _at(33.0, 73.0),
+    );
+    final c = _container(gateway);
+
+    await c.read(patientLocationProvider.notifier).prompt();
+
+    expect(gateway.requests, 1);
+    expect(c.read(patientLocationProvider).status, LocationStatus.granted);
+  });
+
   test('starts in the loading state', () {
     final c = _container(_FakeGateway());
 

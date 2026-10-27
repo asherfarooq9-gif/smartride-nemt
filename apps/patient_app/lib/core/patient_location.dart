@@ -86,6 +86,11 @@ class PatientLocationNotifier extends StateNotifier<PatientLocation> {
   /// Reads the current state without ever showing a permission prompt.
   Future<void> refresh() => _read(prompt: false);
 
+  /// Shows the permission dialog if the permission is merely denied, and reads
+  /// the position. Never opens settings; use it when a screen opens because of a
+  /// deliberate tap (such as the emergency confirmation).
+  Future<void> prompt() => _read(prompt: true);
+
   /// For a deliberate user action (recenter, enable location). Prompts once if
   /// the permission has not been refused for good; otherwise opens settings.
   Future<void> request() async {
@@ -97,7 +102,7 @@ class PatientLocationNotifier extends StateNotifier<PatientLocation> {
     } on Exception catch (e, st) {
       ErrorReporter.report('Could not read location permission', e, st);
     }
-    await _read(prompt: true);
+    await prompt();
   }
 
   Future<void> _read({required bool prompt}) async {

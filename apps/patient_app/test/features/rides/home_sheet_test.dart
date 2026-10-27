@@ -94,6 +94,7 @@ void main() {
   });
 
   testWidgets('Book a Ride opens the booking flow', (tester) async {
+    _tallPhone(tester);
     await tester.pumpWidget(_app());
     await tester.pumpAndSettle();
 
