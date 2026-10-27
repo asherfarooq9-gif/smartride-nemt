@@ -38,12 +38,13 @@ services:
     build: ./backend
     container_name: smartride_backend
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://smartride:${POSTGRES_PASSWORD:-password}@postgres:5432/smartride
       REDIS_URL: redis://redis:6379/0
       TRIAGE_SERVICE_URL: http://triage:8001
       SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY (cp .env.example .env)}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
       TWILIO_FROM_NUMBER: ${TWILIO_FROM_NUMBER:-}
@@ -62,16 +63,9 @@ services:
     build: ./ai-services/triage
     container_name: smartride_triage
     ports:
-      - "127.0.0.1:8001:8001"
-    environment:
-      MODEL_PATH: /app/model
-      REDIS_URL: redis://redis:6379/1
-    depends_on:
-      redis:
-        condition: service_healthy
+      - "127.0.0.1:${TRIAGE_PORT:-8001}:8001"
     volumes:
       - ./ai-services/triage:/app
-      - triage_model:/app/model
     command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
 
   admin_dashboard:
@@ -121,6 +115,18 @@ services:
       - prometheus_data:/prometheus
     depends_on:
       - backend
+      - alertmanager
+
+  # Routes alerts to people. The receiver in alertmanager.yml is a placeholder that
+  # discards everything until you configure one (see docs/OBSERVABILITY.md).
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: smartride_alertmanager
+    ports:
+      - "127.0.0.1:9093:9093"
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
 
   grafana:
     image: grafana/grafana:11.1.0
@@ -140,6 +146,6 @@ services:
 
 volumes:
   postgres_data:
-  triage_model:
   prometheus_data:
+  alertmanager_data:
   grafana_data:

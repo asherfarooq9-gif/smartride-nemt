@@ -66,7 +66,6 @@ services:
   backend:
     <<: *hardened
     restart: unless-stopped
-    volumes: !reset []
     environment:
       DEBUG: "false"
       ENVIRONMENT: production
@@ -78,12 +77,20 @@ services:
       SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY (python -c "import secrets; print(secrets.token_hex(32))")}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?set ALLOWED_ORIGINS, e.g. ["https://admin.example.com"]}
       METRICS_TOKEN: ${METRICS_TOKEN:?set METRICS_TOKEN for Prometheus}
+      # Push is how drivers and patients hear about assignments. The root filesystem
+      # is read-only, so the key is mounted from the host (see the volume below).
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:?set FIREBASE_PROJECT_ID}
+      FIREBASE_CREDENTIALS_PATH: /run/secrets/firebase-credentials.json
       # uvicorn only trusts X-Forwarded-For from these peers (IPs or CIDRs).
       # Rate limits key on the client IP, so without the proxy listed here every
       # user shares the proxy's IP. A host-side proxy reaches the container from
       # the compose network gateway, NOT 127.0.0.1: use that gateway or the
       # compose network CIDR (docker network inspect <project>_default).
       FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:?set FORWARDED_ALLOW_IPS to your reverse proxy IP/CIDR}
+    # A bind mount of a missing file makes Docker create a directory in its place,
+    # so the path is required rather than defaulted.
+    volumes: !override
+      - ${FIREBASE_CREDENTIALS_FILE:?set FIREBASE_CREDENTIALS_FILE to the Firebase service-account key}:/run/secrets/firebase-credentials.json:ro
     ports: !override
       - "127.0.0.1:8000:8000"
     tmpfs:
@@ -130,6 +137,15 @@ services:
     deploy:
       resources:
         limits: { cpus: "1.0", memory: 512m, pids: 256 }
+
+  alertmanager:
+    <<: *hardened
+    restart: unless-stopped
+    ports: !override
+      - "127.0.0.1:9093:9093"
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 256m, pids: 128 }
 
   grafana:
     <<: *hardened

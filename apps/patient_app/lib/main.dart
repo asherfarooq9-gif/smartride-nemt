@@ -153,7 +153,7 @@ class _SmartRideAppState extends ConsumerState<SmartRideApp> {
       title: 'SmartRide',
       theme: isDriver ? AppTheme.driver() : AppTheme.patient(),
       darkTheme: isDriver ? AppTheme.driver(dark: true) : AppTheme.patient(dark: true),
-      themeMode: ref.watch(themeModeProvider),
+      themeMode: ref.watch(effectiveThemeModeProvider),
       routerConfig: router,
       debugShowCheckedModeBanner: false,
     );

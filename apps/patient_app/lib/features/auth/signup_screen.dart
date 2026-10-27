@@ -82,7 +82,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     final isLoading = ref.watch(authProvider) is AsyncLoading;
 
     return Scaffold(
-      backgroundColor: kAuthDarkBg,
+      backgroundColor: kAuthLightBg,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: kSpaceXL),
@@ -111,18 +111,18 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   style: GoogleFonts.dmSans(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: kAuthText,
                   ),
                 ),
                 const SizedBox(height: kSpaceXXL),
-                DarkField(
+                AuthField(
                   controller: _nameCtrl,
                   label: 'FULL NAME',
                   hint: 'Your full name',
                   validator: (v) => Validators.required(v, field: 'Full name'),
                 ),
                 const SizedBox(height: kSpaceLG),
-                DarkField(
+                AuthField(
                   controller: _phoneCtrl,
                   label: 'PHONE NUMBER',
                   hint: '+92 3XX XXX XXXX',
@@ -130,7 +130,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   validator: Validators.phone,
                 ),
                 const SizedBox(height: kSpaceLG),
-                DarkField(
+                AuthField(
                   controller: _passCtrl,
                   label: 'PASSWORD',
                   hint: 'Min. 8 characters',
@@ -140,7 +140,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       _obscure
                           ? Icons.visibility_outlined
                           : Icons.visibility_off_outlined,
-                      color: Colors.white38,
+                      color: kAuthMuted,
                       size: 20,
                     ),
                     onPressed: () => setState(() => _obscure = !_obscure),
@@ -148,7 +148,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   validator: Validators.password,
                 ),
                 const SizedBox(height: kSpaceLG),
-                DarkField(
+                AuthField(
                   controller: _confirmCtrl,
                   label: 'CONFIRM PASSWORD',
                   hint: 'Repeat password',
@@ -162,7 +162,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   style: GoogleFonts.dmSans(
                     fontSize: kFontCaption,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white38,
+                    color: kAuthMuted,
                     letterSpacing: 0.6,
                   ),
                 ),
@@ -184,12 +184,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                               style: GoogleFonts.dmSans(
                                 fontSize: kFontCaption,
                                 fontWeight: FontWeight.w700,
-                                color: Colors.white38,
+                                color: kAuthMuted,
                                 letterSpacing: 0.6,
                               ),
                             ),
                             const SizedBox(height: kSpaceMD),
-                            DarkField(
+                            AuthField(
                               controller: _licenseCtrl,
                               label: 'LICENSE NUMBER',
                               hint: 'e.g. LHR-DL-12345',
@@ -201,7 +201,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                   : null,
                             ),
                             const SizedBox(height: kSpaceLG),
-                            DarkField(
+                            AuthField(
                               controller: _plateCtrl,
                               label: 'VEHICLE PLATE',
                               hint: 'e.g. ABC-123',
@@ -218,7 +218,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                               style: GoogleFonts.dmSans(
                                 fontSize: kFontCaption,
                                 fontWeight: FontWeight.w700,
-                                color: Colors.white38,
+                                color: kAuthMuted,
                                 letterSpacing: 0.6,
                               ),
                             ),
@@ -270,7 +270,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     Text(
                       'Already have an account? ',
                       style: GoogleFonts.dmSans(
-                        color: Colors.white70,
+                        color: kAuthMuted,
                         fontSize: kFontSmall,
                       ),
                     ),
@@ -282,7 +282,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       child: Text(
                         'Log in',
                         style: GoogleFonts.dmSans(
-                          color: kDarkTeal,
+                          color: kAuthTeal,
                           fontSize: kFontSmall,
                           fontWeight: FontWeight.w600,
                         ),
@@ -335,10 +335,10 @@ class _VehicleTypeChips extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: isSelected
                       ? kAuthTeal.withValues(alpha: 0.15)
-                      : kDarkFieldBg,
+                      : kAuthFieldBg,
                   borderRadius: BorderRadius.circular(kRadiusMD),
                   border: Border.all(
-                    color: isSelected ? kAuthTeal : kDarkFieldBorder,
+                    color: isSelected ? kAuthTeal : kAuthFieldBorder,
                     width: isSelected ? 1.5 : 1.0,
                   ),
                 ),
@@ -347,7 +347,7 @@ class _VehicleTypeChips extends StatelessWidget {
                   style: GoogleFonts.dmSans(
                     fontSize: kFontSmall,
                     fontWeight: FontWeight.w600,
-                    color: isSelected ? kDarkTeal : Colors.white70,
+                    color: isSelected ? kAuthTeal : kAuthMuted,
                   ),
                 ),
               ),
@@ -436,10 +436,10 @@ class _RoleCard extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             color:
-                isSelected ? kAuthTeal.withValues(alpha: 0.15) : kDarkFieldBg,
+                isSelected ? kAuthTeal.withValues(alpha: 0.15) : kAuthFieldBg,
             borderRadius: BorderRadius.circular(kRadiusMD),
             border: Border.all(
-              color: isSelected ? kAuthTeal : kDarkFieldBorder,
+              color: isSelected ? kAuthTeal : kAuthFieldBorder,
               width: isSelected ? 1.5 : 1.0,
             ),
           ),
@@ -454,7 +454,7 @@ class _RoleCard extends StatelessWidget {
                     Text(
                       title,
                       style: GoogleFonts.dmSans(
-                        color: isSelected ? Colors.white : Colors.white70,
+                        color: isSelected ? kAuthText : kAuthMuted,
                         fontWeight: FontWeight.w600,
                         fontSize: kFontBody,
                       ),
@@ -462,7 +462,7 @@ class _RoleCard extends StatelessWidget {
                     Text(
                       subtitle,
                       style: GoogleFonts.dmSans(
-                        color: Colors.white70,
+                        color: kAuthMuted,
                         fontSize: kFontSmall,
                       ),
                     ),

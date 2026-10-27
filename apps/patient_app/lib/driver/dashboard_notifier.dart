@@ -33,11 +33,58 @@ Future<HeartbeatResult> sendHeartbeat({
 
 /// [successWithoutTracking]: the ride is accepted but location sharing could
 /// not start, so the driver must be told the patient cannot see them.
-enum AcceptResult { success, successWithoutTracking, alreadyTaken, error }
+/// [notNearby]: the server refused because the ride is not within reach of this
+/// driver's last known position (or the position is unknown).
+enum AcceptResult {
+  success,
+  successWithoutTracking,
+  alreadyTaken,
+  notNearby,
+  error,
+}
+
+/// What an accept attempt came to, and the words to show the driver. Every
+/// failure carries a message: the next 15 s refresh clears `state.error`, so a
+/// refusal shown only there is gone before it can be read.
+class AcceptOutcome {
+  const AcceptOutcome(this.result, {this.message});
+  final AcceptResult result;
+  final String? message;
+}
+
+/// Maps a failed accept to an outcome. The server's own message is kept because
+/// a 409 does not always mean "taken" ("go online first" is also a 409).
+AcceptOutcome acceptOutcomeForError(core.AppError e) {
+  final message = e.message.isEmpty ? 'Could not accept the ride' : e.message;
+  switch (e.statusCode) {
+    case 409:
+      return AcceptOutcome(AcceptResult.alreadyTaken, message: message);
+    case 403:
+      return AcceptOutcome(AcceptResult.notNearby, message: message);
+    default:
+      return AcceptOutcome(AcceptResult.error, message: message);
+  }
+}
+
+/// The ride this driver is in the middle of, from their ride history (newest
+/// first). The only way back into a ride after the app was closed or crashed.
+core.RideResponse? findActiveDriverRide(List<core.RideResponse> rides) {
+  const live = {
+    core.RideStatus.driverAssigned,
+    core.RideStatus.driverEnRoute,
+    core.RideStatus.patientPickedUp,
+    core.RideStatus.arrivedAtHospital,
+  };
+  for (final ride in rides) {
+    if (live.contains(ride.status)) return ride;
+  }
+  return null;
+}
 
 class DashboardState {
   const DashboardState({
     this.driver,
+    this.activeRide,
     this.pendingRides = const [],
     this.todayEarningsPkr = 0.0,
     this.isLoading = false,
@@ -45,6 +92,9 @@ class DashboardState {
   });
 
   final core.DriverResponse? driver;
+
+  /// A ride in progress for this driver, so the dashboard can offer to resume it.
+  final core.RideResponse? activeRide;
   final List<core.RideResponse> pendingRides;
   final double todayEarningsPkr;
   final bool isLoading;
@@ -54,6 +104,7 @@ class DashboardState {
 
   DashboardState copyWith({
     core.DriverResponse? driver,
+    core.RideResponse? activeRide,
     List<core.RideResponse>? pendingRides,
     double? todayEarningsPkr,
     bool? isLoading,
@@ -61,6 +112,7 @@ class DashboardState {
   }) =>
       DashboardState(
         driver: driver ?? this.driver,
+        activeRide: activeRide ?? this.activeRide,
         pendingRides: pendingRides ?? this.pendingRides,
         todayEarningsPkr: todayEarningsPkr ?? this.todayEarningsPkr,
         isLoading: isLoading ?? this.isLoading,
@@ -133,19 +185,37 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
         core.getDriverPendingRides(),
         core.getDriverEarnings(),
       ).wait;
+      final active = await _loadActiveRide();
+      if (!mounted) return; // signed out while this was in flight
       state = DashboardState(
         driver: driver,
+        activeRide: active,
         pendingRides:
             rides.where((r) => !_declined.contains(r.id.toString())).toList(),
         todayEarningsPkr: _calcTodayEarnings(earnings),
         isLoading: false,
       );
       _syncHeartbeat();
-    } catch (e) {
+    } catch (e, st) {
+      if (e is! core.AppError) {
+        // A parsing bug must not hide behind a bare "Failed to load".
+        core.ErrorReporter.report('Driver dashboard refresh failed', e, st);
+      }
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         error: e is core.AppError ? e.message : 'Failed to load',
       );
+    }
+  }
+
+  /// A failure here must not break the dashboard: keep what was shown before.
+  Future<core.RideResponse?> _loadActiveRide() async {
+    try {
+      final mine = await core.getMyRides(pageSize: 10);
+      return findActiveDriverRide(mine.items);
+    } on core.AppError {
+      return state.activeRide;
     }
   }
 
@@ -173,25 +243,25 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
     }
   }
 
-  Future<AcceptResult> acceptRide(String rideId) async {
+  Future<AcceptOutcome> acceptRide(String rideId) async {
     try {
       await core.acceptRide(rideId);
     } on core.AppError catch (e) {
-      if (e.statusCode == 409) return AcceptResult.alreadyTaken;
-      state = state.copyWith(error: e.message);
-      return AcceptResult.error;
+      return acceptOutcomeForError(e);
     } on Exception catch (e, st) {
       core.ErrorReporter.report('Accepting a ride failed', e, st);
-      state = state.copyWith(error: 'Failed to accept ride');
-      return AcceptResult.error;
+      return const AcceptOutcome(
+        AcceptResult.error,
+        message: 'Failed to accept ride',
+      );
     }
     final tracking =
         await _ref.read(gpsStreamProvider.notifier).startStreaming(rideId);
     final isSharing = tracking == GpsStartResult.started ||
         tracking == GpsStartResult.alreadyStreaming;
-    return isSharing
-        ? AcceptResult.success
-        : AcceptResult.successWithoutTracking;
+    return AcceptOutcome(
+      isSharing ? AcceptResult.success : AcceptResult.successWithoutTracking,
+    );
   }
 
   double _calcTodayEarnings(Map<String, dynamic> data) {

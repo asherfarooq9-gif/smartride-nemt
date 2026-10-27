@@ -60,6 +60,25 @@ def create_tables():
 
 
 @pytest.fixture(autouse=True)
+def _reset_triage_breaker():
+    """The breaker is process-wide state; failures in one test must not open it for the next."""
+    from app.services.emergency_dispatch import reset_triage_breaker
+
+    reset_triage_breaker()
+    yield
+    reset_triage_breaker()
+
+
+@pytest.fixture(autouse=True)
+def _summary_cache_off(monkeypatch):
+    """The dashboard summary is cached in production. Tests that read it right after
+    changing data need the live numbers, so the cache is off unless a test asks."""
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "SUMMARY_CACHE_SECONDS", 0, raising=False)
+
+
+@pytest.fixture(autouse=True)
 def _clear_login_lockouts():
     """Lockout counters live in Redis and outlive a test run; tests reuse phone numbers."""
     import redis
@@ -207,5 +226,7 @@ async def verified_driver_token(client: AsyncClient, db: AsyncSession) -> str:
     ).scalar_one()
     driver.is_verified = True
     driver.status = DriverStatus.available  # only online drivers may take rides
+    # Near the test pickup (33.7215, 73.0433): accepting needs a known, nearby position.
+    driver.current_lat, driver.current_lng = 33.7315, 73.0433
     await db.commit()
     return resp.json()["access_token"]

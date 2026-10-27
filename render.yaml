@@ -1,3 +1,8 @@
+# PILOT ONLY. Both `plan: free` entries below are for demos and the FYP pilot, not for
+# real patients: a free web service sleeps when idle (the first request after a quiet
+# spell waits tens of seconds, and nothing is dispatching while it sleeps) and a free
+# database expires. Move both to a paid plan before anyone relies on this for an
+# emergency. That is a spending decision, so it is left to the owner (docs/RUNBOOK.md).
 databases:
   - name: smartride-db
     databaseName: smartride
@@ -11,7 +16,10 @@ services:
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     plan: free
-    healthCheckPath: /health
+    # /ready, not /health: /health always answers 200, so an instance with no database
+    # or Redis would still receive traffic. Render only switches a deploy over once
+    # this passes, so a missing REDIS_URL fails the deploy instead of breaking logins.
+    healthCheckPath: /ready
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -21,8 +29,11 @@ services:
         sync: false          # set manually in Render dashboard (Upstash)
       - key: SECRET_KEY
         generateValue: true
+      # The triage service is not deployed here. Dispatch then uses the built-in
+      # keyword rules (the same ones the service falls back on), which err towards
+      # the higher severity. Deploy ai-services/triage and set this URL to use the model.
       - key: TRIAGE_SERVICE_URL
-        value: ""            # triage AI not deployed — graceful fallback
+        value: ""
       - key: DEBUG
         value: "false"
       - key: ENVIRONMENT
@@ -35,11 +46,16 @@ services:
         sync: false          # JSON list, e.g. ["https://admin.example.com"]; the app refuses to boot with "*" when DEBUG=false
       - key: METRICS_TOKEN
         sync: false          # bearer token Prometheus sends to /metrics; set in the Render dashboard
+      # Never "*": uvicorn would then take the LEFT-most X-Forwarded-For entry, which
+      # the client writes (Render appends to the header). Trusting only private
+      # ranges makes uvicorn walk the header from the right and stop at the first
+      # public address, the one Render added. Confirm after deploy with
+      # curl -H 'X-Forwarded-For: 1.2.3.4' on /auth/login and check the logged IP.
       - key: FORWARDED_ALLOW_IPS
-        value: "*"           # Render's proxy is the only peer; lets uvicorn read X-Forwarded-For so rate limits key on the real client IP
+        value: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10"
       - key: TWILIO_ACCOUNT_SID
-        value: ""
+        sync: false          # set in the Render dashboard; SMS is off until you do
       - key: TWILIO_AUTH_TOKEN
-        value: ""
+        sync: false          # set in the Render dashboard; SMS is off until you do
       - key: TWILIO_FROM_NUMBER
-        value: ""
+        sync: false          # set in the Render dashboard; SMS is off until you do

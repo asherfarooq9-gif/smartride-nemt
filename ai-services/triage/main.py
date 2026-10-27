@@ -36,8 +36,10 @@ class TriageResponse(BaseModel):
     inference_ms: int
 
 
+# A plain `def`, not `async def`: keyword matching is CPU-bound, and FastAPI runs a
+# sync handler in its threadpool instead of on the event loop that /health shares.
 @app.post("/triage", response_model=TriageResponse)
-async def triage(req: TriageRequest):
+def triage(req: TriageRequest):
     start = time.perf_counter()
     specialty, confidence = infer_specialty(req.text)
     severity, rule_override = compute_severity(req.text)

@@ -125,6 +125,12 @@ async def test_upgrade_creates_and_downgrade_removes_the_0007_objects(scratch_db
     assert again.returncode == 0, again.stderr[-2000:]
 
 
+def _head_revision() -> str:
+    heads = _alembic("heads")
+    assert heads.returncode == 0, heads.stderr[-2000:]
+    return heads.stdout.split()[0]
+
+
 async def _alembic_current() -> str:
     (version,) = await _scalars("SELECT version_num FROM alembic_version")
     return version
@@ -151,6 +157,63 @@ async def test_downgrade_refuses_to_drop_ledger_audit_data(scratch_db):
 
     assert down.returncode != 0
     assert "Refusing to downgrade 0007" in down.stderr
-    # The whole downgrade is one transaction, so 0008's step is rolled back too.
-    assert (await _alembic_current()) == "0008"
+    # The whole downgrade is one transaction, so the later steps are rolled back too.
+    assert (await _alembic_current()) == _head_revision()
     assert await _scalars("SELECT idempotency_key FROM wallet_transactions") == {"k"}
+
+
+TRIGRAM_INDEXES = {
+    "ix_rides_pickup_address_trgm": ("rides", "pickup_address"),
+    "ix_drivers_full_name_trgm": ("drivers", "full_name"),
+    "ix_drivers_vehicle_plate_trgm": ("drivers", "vehicle_plate"),
+    "ix_patients_full_name_trgm": ("patients", "full_name"),
+    "ix_users_phone_trgm": ("users", "phone"),
+}
+
+
+async def test_search_columns_get_trigram_indexes_and_downgrade_removes_them(
+    scratch_db,
+):
+    up = _alembic("upgrade", "head")
+    assert up.returncode == 0, up.stderr[-2000:]
+    definitions = {
+        row.split("|")[0]: row.split("|")[1]
+        for row in await _scalars(
+            "SELECT indexname || '|' || indexdef FROM pg_indexes "
+            "WHERE indexname LIKE '%trgm'"
+        )
+    }
+    assert set(definitions) == set(TRIGRAM_INDEXES)
+    for name, (table, column) in TRIGRAM_INDEXES.items():
+        assert f"public.{table}" in definitions[name]
+        assert "USING gin" in definitions[name]
+        assert f"{column} gin_trgm_ops" in definitions[name]
+
+    down = _alembic("downgrade", "-1")
+    assert down.returncode == 0, down.stderr[-2000:]
+    assert not await _scalars(
+        "SELECT indexname FROM pg_indexes WHERE indexname LIKE '%trgm'"
+    )
+
+
+async def test_substring_search_can_use_the_trigram_index(scratch_db):
+    assert _alembic("upgrade", "head").returncode == 0
+    engine = create_async_engine(_url_for(SCRATCH_DB), poolclass=NullPool)
+    async with engine.connect() as conn:
+        # With a handful of rows the planner prefers a scan; this asks whether the
+        # index is *usable* for the %term% pattern the admin search builds.
+        await conn.execute(text("SET enable_seqscan = off"))
+        plan = (
+            (
+                await conn.execute(
+                    text(
+                        "EXPLAIN SELECT id FROM rides WHERE pickup_address ILIKE '%pims%'"
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+    await engine.dispose()
+
+    assert any("ix_rides_pickup_address_trgm" in line for line in plan), plan

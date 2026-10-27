@@ -77,7 +77,8 @@ class RideResponse(BaseModel):
 
 class RidePatientInfo(BaseModel):
     full_name: str
-    phone: str
+    # None once the ride is over and the viewer is the driver (see _patient_info).
+    phone: Optional[str] = None
     mobility_needs: Optional[str] = None
 
 

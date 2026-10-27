@@ -39,8 +39,19 @@ export function useApiData<T>(fetcher: Fetcher<T>, pollMs?: number) {
 
   useEffect(() => {
     if (!pollMs) return
-    const id = setInterval(() => setReloads(n => n + 1), pollMs)
-    return () => clearInterval(id)
+    // A background tab has nobody to show the data to, and each open dashboard
+    // polls /summary (several aggregate queries), so skip the tick while hidden.
+    // visibilitychange also reloads on return, so the page never shows data up to
+    // pollMs old.
+    const reloadIfVisible = () => {
+      if (document.visibilityState === 'visible') setReloads(n => n + 1)
+    }
+    const id = setInterval(reloadIfVisible, pollMs)
+    document.addEventListener('visibilitychange', reloadIfVisible)
+    return () => {
+      clearInterval(id)
+      document.removeEventListener('visibilitychange', reloadIfVisible)
+    }
   }, [pollMs])
 
   const isSameQuery = settled?.fetcher === fetcher

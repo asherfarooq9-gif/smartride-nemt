@@ -25,6 +25,23 @@ export function setToken(token: string) {
   notifyTokenChange()
 }
 
+// Held in memory, not storage: the redirect to /login after a 401 is a client-side
+// navigation, so this survives it, and a page reload (or a fresh visit) starts clean,
+// which makes the notice appear once. It is also safe to read while rendering.
+let sessionExpiredNotice = false
+
+/** Remember that the server rejected the session, so /login can say so once. */
+export function markSessionExpired() {
+  sessionExpiredNotice = true
+}
+
+/** True once after a session expired; reading it clears it. */
+export function takeSessionExpired(): boolean {
+  const expired = sessionExpiredNotice
+  sessionExpiredNotice = false
+  return expired
+}
+
 export function clearToken() {
   localStorage.removeItem(TOKEN_KEY)
   notifyTokenChange()
@@ -100,6 +117,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   // watches the token store and navigates to /login (no hard page reload, and
   // several parallel 401s collapse into one redirect).
   if (res.status === 401 && !path.endsWith('/auth/login')) {
+    markSessionExpired()
     clearToken()
     throw new Error('Session expired. Please sign in again.')
   }
@@ -115,12 +133,28 @@ function qs(params: Record<string, string | number | boolean | undefined>): stri
 }
 
 export const api = {
-  login: async (phone: string, password: string) => {
-    clearToken()
-    return request<{ access_token: string; role: string }>('/api/v1/auth/login', {
+  // Does not clear the stored token first: a failed attempt (wrong password, a
+  // mistyped number) must not sign the admin out of the session another tab holds.
+  login: (phone: string, password: string) =>
+    request<{ access_token: string; role: string }>('/api/v1/auth/login', {
       method: 'POST',
       body: JSON.stringify({ phone, password }),
-    })
+    }),
+
+  /**
+   * Ends a server session for a token that was never stored (a non-admin who signed
+   * in to the admin portal). Best effort: if it fails the token simply expires on its
+   * own and is never used, because it was not saved.
+   */
+  logoutWithToken: async (token: string) => {
+    try {
+      await fetch(`${API_URL}/api/v1/auth/logout`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+    } catch {
+      // Offline or blocked: nothing more can be done for a token we never kept.
+    }
   },
 
   summary: (signal?: AbortSignal) => request<DashboardSummary>('/api/v1/analytics/summary', { signal }),

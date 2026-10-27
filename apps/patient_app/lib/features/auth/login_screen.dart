@@ -48,7 +48,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final isLoading = ref.watch(authProvider) is AsyncLoading;
 
     return Scaffold(
-      backgroundColor: kAuthDarkBg,
+      backgroundColor: kAuthLightBg,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: kSpaceXL),
@@ -77,7 +77,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   style: GoogleFonts.dmSans(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: kAuthText,
                   ),
                 ),
                 const SizedBox(height: kSpaceXS),
@@ -85,11 +85,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   'Log in to your SmartRide account',
                   style: GoogleFonts.dmSans(
                     fontSize: kFontSmall,
-                    color: Colors.white70,
+                    color: kAuthMuted,
                   ),
                 ),
                 const SizedBox(height: kSpaceXXL),
-                DarkField(
+                AuthField(
                   controller: _phoneCtrl,
                   label: 'PHONE NUMBER',
                   hint: '+92 3XX XXX XXXX',
@@ -97,7 +97,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   validator: Validators.phone,
                 ),
                 const SizedBox(height: kSpaceLG),
-                DarkField(
+                AuthField(
                   controller: _passCtrl,
                   label: 'PASSWORD',
                   hint: 'Your password',
@@ -108,7 +108,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       _obscure
                           ? Icons.visibility_outlined
                           : Icons.visibility_off_outlined,
-                      color: Colors.white70,
+                      color: kAuthMuted,
                     ),
                     onPressed: () => setState(() => _obscure = !_obscure),
                   ),
@@ -185,7 +185,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Text(
                       "Don't have an account? ",
                       style: GoogleFonts.dmSans(
-                        color: Colors.white70,
+                        color: kAuthMuted,
                         fontSize: kFontSmall,
                       ),
                     ),
@@ -197,7 +197,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       child: Text(
                         'Sign up',
                         style: GoogleFonts.dmSans(
-                          color: kDarkTeal,
+                          color: kAuthTeal,
                           fontSize: kFontSmall,
                           fontWeight: FontWeight.w600,
                         ),

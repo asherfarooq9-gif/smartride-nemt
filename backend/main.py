@@ -30,6 +30,7 @@ from app.core.ratelimit import make_limiter
 from app.core.security import require_metrics_access
 from app.routers import auth, patients, drivers, hospitals, rides, analytics, ws
 from app.services import dispatch_loop
+from app.services.notifications import push_setup_problem
 from app.services.ws_manager import location_manager
 from app.schemas.errors import ErrorResponse
 
@@ -60,6 +61,17 @@ def _warn_if_dispatch_loop_disabled() -> None:
         )
 
 
+def _warn_if_push_not_set_up() -> None:
+    """Say so at startup: a missing key otherwise turns every push into a no-op."""
+    problem = push_setup_problem()
+    if problem and not settings.DEBUG:
+        log.warning(
+            "Push notifications will NOT be delivered (%s): drivers and patients "
+            "will not be told about assignments.",
+            problem,
+        )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # #3 Fail fast if the default insecure secret key is still in use
@@ -82,6 +94,7 @@ async def lifespan(app: FastAPI):
     # Wire error tracking (no-op unless SENTRY_DSN is configured).
     init_error_tracking()
     _warn_if_dispatch_loop_disabled()
+    _warn_if_push_not_set_up()
 
     dispatch_task = (
         asyncio.create_task(dispatch_loop.run_forever())

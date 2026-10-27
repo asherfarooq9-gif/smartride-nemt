@@ -61,6 +61,9 @@ class FakeWebSocket:
         if not self._incoming:
             raise WebSocketDisconnect()
         item = self._incoming.pop(0)
+        if callable(item):  # a side effect that happens between two frames
+            await item()
+            return await self._next()
         if item is HANG:
             await asyncio.sleep(3600)
         if isinstance(item, BaseException):
@@ -389,3 +392,147 @@ async def test_failed_subscribe_closes_the_half_open_pubsub():
         await mgr.subscribe("r")
 
     pubsub.aclose.assert_awaited_once()
+
+
+# ── ownership and relay cost ─────────────────────────────────────────────────
+
+
+async def test_a_driver_who_no_longer_owns_the_ride_is_told_it_ended(db, ws_factory):
+    ride, driver, *_ = await _seed_driver_ride(db)
+    assert await ws._persist_location(str(ride.id), driver.id, 33.5, 73.5) is True
+
+    await db.execute(update(Ride).where(Ride.id == ride.id).values(driver_id=None))
+    await db.commit()
+
+    assert await ws._persist_location(str(ride.id), driver.id, 33.5, 73.5) is False
+
+
+async def test_a_reassigned_ride_ends_the_old_drivers_socket(
+    db, ws_factory, fast_frames, monkeypatch
+):
+    monkeypatch.setattr(ws, "_GPS_PERSIST_INTERVAL_SECONDS", 0)
+    ride_id = None
+
+    async def another_driver_takes_the_ride():
+        await db.execute(update(Ride).where(Ride.id == ride_id).values(driver_id=None))
+        await db.commit()
+
+    ride, _, du, fake = await _drive(db, ws_factory, [])
+    ride_id = ride.id
+    fake._incoming += [_frame(), another_driver_takes_the_ride, _frame(33.73)]
+    publish = AsyncMock()
+
+    with patch.object(ws.location_manager, "publish", publish):
+        await ws.driver_location_ws(fake, str(ride.id))
+
+    assert {"event": "ride_ended"} in fake.sent
+    assert publish.await_count == 1  # only the frame sent while they still owned it
+
+
+class _ScriptedPubSub:
+    """get_message returns the scripted items, then raises to stop the relay."""
+
+    def __init__(self, items):
+        self._items = list(items)
+
+    async def get_message(self, **_kwargs):
+        if not self._items:
+            raise asyncio.CancelledError()
+        return self._items.pop(0)
+
+
+async def test_relay_does_not_query_the_database_for_every_gps_frame(
+    db, ws_factory, monkeypatch
+):
+    ride, *_ = await _seed_driver_ride(db)
+    monkeypatch.setattr(ws, "_STATUS_RECHECK_SECONDS", 3600.0)
+    opened = MagicMock(wraps=ws.AsyncSessionLocal)
+    frames = [{"data": '{"lat": 1, "lng": 2}'}] * 6
+    fake = FakeWebSocket([])
+
+    with patch.object(ws, "AsyncSessionLocal", opened):
+        with pytest.raises(asyncio.CancelledError):
+            await ws._relay_location(
+                fake, str(ride.id), _ScriptedPubSub(frames), ws_token_for_tests()
+            )
+
+    assert len(fake.sent) == 6
+    assert opened.call_count == 1  # the first check only
+
+
+async def test_relay_still_ends_when_the_ride_finishes_while_quiet(
+    db, ws_factory, monkeypatch
+):
+    ride, *_ = await _seed_driver_ride(db)
+    monkeypatch.setattr(ws, "_STATUS_RECHECK_SECONDS", 3600.0)
+    fake = FakeWebSocket([])
+    pubsub = _ScriptedPubSub([{"data": "x"}, None])
+
+    with pytest.raises(asyncio.CancelledError):
+        await ws._relay_location(fake, str(ride.id), pubsub, ws_token_for_tests())
+    assert {"event": "ping"} in fake.sent  # quiet, ride still live
+
+    await db.execute(
+        update(Ride).where(Ride.id == ride.id).values(status=RideStatus.completed)
+    )
+    await db.commit()
+    fake = FakeWebSocket([])
+
+    await ws._relay_location(
+        fake, str(ride.id), _ScriptedPubSub([None]), ws_token_for_tests()
+    )
+
+    assert fake.sent[0]["event"] == "ride_ended"
+
+
+def ws_token_for_tests() -> str:
+    from app.core.security import create_access_token
+
+    return create_access_token({"sub": "x"})
+
+
+# ── a logged-out token must not keep streaming ───────────────────────────────
+
+
+async def _block(token: str) -> None:
+    from app.core.redis_client import block_token
+    from app.core.security import decode_token
+
+    assert await block_token(decode_token(token)["jti"], 600)
+
+
+async def test_watcher_socket_closes_once_its_token_is_revoked(
+    db, ws_factory, monkeypatch
+):
+    ride, *_ = await _seed_driver_ride(db)
+    monkeypatch.setattr(ws, "_STATUS_RECHECK_SECONDS", 0)
+    token = ws_token_for_tests()
+    await _block(token)
+    fake = FakeWebSocket([])
+
+    await ws._relay_location(
+        fake, str(ride.id), _ScriptedPubSub([{"data": "x"}]), token
+    )
+
+    assert fake.closed_with == [1008]
+    assert fake.sent == []
+
+
+async def test_driver_socket_closes_once_its_token_is_revoked(
+    db, ws_factory, fast_frames, monkeypatch
+):
+    monkeypatch.setattr(ws, "_GPS_PERSIST_INTERVAL_SECONDS", 0)
+    ride, driver, du, fake = await _drive(db, ws_factory, [])
+    driver_token = json.loads(fake._incoming[0])["token"]
+
+    async def driver_logs_out():
+        await _block(driver_token)
+
+    fake._incoming += [_frame(), driver_logs_out, _frame(33.73)]
+    publish = AsyncMock()
+
+    with patch.object(ws.location_manager, "publish", publish):
+        await ws.driver_location_ws(fake, str(ride.id))
+
+    assert 1008 in fake.closed_with
+    assert publish.await_count == 1

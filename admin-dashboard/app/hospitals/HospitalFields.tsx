@@ -1,4 +1,4 @@
-import type { HospitalInput } from '@/lib/api'
+import type { HospitalFormState } from './hospitalForm'
 
 export const ALL_SPECIALTIES = [
   'cardiology', 'neurology', 'orthopedics', 'obstetrics', 'pediatrics',
@@ -31,8 +31,8 @@ const LABEL_CLASS = 'block text-xs font-medium text-gray-500 mb-1'
 interface Props {
   /** Prefix for the input ids, so two forms on one page never collide. */
   idPrefix: string
-  value: HospitalInput
-  onChange: (next: HospitalInput) => void
+  value: HospitalFormState
+  onChange: (next: HospitalFormState) => void
 }
 
 export function toggleSpecialty(list: string[], specialty: string): string[] {
@@ -60,10 +60,11 @@ export default function HospitalFields({ idPrefix, value, onChange }: Props) {
           <label htmlFor={`${idPrefix}-${f.key}`} className={LABEL_CLASS}>{f.label}</label>
           <input
             id={`${idPrefix}-${f.key}`}
-            type="number"
-            step="any"
+            type="text"
+            inputMode={f.key === 'ed_capacity' ? 'numeric' : 'decimal'}
+            autoComplete="off"
             value={value[f.key]}
-            onChange={e => onChange({ ...value, [f.key]: parseFloat(e.target.value) || 0 })}
+            onChange={e => onChange({ ...value, [f.key]: e.target.value })}
             className={INPUT_CLASS}
           />
         </div>

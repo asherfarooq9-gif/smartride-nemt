@@ -173,3 +173,62 @@ async def test_ride_detail_for_the_owner_never_includes_password_hashes(client):
     r = await client.get(f"/api/v1/rides/{ride_id}/detail", headers=_auth(token))
     assert r.status_code == 200
     assert "password" not in r.text.lower()
+
+
+async def _detail(client, token: str, ride_id: str) -> dict:
+    r = await client.get(f"/api/v1/rides/{ride_id}/detail", headers=_auth(token))
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+async def _complete(client, driver_token: str, ride_id: str) -> None:
+    from tests.test_ride_lifecycle import _set_ride_status
+
+    for step in (
+        "driver_en_route",
+        "patient_picked_up",
+        "arrived_at_hospital",
+        "completed",
+    ):
+        r = await _set_ride_status(client, driver_token, ride_id, step)
+        assert r.status_code == 200, r.text
+
+
+async def test_driver_sees_patient_contact_only_while_the_ride_is_live(
+    client, db, verified_driver_token
+):
+    from sqlalchemy import update
+
+    from app.models.models import Patient
+    from tests.test_ride_lifecycle import _assigned_ride, _phone
+
+    patient_token, ride_id = await _assigned_ride(
+        client, _phone(), verified_driver_token
+    )
+    await db.execute(update(Patient).values(mobility_needs="wheelchair"))
+    await db.commit()
+
+    live = (await _detail(client, verified_driver_token, ride_id))["patient"]
+    assert live["phone"]
+    assert live["mobility_needs"] == "wheelchair"
+
+    await _complete(client, verified_driver_token, ride_id)
+
+    done = (await _detail(client, verified_driver_token, ride_id))["patient"]
+    assert done["phone"] is None
+    assert done["mobility_needs"] is None
+    assert done["full_name"]
+
+
+async def test_patient_and_admin_keep_full_detail_after_the_ride(
+    client, db, verified_driver_token, admin_token
+):
+    from tests.test_ride_lifecycle import _assigned_ride, _phone
+
+    patient_token, ride_id = await _assigned_ride(
+        client, _phone(), verified_driver_token
+    )
+    await _complete(client, verified_driver_token, ride_id)
+
+    for token in (patient_token, admin_token):
+        assert (await _detail(client, token, ride_id))["patient"]["phone"]

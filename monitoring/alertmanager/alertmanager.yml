@@ -1,0 +1,25 @@
+# Alertmanager routes Prometheus alerts to people.
+#
+# PLACEHOLDER: the receiver below discards every alert. Nobody is paged until you
+# replace it with a real one (email, Slack, PagerDuty, Opsgenie, a webhook...).
+# Deciding who is on call, and on which channel, is an owner decision. See
+# docs/OBSERVABILITY.md. Secrets (SMTP password, Slack webhook URL) belong in a
+# mounted file, not in this repository: use `password_file` / `api_url_file`.
+#
+# Example Slack receiver:
+#   receivers:
+#     - name: oncall
+#       slack_configs:
+#         - api_url_file: /etc/alertmanager/slack_webhook_url
+#           channel: "#smartride-alerts"
+#           send_resolved: true
+route:
+  receiver: unconfigured
+  group_by: [alertname]
+  group_wait: 10s
+  group_interval: 5m
+  # A critical alert that is still firing is repeated, not forgotten.
+  repeat_interval: 1h
+
+receivers:
+  - name: unconfigured

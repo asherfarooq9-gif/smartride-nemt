@@ -31,6 +31,15 @@ Put TLS in front of `backend` and `admin_dashboard` (nginx, Caddy or a cloud loa
 balancer) and set `FORWARDED_ALLOW_IPS` to the proxy's address so rate limits see
 real client IPs. Production ports are bound to `127.0.0.1` for that reason.
 
+Never set `FORWARDED_ALLOW_IPS` to `*`. uvicorn then trusts the left-most
+`X-Forwarded-For` entry, which the client controls, and the IP rate limits and login
+lockout can be bypassed. On Render it is set to the private ranges in `render.yaml`;
+after a deploy, send `curl -H 'X-Forwarded-For: 1.2.3.4'` to `/auth/login` and check the
+logged client IP is yours, not `1.2.3.4`.
+
+Wallet top-ups (`POST /drivers/{id}/wallet/topup`) require an `Idempotency-Key` header;
+reuse the same key when retrying so the driver is credited once.
+
 Optional integrations, all of which degrade gracefully when unset: `TWILIO_*`
 (SMS to family and hospitals), `FIREBASE_PROJECT_ID` + credentials file (push),
 `SENTRY_DSN`.
@@ -40,11 +49,35 @@ Optional integrations, all of which degrade gracefully when unset: `TWILIO_*`
 1. Merge to `main` only when CI is green (backend, Flutter, triage, admin build, Playwright).
 2. Tag `vX.Y.Z` to build the signed Android APK. The workflow refuses to run without
    the signing secrets (`KEYSTORE_*`, `KEY_*`, `API_BASE_URL`).
-3. Roll the backend by deploying the previous image tag.
-4. Database: migrations only add. `0006` converts `wallet_balance_pkr` from float to
-   `NUMERIC(12,2)` and adds the `wallet_transactions` ledger. To go back:
-   `alembic downgrade 0005` (the ledger table is dropped, balances are kept). Take a
-   backup first (`scripts/db_backup.sh`).
+3. Roll the backend back by redeploying the previous release (on Render, roll back to
+   the previous deploy). Do this first; it is almost always enough.
+4. Database: prefer rolling forward. Every migration is additive for the previous
+   release, so release N-1 runs on schema N:
+   - `0006` converts `wallet_balance_pkr` to `NUMERIC(12,2)` and adds the
+     `wallet_transactions` ledger.
+   - `0007` adds ledger guards, a unique idempotency key and indexes. **Its downgrade
+     refuses to run** once the ledger holds idempotency keys, admin ids or payment
+     methods, or once rides carry `symptom_text`. That is deliberate: it would destroy
+     audit data. Do not force it.
+   - `0008` **dropped** `hospital_alerts` and `family_notifications`. They were never
+     written to, so nothing is lost. Its downgrade recreates them empty.
+   - `0009` adds `users.token_version`. The previous release ignores it, and tokens
+     issued without a version count as 0, so nothing is signed out by the deploy.
+   - `0010` adds `pg_trgm` and five GIN indexes for the admin substring searches. The
+     previous release ignores them; the downgrade drops the indexes and keeps the
+     extension. Building them briefly blocks writes to each table.
+
+   If you must go back, take a backup first (`scripts/db_backup.sh`), then step down
+   one revision at a time (`alembic downgrade 0008`, and so on) and stop at the first
+   refusal. A downgrade past `0006` is never needed to undo a bad release.
+5. The backend runs `alembic upgrade head` on every start. Instances that start together
+   queue on a PostgreSQL advisory lock, so only one applies a migration and the others
+   find nothing left to do. A migration that hangs holds the lock, so check for a stuck
+   `alembic` session (`SELECT * FROM pg_locks WHERE locktype = 'advisory'`) before
+   restarting every instance.
+   Each migration statement waits at most 5 seconds for a table lock; if a long
+   transaction holds one, the migration fails and the container restarts and retries,
+   instead of queueing behind it and stalling every query on that table.
 
 ## Incidents
 
@@ -58,8 +91,17 @@ Optional integrations, all of which degrade gracefully when unset: `TWILIO_*`
 loop restarts itself each interval; a repeating error is almost always the database.
 Restarting the backend is safe.
 
-**A user is locked out.** Five wrong passwords lock a phone number for 15 minutes.
-Clear it early with `redis-cli DEL login_fail:+92300xxxxxxx`.
+**A user is locked out.** Five wrong passwords from one address lock that address for
+15 minutes for that phone number. 25 wrong passwords from any addresses also lock
+addresses that have never logged in to that account; an address that has logged in
+within the last 30 days is exempt from that second limit, so the owner is not locked
+out by someone else's guessing. Clear it early with
+`redis-cli --scan --pattern 'login_fail:*+92300xxxxxxx*' | xargs redis-cli DEL`.
+
+**Sign a user out everywhere** (a stolen phone, a leaked token). The user can call
+`POST /api/v1/auth/logout-all`. Support can do the same in SQL:
+`UPDATE users SET token_version = token_version + 1 WHERE phone = '+92300xxxxxxx';`
+Every token issued before that stops working immediately.
 
 **Redis is down.** Every authenticated request fails (token revocation cannot be
 checked) and `/ready` reports `redis: false`. Restore Redis; nothing else needs a restart.

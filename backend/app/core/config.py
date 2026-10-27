@@ -28,6 +28,13 @@ class Settings(BaseSettings):
 
     # AI Services
     TRIAGE_SERVICE_URL: str = "http://triage:8001"
+    # The service is rules-only, so a slow answer is a sick service, not a hard
+    # question. Seconds to wait before using the local rules instead.
+    TRIAGE_TIMEOUT_SECONDS: float = 3.0
+    # After this many failures in a row, stop calling it for TRIAGE_BREAKER_SECONDS
+    # (local rules answer meanwhile), then let one probe call through.
+    TRIAGE_BREAKER_FAILURES: int = 3
+    TRIAGE_BREAKER_SECONDS: int = 30
 
     # Twilio
     TWILIO_ACCOUNT_SID: str = ""
@@ -61,9 +68,16 @@ class Settings(BaseSettings):
     # without letting one stranger lock the real owner out.
     LOGIN_PHONE_MAX_FAILURES: int = 25
     LOGIN_LOCK_SECONDS: int = 900
+    # An address that has logged in to an account is remembered this long. The
+    # per-phone ceiling does not apply to it, so guessing from elsewhere cannot
+    # lock the real owner out.
+    LOGIN_KNOWN_ADDRESS_SECONDS: int = 60 * 60 * 24 * 30
     SESSION_MAX_DAYS: int = 30
     # Bearer token Prometheus must send to /metrics (open without it only in DEBUG)
     METRICS_TOKEN: str = ""
+    # Seconds the admin dashboard summary is cached (it runs several aggregate
+    # queries and every open dashboard polls it). 0 turns the cache off.
+    SUMMARY_CACHE_SECONDS: int = 15
     # Drivers farther than this from the pickup are not considered for dispatch
     DRIVER_SEARCH_RADIUS_KM: float = 50.0
     # Fares (flat base + per km) and the platform's share of each fare
@@ -74,6 +88,9 @@ class Settings(BaseSettings):
     DISPATCH_LOOP_ENABLED: bool = True
     DISPATCH_LOOP_INTERVAL_SECONDS: float = 15.0
     DISPATCH_RETRY_AFTER_SECONDS: int = 30
+    # Rides dispatched at the same time. Each can wait on triage, FHIR and SMS, so
+    # one at a time makes the last of a surge wait minutes.
+    DISPATCH_CONCURRENCY: int = 4
     DISPATCH_MAX_AGE_SECONDS: int = 900
     SCHEDULED_DISPATCH_LEAD_MINUTES: int = 30
     LOG_LEVEL: str = "INFO"

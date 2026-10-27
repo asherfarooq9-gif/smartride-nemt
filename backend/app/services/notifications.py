@@ -6,6 +6,7 @@ Falls back gracefully when credentials are absent.
 import asyncio
 import httpx
 import logging
+import os
 from datetime import datetime, timezone
 from urllib.parse import urlsplit
 
@@ -65,6 +66,20 @@ async def send_push(
             resp.raise_for_status()
     except Exception as exc:
         log.warning("FCM push failed: %s", exc)
+
+
+def push_setup_problem() -> str | None:
+    """Why push notifications cannot be delivered, or None when they can.
+
+    Without a project id or the key file, send_push quietly does nothing, so a
+    production deploy that forgot either looks healthy while no driver or patient
+    ever receives a push.
+    """
+    if not settings.FIREBASE_PROJECT_ID:
+        return "FIREBASE_PROJECT_ID is not set"
+    if not os.path.isfile(settings.FIREBASE_CREDENTIALS_PATH):
+        return f"credentials file not found at {settings.FIREBASE_CREDENTIALS_PATH}"
+    return None
 
 
 _pending_pushes: set[asyncio.Task] = set()
@@ -201,7 +216,9 @@ async def send_hospital_alert(*, ride, triage: dict, hospital, patient) -> bool:
     Callers should record a False result: nobody at the hospital was told.
     """
     ride_id = getattr(ride, "id", None)
-    fhir_bundle = _build_fhir_bundle(ride=ride, triage=triage, patient=patient)
+    fhir_bundle = _build_fhir_bundle(
+        ride=ride, triage=triage, patient=patient, ed_full=hospital.ed_full
+    )
 
     if hospital.has_fhir and hospital.fhir_endpoint:
         try:
@@ -226,6 +243,7 @@ async def send_hospital_alert(*, ride, triage: dict, hospital, patient) -> bool:
         f"Specialty: {triage.get('specialty', 'unknown')} | "
         f"Severity: {triage.get('severity', '?')} | "
         f"Ride: {ride.id}"
+        f"{' | ED FULL per your last update, please confirm' if hospital.ed_full else ''}"
     )
     sent = await asyncio.to_thread(_send_sms, hospital.coordinator_phone, body)
     if not sent:
@@ -233,7 +251,77 @@ async def send_hospital_alert(*, ride, triage: dict, hospital, patient) -> bool:
     return bool(sent)
 
 
-def _build_fhir_bundle(*, ride, triage: dict, patient) -> dict:
+async def send_sms_to_patient(db, *, patient_id, body: str) -> bool:
+    """SMS the phone number on the patient's account. Never raises.
+
+    For messages that must not depend on a push token being valid, such as the
+    instruction to call 1122 when no driver could be found. True only when the
+    SMS was handed to the sender.
+    """
+    from sqlalchemy import select
+
+    from app.models.models import Patient, User
+
+    try:
+        phone = (
+            await db.execute(
+                select(User.phone)
+                .join(Patient, Patient.user_id == User.id)
+                .where(Patient.id == patient_id)
+            )
+        ).scalar_one_or_none()
+    except Exception as exc:
+        log.error("patient phone lookup failed (%s)", type(exc).__name__)
+        return False
+    if not phone:
+        return False
+    return bool(await asyncio.to_thread(_send_sms, phone, body))
+
+
+async def tell_hospital_ride_stopped(db, *, ride_id, hospital_id) -> bool:
+    """SMS the hospital coordinator that an earlier pre-alert no longer applies.
+
+    Used when a ride is cancelled or goes back to the queue after the hospital
+    was already alerted, so staff do not hold a bay for a patient who is not
+    coming. Never raises. True only when the SMS was handed to the sender.
+    """
+    from sqlalchemy import select
+
+    from app.core import metrics
+    from app.models.models import Hospital
+
+    try:
+        phone = (
+            await db.execute(
+                select(Hospital.coordinator_phone).where(Hospital.id == hospital_id)
+            )
+        ).scalar_one_or_none()
+    except Exception as exc:
+        log.error(
+            "hospital lookup failed, NOT told ride stopped ride_id=%s (%s)",
+            ride_id,
+            type(exc).__name__,
+        )
+        phone = None
+    sent = False
+    if phone:
+        body = (
+            f"SmartRide Update: Ride {ride_id} was cancelled or re-assigned. "
+            "Disregard the earlier pre-alert."
+        )
+        sent = bool(await asyncio.to_thread(_send_sms, phone, body))
+    if not sent:
+        metrics.dispatch_failures_total.labels(
+            reason="hospital_not_told_ride_stopped"
+        ).inc()
+        log.error("hospital NOT told the ride stopped ride_id=%s", ride_id)
+    return sent
+
+
+def _build_fhir_bundle(*, ride, triage: dict, patient, ed_full: bool = False) -> dict:
+    tags = [{"code": f"severity-{triage.get('severity', '3')}"}]
+    if ed_full:
+        tags.append({"code": "ed-reported-full"})
     return {
         "resourceType": "Bundle",
         "type": "transaction",
@@ -247,9 +335,7 @@ def _build_fhir_bundle(*, ride, triage: dict, patient) -> dict:
                     "reasonCode": [
                         {"text": triage.get("specialty", "general_emergency")}
                     ],
-                    "meta": {
-                        "tag": [{"code": f"severity-{triage.get('severity', '3')}"}]
-                    },
+                    "meta": {"tag": tags},
                 }
             }
         ],

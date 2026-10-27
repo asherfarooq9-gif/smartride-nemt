@@ -5,15 +5,20 @@ driver or a missing hospital used to strand the ride. This loop re-dispatches
 stale pending rides (most severe first), promotes scheduled rides that fall due,
 takes rides back from drivers who never acknowledged them, and closes rides
 nobody accepted in time. Safe to run on several instances at once: assignment
-is a guarded UPDATE, so only one dispatch can win a given ride or driver.
+is a guarded UPDATE, so only one dispatch can win a given ride or driver. The
+row locks taken to pick ride ids are released before dispatching starts, so two
+instances can both triage the same ride; only the guarded UPDATEs stop a double
+assignment, and the loser's work is discarded.
 """
 
 import asyncio
 import logging
+from itertools import groupby
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import and_, or_, select, update
 
+from app.core import metrics
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.models.models import (
@@ -25,7 +30,12 @@ from app.models.models import (
     TriageEvent,
 )
 from app.services.emergency_dispatch import dispatch_emergency
-from app.services.notifications import notify_user
+from app.services.health_metrics import record_health_metrics
+from app.services.notifications import (
+    notify_user,
+    send_sms_to_patient,
+    tell_hospital_ride_stopped,
+)
 
 log = logging.getLogger("smartride.dispatch_loop")
 BATCH = 20
@@ -88,7 +98,14 @@ async def _expire(db, now: datetime) -> None:
             body="We could not find a driver. Please call 1122.",
             data={"ride_id": str(ride_id)},
         )
-        if not told:
+        # A push can fail silently (stale token, FCM down) or go unseen, and
+        # this is the one message that must arrive, so also send an SMS.
+        texted = await send_sms_to_patient(
+            db,
+            patient_id=patient_id,
+            body="SmartRide: we could not find a driver. Please call 1122 now.",
+        )
+        if not (told or texted):
             log.error("patient NOT told to call 1122 after expiry ride_id=%s", ride_id)
 
 
@@ -97,7 +114,7 @@ async def _requeue_unacknowledged(db, now: datetime) -> None:
     cutoff = now - timedelta(seconds=DRIVER_ACK_TIMEOUT_SECONDS)
     stuck = (
         await db.execute(
-            select(Ride.id, Ride.driver_id, Ride.patient_id)
+            select(Ride.id, Ride.driver_id, Ride.patient_id, Ride.hospital_id)
             .where(
                 Ride.status == RideStatus.driver_assigned,
                 Ride.driver_assigned_at < cutoff,
@@ -108,7 +125,7 @@ async def _requeue_unacknowledged(db, now: datetime) -> None:
         )
     ).all()
     requeued = []
-    for ride_id, driver_id, patient_id in stuck:
+    for ride_id, driver_id, patient_id, hospital_id in stuck:
         # Guarded: the driver may have just moved the ride on or cancelled.
         result = await db.execute(
             update(Ride)
@@ -131,9 +148,9 @@ async def _requeue_unacknowledged(db, now: datetime) -> None:
                 .where(Driver.id == driver_id)
                 .values(status=DriverStatus.offline)
             )
-            requeued.append((ride_id, patient_id))
+            requeued.append((ride_id, patient_id, hospital_id))
     await db.commit()
-    for ride_id, patient_id in requeued:
+    for ride_id, patient_id, hospital_id in requeued:
         log.warning("driver never acknowledged, ride requeued ride_id=%s", ride_id)
         told = await notify_user(
             db,
@@ -144,10 +161,14 @@ async def _requeue_unacknowledged(db, now: datetime) -> None:
         )
         if not told:
             log.warning("patient NOT told about the requeue ride_id=%s", ride_id)
+        if hospital_id is not None:
+            await tell_hospital_ride_stopped(
+                db, ride_id=ride_id, hospital_id=hospital_id
+            )
 
 
-async def _pending_ride_ids(db, now: datetime) -> list:
-    """Ids of rides to retry: most severe first, then longest waiting.
+async def _pending_rides(db, now: datetime) -> list:
+    """(id, severity) of rides to retry: most severe first, then longest waiting.
 
     Rides with no triage yet sort as the most severe (we know nothing, so we
     assume the worst). SKIP LOCKED keeps two instances from picking the same
@@ -157,7 +178,7 @@ async def _pending_ride_ids(db, now: datetime) -> list:
     stale = now - timedelta(seconds=settings.DISPATCH_RETRY_AFTER_SECONDS)
     lead = now + timedelta(minutes=settings.SCHEDULED_DISPATCH_LEAD_MINUTES)
     result = await db.execute(
-        select(Ride.id)
+        select(Ride.id, TriageEvent.severity_level)
         .outerjoin(TriageEvent, TriageEvent.ride_id == Ride.id)
         .where(
             Ride.status == RideStatus.pending,
@@ -171,7 +192,7 @@ async def _pending_ride_ids(db, now: datetime) -> list:
         .limit(BATCH)
         .with_for_update(skip_locked=True, of=Ride)
     )
-    return list(result.scalars().all())
+    return [(ride_id, severity) for ride_id, severity in result.all()]
 
 
 async def _dispatch_one(ride_id) -> None:
@@ -198,15 +219,33 @@ async def retry_pending_dispatches() -> None:
     async with AsyncSessionLocal() as db:
         await _expire(db, now)
         await _requeue_unacknowledged(db, now)
-        ride_ids = await _pending_ride_ids(db, now)
-    for ride_id in ride_ids:
-        await _dispatch_one(ride_id)
+        pending = await _pending_rides(db, now)
+    slots = asyncio.Semaphore(max(1, settings.DISPATCH_CONCURRENCY))
+
+    async def dispatch_when_free(ride_id) -> None:
+        async with slots:
+            await _dispatch_one(ride_id)
+
+    # Rides of one severity run together, but a less severe group starts only
+    # after the more severe one has finished: when drivers are scarce, the most
+    # severe patient must be the one who gets the nearest driver.
+    for _, group in groupby(pending, key=lambda row: row[1]):
+        await asyncio.gather(*(dispatch_when_free(ride_id) for ride_id, _ in group))
+
+
+async def run_pass() -> None:
+    """One loop pass. The success stamp moves only when the pass finished cleanly,
+    so DispatchLoopStalled fires on a loop that keeps failing as well as on one that
+    has stopped. The health gauges are refreshed either way."""
+    try:
+        await retry_pending_dispatches()
+        metrics.dispatch_loop_last_success_timestamp.set_to_current_time()
+    except Exception:
+        log.exception("dispatch loop pass failed")
+    await record_health_metrics()
 
 
 async def run_forever() -> None:
     while True:
-        try:
-            await retry_pending_dispatches()
-        except Exception:
-            log.exception("dispatch loop pass failed")
+        await run_pass()
         await asyncio.sleep(settings.DISPATCH_LOOP_INTERVAL_SECONDS)

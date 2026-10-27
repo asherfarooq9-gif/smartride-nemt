@@ -27,6 +27,7 @@ from app.core.redis_client import (
     clear_login_failures,
     count_login_failure,
     is_login_locked,
+    remember_login_ip,
 )
 from app.models.models import User, Patient, Driver, UserRole, UserRoleLink
 from app.schemas.auth import (
@@ -60,6 +61,7 @@ def _make_token(
             "role": active_role,
             "roles": roles,
             "auth_time": auth_time or int(datetime.now(timezone.utc).timestamp()),
+            "tv": user.token_version,
         }
     )
 
@@ -197,6 +199,7 @@ async def login(
         await count_login_failure(body.phone, client_ip, settings.LOGIN_LOCK_SECONDS)
         raise HTTPException(status_code=401, detail="Invalid credentials")
     await clear_login_failures(body.phone, client_ip)
+    await remember_login_ip(body.phone, client_ip)
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account disabled")
 
@@ -360,6 +363,21 @@ async def logout(
         )
 
 
+@router.post("/logout-all", status_code=status.HTTP_204_NO_CONTENT)
+async def logout_everywhere(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Sign this account out on every device: all earlier tokens stop working."""
+    await db.execute(
+        update(User)
+        .where(User.id == user.id)
+        .values(token_version=User.token_version + 1)
+        .execution_options(synchronize_session="fetch")
+    )
+    await db.commit()
+
+
 @router.post("/refresh", response_model=RefreshResponse)
 @limiter.limit("20/minute")
 async def refresh_token(
@@ -374,6 +392,10 @@ async def refresh_token(
     auth_time = int(payload.get("auth_time") or payload.get("iat") or now)
     if now - auth_time > settings.SESSION_MAX_DAYS * 86400:
         raise HTTPException(status_code=401, detail="Session expired. Sign in again.")
+    # Fail open, on purpose, like the blocklist lookup: if Redis cannot store the
+    # revocation the user still gets a new token (a patient in an emergency must not
+    # be signed out by a Redis blip). _revoke has logged and counted the failure,
+    # and POST /auth/logout-all ends any chain a stolen token has spawned.
     await _revoke(credentials)
 
     roles = await _held_roles(db, user.id)

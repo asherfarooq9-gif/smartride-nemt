@@ -1,5 +1,6 @@
 """Ride/driver state-machine invariants."""
 
+import pytest
 from httpx import AsyncClient
 
 import uuid
@@ -61,6 +62,44 @@ async def test_completed_ride_cannot_be_cancelled(client, verified_driver_token)
     assert detail["status"] == "completed"
 
 
+@pytest.mark.parametrize("status", ["patient_picked_up", "arrived_at_hospital"])
+async def test_driver_cannot_cancel_once_the_patient_is_on_board(
+    client, verified_driver_token, status
+):
+    """Cancelling mid-journey would leave the patient stranded with no requeue."""
+    _, ride_id = await _assigned_ride(client, _phone(), verified_driver_token)
+    for step in ("driver_en_route", "patient_picked_up", "arrived_at_hospital"):
+        r = await _set_ride_status(client, verified_driver_token, ride_id, step)
+        assert r.status_code == 200, r.text
+        if step == status:
+            break
+
+    r = await _set_ride_status(client, verified_driver_token, ride_id, "cancelled")
+
+    assert r.status_code == 409, r.text
+    assert "dispatch" in r.json()["detail"].lower()
+    detail = (
+        await client.get(
+            f"/api/v1/rides/{ride_id}", headers=_auth(verified_driver_token)
+        )
+    ).json()
+    assert detail["status"] == status
+
+
+async def test_admin_can_still_cancel_a_ride_with_the_patient_on_board(
+    client, verified_driver_token, admin_token
+):
+    _, ride_id = await _assigned_ride(client, _phone(), verified_driver_token)
+    for step in ("driver_en_route", "patient_picked_up"):
+        r = await _set_ride_status(client, verified_driver_token, ride_id, step)
+        assert r.status_code == 200, r.text
+
+    r = await _set_ride_status(client, admin_token, ride_id, "cancelled")
+
+    assert r.status_code == 200, r.text
+    assert r.json()["status"] == "cancelled"
+
+
 async def test_patient_cancel_after_assignment_frees_the_driver(
     client, verified_driver_token
 ):
@@ -101,3 +140,29 @@ async def test_driver_cannot_go_available_while_on_a_ride(
         headers=_auth(verified_driver_token),
     )
     assert r.status_code == 200, r.text
+
+
+async def test_a_driver_who_went_offline_mid_ride_stays_offline_after_completing(
+    client, db, verified_driver_token
+):
+    """Finishing a ride must not make an offline driver dispatchable again."""
+    from sqlalchemy import update
+
+    from app.models.models import Driver, DriverStatus
+
+    _, ride_id = await _assigned_ride(client, _phone(), verified_driver_token)
+    for step in ("driver_en_route", "patient_picked_up", "arrived_at_hospital"):
+        r = await _set_ride_status(client, verified_driver_token, ride_id, step)
+        assert r.status_code == 200, r.text
+    me = await client.get("/api/v1/drivers/me", headers=_auth(verified_driver_token))
+    await db.execute(
+        update(Driver)
+        .where(Driver.id == me.json()["id"])
+        .values(status=DriverStatus.offline)
+    )
+    await db.commit()
+
+    r = await _set_ride_status(client, verified_driver_token, ride_id, "completed")
+
+    assert r.status_code == 200, r.text
+    assert await _driver_status(client, verified_driver_token) == "offline"

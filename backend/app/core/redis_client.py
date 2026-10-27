@@ -114,10 +114,19 @@ def _phone_key(phone: str) -> str:
     return f"login_fail:phone:{phone}"
 
 
+def _known_key(phone: str) -> str:
+    return f"login_known:{phone}"
+
+
 async def is_login_locked(phone: str, client_ip: str) -> bool:
     try:
         r = await get_redis()
         pair, total = await r.mget(_pair_key(phone, client_ip), _phone_key(phone))
+        known = int(
+            total or 0
+        ) >= settings.LOGIN_PHONE_MAX_FAILURES and await r.sismember(
+            _known_key(phone), client_ip
+        )
     except _REDIS_ERRORS:
         _record_failure("login_lock_check")
         log.warning("Login lockout check failed; not enforcing", exc_info=True)
@@ -125,13 +134,30 @@ async def is_login_locked(phone: str, client_ip: str) -> bool:
     if int(pair or 0) >= settings.LOGIN_MAX_FAILURES:
         log.warning("Login locked: too many failures from ip=%s", client_ip)
         return True
-    if int(total or 0) >= settings.LOGIN_PHONE_MAX_FAILURES:
+    if int(total or 0) >= settings.LOGIN_PHONE_MAX_FAILURES and not known:
         log.warning(
             "Login locked: too many failures for one phone across IPs (latest ip=%s)",
             client_ip,
         )
         return True
     return False
+
+
+async def remember_login_ip(phone: str, client_ip: str) -> None:
+    """Note that this address has logged in to the account.
+
+    The per-phone ceiling stops guessing spread over many addresses, but it must
+    not lock the owner out of their own account, so it skips addresses seen here.
+    The per-(phone, address) streak still applies to them.
+    """
+    try:
+        r = await get_redis()
+        key = _known_key(phone)
+        await r.sadd(key, client_ip)
+        await r.expire(key, settings.LOGIN_KNOWN_ADDRESS_SECONDS)
+    except _REDIS_ERRORS:
+        _record_failure("remember_login_ip")
+        log.warning("Login address not remembered (redis error)", exc_info=True)
 
 
 async def count_login_failure(phone: str, client_ip: str, lock_seconds: int) -> None:

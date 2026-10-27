@@ -13,9 +13,10 @@ from app.core import metrics
 from app.core.config import settings
 from app.core.search import contains
 from app.services.driver_service import ACTIVE_RIDE_STATUSES, apply_balance_delta
+from app.services.emergency_dispatch import match_hospital_for_ride
 from app.services.fare import commission_for, fare_for
 from app.services.hospital_matching import haversine_km
-from app.services.notifications import notify_user
+from app.services.notifications import notify_user, tell_hospital_ride_stopped
 
 from app.models.models import (
     Ride,
@@ -271,7 +272,11 @@ async def _lock_ride(db: AsyncSession, ride: Ride) -> None:
 
 
 async def _release_driver(db: AsyncSession, driver_id, ride_id) -> None:
-    """Mark the driver available unless they have since taken another live ride."""
+    """Free a busy driver unless they have since taken another live ride.
+
+    Only a busy driver is touched: one who went offline mid-ride chose to stop
+    taking rides and must not become dispatchable again by finishing this one.
+    """
     on_another_ride = exists().where(
         Ride.driver_id == driver_id,
         Ride.id != ride_id,
@@ -279,7 +284,9 @@ async def _release_driver(db: AsyncSession, driver_id, ride_id) -> None:
     )
     await db.execute(
         update(Driver)
-        .where(Driver.id == driver_id, ~on_another_ride)
+        .where(
+            Driver.id == driver_id, Driver.status == DriverStatus.busy, ~on_another_ride
+        )
         .values(status=DriverStatus.available)
         .execution_options(synchronize_session="fetch")
     )
@@ -309,6 +316,15 @@ async def _apply_driver_transition(
             ride.driver_assigned_at = None
             ride.hospital_id = None
             driver.status = DriverStatus.offline
+        elif ride.status in (
+            RideStatus.patient_picked_up,
+            RideStatus.arrived_at_hospital,
+        ):
+            # The patient is on board: cancelling would strand them with no
+            # requeue. Dispatch (an admin) decides what happens to the ride.
+            raise HTTPException(
+                409, "The patient is on board. Call dispatch to cancel this ride."
+            )
         else:
             ride.status = RideStatus.cancelled
             ride.cancelled_at = datetime.now(timezone.utc)
@@ -332,6 +348,40 @@ async def _apply_driver_transition(
         await _release_driver(db, driver.id, ride.id)
 
 
+async def _tell_ride_stopped(
+    db: AsyncSession, ride: Ride, role: str, driver_id, hospital_id
+) -> None:
+    """Tell the hospital (and the driver, unless they did it) the ride is off.
+
+    Runs after the commit and never raises: the state change already happened,
+    a lost notification must not turn it into an error. Failures are logged and
+    counted by the senders.
+    """
+    try:
+        if hospital_id is not None:
+            await tell_hospital_ride_stopped(
+                db, ride_id=ride.id, hospital_id=hospital_id
+            )
+        if driver_id is not None and role != "driver":
+            driver_user_id = (
+                await db.execute(select(Driver.user_id).where(Driver.id == driver_id))
+            ).scalar_one_or_none()
+            if driver_user_id is not None:
+                await notify_user(
+                    db,
+                    user_id=driver_user_id,
+                    title="Ride cancelled",
+                    body=ride.cancel_reason or "This ride was cancelled.",
+                    data={"ride_id": str(ride.id)},
+                )
+    except Exception as exc:
+        log.error(
+            "could not tell the hospital or driver the ride stopped ride_id=%s (%s)",
+            ride.id,
+            type(exc).__name__,
+        )
+
+
 async def update_ride_status(
     ride: Ride,
     body: RideStatusUpdate,
@@ -342,6 +392,8 @@ async def update_ride_status(
 ) -> Ride:
     new_status = body.status
     await _lock_ride(db, ride)
+    # A requeue or cancel clears these, so remember who was told about the ride.
+    alerted_driver_id, alerted_hospital_id = ride.driver_id, ride.hospital_id
 
     if new_status == RideStatus.cancelled and ride.status in TERMINAL_STATUSES:
         raise HTTPException(400, f"Cannot cancel a {ride.status.value} ride")
@@ -370,6 +422,9 @@ async def update_ride_status(
 
     await db.commit()
     await db.refresh(ride)
+
+    if ride.status in (RideStatus.cancelled, RideStatus.pending):
+        await _tell_ride_stopped(db, ride, role, alerted_driver_id, alerted_hospital_id)
 
     # Push notification to patient on status change
     labels = {
@@ -483,6 +538,60 @@ async def get_pending_rides(driver: Driver, db: AsyncSession) -> list[Ride]:
     return [r for r, _ in nearby]
 
 
+async def _ensure_driver_is_near(
+    ride_id: str, driver: Driver, db: AsyncSession
+) -> None:
+    """Only a driver the ride could have been offered to may accept it.
+
+    The pending list shows rides within DRIVER_SEARCH_RADIUS_KM of the driver's
+    last position; accepting by id must follow the same rule, or anyone holding a
+    ride id (it is in the family SMS) could take a ride from across the country.
+    """
+    pickup = (
+        await db.execute(
+            select(Ride.pickup_lat, Ride.pickup_lng).where(Ride.id == ride_id)
+        )
+    ).first()
+    if pickup is None:
+        raise HTTPException(404, "Ride not found")
+    if driver.current_lat is None or driver.current_lng is None:
+        raise HTTPException(403, "Your location is unknown. Turn on location first.")
+    km = _haversine_km(
+        driver.current_lat, driver.current_lng, pickup.pickup_lat, pickup.pickup_lng
+    )
+    if km > settings.DRIVER_SEARCH_RADIUS_KM:
+        raise HTTPException(403, "This ride is too far from you")
+
+
+async def _hospital_placement(ride_id: str, db: AsyncSession) -> dict:
+    """Hospital and estimated fare for a ride that dispatch has not placed yet.
+
+    Dispatch sets these when it assigns a driver itself. A driver who accepts a
+    pending ride by hand skips that path, so without this the ride would have no
+    destination, no hospital to pre-alert, and a 0 km base fare on completion.
+    Returns {} (leave the ride as it is) when it already has a hospital, has no
+    symptom text to triage, or no hospital is in range.
+    """
+    ride = (
+        await db.execute(
+            select(
+                Ride.hospital_id, Ride.pickup_lat, Ride.pickup_lng, Ride.symptom_text
+            ).where(Ride.id == ride_id)
+        )
+    ).first()
+    if ride is None or ride.hospital_id is not None or not ride.symptom_text:
+        return {}
+    match = await match_hospital_for_ride(
+        db, ride_id, ride.pickup_lat, ride.pickup_lng, ride.symptom_text
+    )
+    if match is None:
+        return {}
+    return {
+        "hospital_id": match.hospital_id,
+        "estimated_fare_pkr": fare_for(match.distance_km),
+    }
+
+
 async def accept_ride(ride_id: str, driver: Driver, db: AsyncSession) -> Ride:
     """Atomically assign a driver to a ride; raises 409 if already taken."""
     requester_user_id = (
@@ -494,6 +603,9 @@ async def accept_ride(ride_id: str, driver: Driver, db: AsyncSession) -> Ride:
     ).scalar_one_or_none()
     if requester_user_id == driver.user_id:
         raise HTTPException(403, "You cannot accept your own ride")
+
+    await _ensure_driver_is_near(ride_id, driver, db)
+    placement = await _hospital_placement(ride_id, db)
 
     # Claim the driver first: only an available driver may take a ride, and two
     # simultaneous accepts by one driver cannot both succeed.
@@ -518,6 +630,7 @@ async def accept_ride(ride_id: str, driver: Driver, db: AsyncSession) -> Ride:
             driver_id=driver.id,
             status=RideStatus.driver_assigned,
             driver_assigned_at=datetime.now(timezone.utc),
+            **placement,
         )
         .returning(Ride.id)
     )

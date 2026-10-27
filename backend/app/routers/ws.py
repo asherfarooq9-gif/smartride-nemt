@@ -37,6 +37,8 @@ _MIN_GPS_INTERVAL_SECONDS = 0.2  # more than ~5 updates/s is abuse, not tracking
 _MAX_STRIKES = 10  # bad or too-fast frames tolerated before the socket is closed
 _MAX_SOCKETS_PER_USER = 5
 _PING_SECONDS = 15
+# How often a watcher re-reads the ride status while GPS frames keep arriving.
+_STATUS_RECHECK_SECONDS = 5.0
 # Every frame is relayed to watchers, but the driver row and the ride status are
 # only touched this often, so a 5 Hz GPS feed is not 5 write transactions/second.
 _GPS_PERSIST_INTERVAL_SECONDS = float(os.getenv("WS_GPS_PERSIST_INTERVAL_SECONDS", "5"))
@@ -79,6 +81,16 @@ def _expired(token: str) -> bool:
         return decode_token(token)["exp"] <= time.time()
     except jwt.PyJWTError:
         return True
+
+
+async def _revoked(token: str) -> bool:
+    """True once the token has been logged out. Checked on a timer, not per frame:
+    the handshake checks it, but a socket lives for the whole ride."""
+    try:
+        jti = decode_token(token)["jti"]
+    except (jwt.PyJWTError, KeyError):
+        return True
+    return await is_token_blocked(jti)
 
 
 async def _auth_user(token: str) -> User | None:
@@ -218,17 +230,22 @@ async def _load_driver_ride(
 
 
 async def _persist_location(ride_id: str, driver_id, lat: float, lng: float) -> bool:
-    """Save the driver's position in one transaction. False once the ride is over.
+    """Save the driver's position in one transaction. False once the ride is over
+    or no longer belongs to this driver (they gave it back and another took it).
 
     A database failure is logged and treated as "still active": watchers keep
     getting GPS from Redis and the next interval retries the write.
     """
     try:
         async with AsyncSessionLocal() as db:
-            ride_status = (
-                await db.execute(select(Ride.status).where(Ride.id == ride_id))
-            ).scalar_one_or_none()
-            if ride_status not in _ACTIVE:
+            ride = (
+                await db.execute(
+                    select(Ride.status, Ride.driver_id).where(Ride.id == ride_id)
+                )
+            ).first()
+            if ride is None or ride.status not in _ACTIVE:
+                return False
+            if ride.driver_id != driver_id:
                 return False
             await db.execute(
                 update(Driver)
@@ -299,6 +316,9 @@ async def _stream_driver_gps(
         # Only a live ride may be streamed to; a finished one ends the socket.
         if last_persist is None or now - last_persist >= _GPS_PERSIST_INTERVAL_SECONDS:
             last_persist = now
+            if await _revoked(token):
+                await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+                return
             if not await _persist_location(ride_id, driver_id, lat, lng):
                 await websocket.send_json({"event": "ride_ended"})
                 await websocket.close(code=status.WS_1000_NORMAL_CLOSURE)
@@ -365,6 +385,7 @@ async def _may_watch(user: User, ride: Ride) -> bool:
 async def _relay_location(
     websocket: WebSocket, ride_id: str, pubsub, token: str
 ) -> None:
+    last_checked = None
     while True:
         # Wake at least every _PING_SECONDS even when the driver is silent, so an
         # ended ride or an expired token closes the socket and a dead client is
@@ -375,16 +396,27 @@ async def _relay_location(
         if _expired(token):
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return
-        # Re-read the status from the DB: a cancelled or completed ride must
-        # stop streaming GPS to the client.
-        async with AsyncSessionLocal() as db:
-            current_status = (
-                await db.execute(select(Ride.status).where(Ride.id == ride_id))
-            ).scalar_one_or_none()
-        if current_status in (RideStatus.completed, RideStatus.cancelled, None):
-            ended = current_status.value if current_status else "deleted"
-            await websocket.send_json({"event": "ride_ended", "status": ended})
-            return
+        # Re-read the status from the DB so a cancelled or completed ride stops
+        # streaming GPS. Not on every frame: at 5 Hz with several watchers that
+        # would hold a connection per frame. Quiet moments always re-check.
+        now = time.monotonic()
+        if (
+            message is None
+            or last_checked is None
+            or now - last_checked >= _STATUS_RECHECK_SECONDS
+        ):
+            last_checked = now
+            if await _revoked(token):
+                await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+                return
+            async with AsyncSessionLocal() as db:
+                current_status = (
+                    await db.execute(select(Ride.status).where(Ride.id == ride_id))
+                ).scalar_one_or_none()
+            if current_status in (RideStatus.completed, RideStatus.cancelled, None):
+                ended = current_status.value if current_status else "deleted"
+                await websocket.send_json({"event": "ride_ended", "status": ended})
+                return
         if message is None:
             await websocket.send_json({"event": "ping"})
         else:

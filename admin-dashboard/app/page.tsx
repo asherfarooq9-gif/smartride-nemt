@@ -66,18 +66,21 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* ETA card */}
-      {summary.avg_eta_seconds_24h != null && (
-        <div className="bg-white rounded-2xl border border-blue-100 p-5 shadow-sm inline-flex items-center gap-4">
-          <div className="p-3 bg-cyan-50 border border-cyan-200 rounded-xl text-cyan-700">
-            <Clock size={20} />
+      {/* ETA card. The slot keeps its height when there is no ETA yet, so the table
+          below does not move between the loading skeleton and the loaded page. */}
+      <div className="min-h-[92px]">
+        {summary.avg_eta_seconds_24h != null && (
+          <div className="bg-white rounded-2xl border border-blue-100 p-5 shadow-sm inline-flex items-center gap-4">
+            <div className="p-3 bg-cyan-50 border border-cyan-200 rounded-xl text-cyan-700">
+              <Clock size={20} />
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Avg ETA (24 h)</p>
+              <p className="text-3xl font-bold text-gray-900">{Math.round(summary.avg_eta_seconds_24h)}s</p>
+            </div>
           </div>
-          <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Avg ETA (24 h)</p>
-            <p className="text-3xl font-bold text-gray-900">{Math.round(summary.avg_eta_seconds_24h)}s</p>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Recent Rides */}
       <div className="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
@@ -119,16 +122,34 @@ export default function DashboardPage() {
   )
 }
 
+// Mirrors the loaded page block for block (header, six cards, ETA slot, rides table
+// with the rows it will show) so nothing shifts when the data arrives. Heights are
+// approximate; re-measure with Lighthouse if the layout above changes.
+const RECENT_ROWS = 8
+
 function DashboardSkeleton() {
   return (
     <div className="space-y-8 animate-pulse" role="status" aria-label="Loading dashboard">
-      <div className="h-8 bg-gray-200 rounded w-48" />
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <div className="h-8 bg-gray-200 rounded w-48" />
+          <div className="h-4 bg-gray-200 rounded w-56" />
+        </div>
+        <div className="h-10 bg-gray-200 rounded-xl w-28" />
+      </div>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="bg-white rounded-2xl border p-5 h-24" />
         ))}
       </div>
-      <div className="bg-white rounded-2xl border h-64" />
+      <div className="h-[92px] w-64 bg-white rounded-2xl border" />
+      <div className="bg-white rounded-2xl border overflow-hidden">
+        <div className="h-14 border-b" />
+        <div className="h-10 bg-gray-100" />
+        {Array.from({ length: RECENT_ROWS }).map((_, i) => (
+          <div key={i} className="h-[45px] border-t border-gray-100" />
+        ))}
+      </div>
     </div>
   )
 }

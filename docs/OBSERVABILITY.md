@@ -45,9 +45,31 @@ Prometheus rules (`monitoring/prometheus/alerts.yml`):
 | `HighServerErrorRate` | >5% 5xx over 5m | critical |
 | `DispatchFailuresSpiking` | >5 dispatch failures in 10m | warning |
 | `SlowEmergencyDispatch` | dispatch p95 >60s for 5m | warning |
+| `DatabaseUnreachable` | `smartride_dependency_up{dependency="database"}` is 0 for 1m | critical |
+| `RedisUnreachable` | `smartride_dependency_up{dependency="redis"}` is 0 for 1m | critical |
+| `DispatchLoopStalled` | no clean dispatch loop pass for 2m | critical |
+| `RideWaitingForDriver` | longest-waiting pending emergency ride over 2m | critical |
+| `TriageServiceDown` | more than 3 triage calls fell back to local rules in 5m | warning |
+| `TriageKeywordsOutOfSync` | the service reports a different keyword version than the backend | warning |
+| `PatientOrHospitalNotNotified` | a driver, hospital pre-alert or hospital cancel notice failed to send | critical |
+| `WalletLedgerMismatch` | a driver's balance differs from the sum of their ledger rows | critical |
 
-> To deliver alerts (Slack/email/PagerDuty) add an Alertmanager service and point
-> Prometheus at it. Rules already evaluate; only the notifier is missing.
+The dependency, pending-ride, loop and ledger gauges are refreshed by the dispatch
+loop every pass (`app/services/health_metrics.py`), so a loop that has died shows up
+as `DispatchLoopStalled` rather than as silence. A test fails if a rule uses a metric
+the backend does not export.
+
+### Delivering alerts
+
+Prometheus sends firing alerts to the `alertmanager` service
+(`monitoring/alertmanager/alertmanager.yml`). **Its receiver is a placeholder that
+discards every alert**, so until you replace it nobody is paged. Choose who is on call
+and the channel (Slack, email, PagerDuty, Opsgenie, a webhook), put the secret in a
+mounted file (`api_url_file`, `password_file`), and send a test alert:
+
+```bash
+curl -XPOST localhost:9093/api/v2/alerts -H 'Content-Type: application/json'   -d '[{"labels":{"alertname":"TestAlert","severity":"critical"}}]'
+```
 
 ## Error tracking
 
@@ -68,6 +90,6 @@ report to an exact request.
 
 ## Still open
 
-- Alertmanager + a real notification channel.
+- A real Alertmanager receiver (owner decision: who is on call, on which channel).
 - Log aggregation (Loki/ELK) — logs are structured JSON but only go to stdout.
 - Distributed tracing spans (OpenTelemetry) if the triage microservice hop needs timing.

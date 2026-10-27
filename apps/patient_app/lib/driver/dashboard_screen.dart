@@ -7,6 +7,7 @@ import 'package:smartride_core/smartride_core.dart' as core;
 import 'package:patient_app/core/providers.dart';
 import 'package:patient_app/driver/dashboard_notifier.dart';
 import 'package:patient_app/shared/role_switcher.dart';
+import 'package:patient_app/driver/money_format.dart';
 
 const Color _kBlue600 = Color(0xFF0B5980);
 const Color _kTeal600 = Color(0xFF0B7777);
@@ -78,6 +79,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
+                              if (dash.activeRide != null) ...[
+                                _ResumeRideBanner(
+                                  statusLabel:
+                                      dash.activeRide!.status.displayLabel,
+                                  onResume: () => context.push(
+                                    '/driver/ride/${dash.activeRide!.id}',
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
                               _StatsRow(
                                 driver: dash.driver,
                                 todayEarningsPkr: dash.todayEarningsPkr,
@@ -129,6 +140,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           sliver: SliverList(
                             delegate: SliverChildBuilderDelegate(
                               (context, i) => _RideRequestCard(
+                                // Keyed by ride: each card owns a 30 s countdown in
+                                // its State. Without a key, declining card 0 left
+                                // the next ride with the old card's countdown.
+                                key: ValueKey(dash.pendingRides[i].id),
                                 ride: dash.pendingRides[i],
                                 driverLat: dash.driver?.currentLat,
                                 driverLng: dash.driver?.currentLng,
@@ -140,6 +155,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                         dash.pendingRides[i].id.toString()),
                               ),
                               childCount: dash.pendingRides.length,
+                              findChildIndexCallback: (key) {
+                                final index = dash.pendingRides.indexWhere(
+                                  (r) => ValueKey(r.id) == key,
+                                );
+                                return index < 0 ? null : index;
+                              },
                             ),
                           ),
                         )
@@ -171,9 +192,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Future<void> _accept(String rideId) async {
-    final result =
+    final outcome =
         await ref.read(dashboardProvider.notifier).acceptRide(rideId);
     if (!mounted) return;
+    final result = outcome.result;
     if (result == AcceptResult.success) {
       context.push('/driver/ride/$rideId');
     } else if (result == AcceptResult.successWithoutTracking) {
@@ -185,13 +207,73 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           duration: Duration(seconds: 8),
         ),
       );
-    } else if (result == AcceptResult.alreadyTaken) {
+    } else {
+      // alreadyTaken, notNearby and error all say why, in the server's words,
+      // in a snackbar that outlives the 15 s refresh.
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Ride already taken by another driver')),
+        SnackBar(
+          content: Text(outcome.message ?? 'Could not accept the ride'),
+          duration: const Duration(seconds: 6),
+        ),
       );
       ref.read(dashboardProvider.notifier).refresh();
     }
+  }
+}
+
+/// Shown while the driver has a ride in progress, so a crash or a closed app does
+/// not strand them: nothing else leads back to the ride screen.
+class _ResumeRideBanner extends StatelessWidget {
+  const _ResumeRideBanner({required this.statusLabel, required this.onResume});
+
+  final String statusLabel;
+  final VoidCallback onResume;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: _kBlue600,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onResume,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              const Icon(Icons.local_taxi, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'You have a ride in progress',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      statusLabel,
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                  ],
+                ),
+              ),
+              const Text(
+                'Resume',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: Colors.white),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -339,7 +421,7 @@ class _StatsRow extends StatelessWidget {
         ? driver!.rating!.toStringAsFixed(1)
         : '—';
     final earningsText = todayEarningsPkr > 0
-        ? 'PKR ${_fmtPkr(todayEarningsPkr)}'
+        ? formatPkr(todayEarningsPkr)
         : 'PKR 0';
     return Row(
       children: [
@@ -367,13 +449,6 @@ class _StatsRow extends StatelessWidget {
     );
   }
 
-  static String _fmtPkr(double v) => v
-      .toInt()
-      .toString()
-      .replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-        (m) => '${m[1]},',
-      );
 }
 
 class _StatCard extends StatelessWidget {
@@ -444,13 +519,7 @@ class _WalletStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final formatted = balance
-        .toInt()
-        .toString()
-        .replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (m) => '${m[1]},',
-        );
+    final formatted = formatPkr(balance);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
@@ -474,7 +543,7 @@ class _WalletStrip extends StatelessWidget {
                 ),
               ),
               Text(
-                'PKR $formatted',
+                formatted,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
@@ -686,6 +755,7 @@ class _NavItem extends StatelessWidget {
 
 class _RideRequestCard extends StatefulWidget {
   const _RideRequestCard({
+    super.key,
     required this.ride,
     required this.onAccept,
     required this.onDecline,
@@ -873,7 +943,7 @@ class _RideRequestCardState extends State<_RideRequestCard> {
                           _InfoChip(
                             icon: Icons.payments_outlined,
                             label: widget.ride.estimatedFarePkr != null
-                                ? 'PKR ${widget.ride.estimatedFarePkr!.toInt()}'
+                                ? formatPkr(widget.ride.estimatedFarePkr!)
                                 : 'PKR —',
                           ),
                         ],

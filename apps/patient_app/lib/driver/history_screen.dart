@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smartride_core/smartride_core.dart';
+import 'package:patient_app/driver/money_format.dart';
 
 final _historyProvider = FutureProvider.autoDispose<Map<String, dynamic>>(
   (_) => getDriverEarnings(),
@@ -66,13 +67,7 @@ class _TripCard extends StatelessWidget {
     final completedAt = ride['completed_at'] as String?;
 
     final isEmergency = rideType == 'emergency';
-    final fareFormatted = fareRaw
-        .toInt()
-        .toString()
-        .replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (m) => '${m[1]},',
-        );
+    final fareFormatted = formatPkr(fareRaw);
     final dateLabel = _formatDate(completedAt);
     final routeLabel = hospitalName != null
         ? '$pickupAddress → $hospitalName'
@@ -137,7 +132,7 @@ class _TripCard extends StatelessWidget {
                 ),
                 const SizedBox(width: kSpaceSM),
                 Text(
-                  '+PKR $fareFormatted',
+                  fareFormatted == 'PKR 0' ? fareFormatted : '+$fareFormatted',
                   style: const TextStyle(
                     fontSize: kFontBody,
                     fontWeight: FontWeight.w800,

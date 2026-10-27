@@ -61,6 +61,12 @@ const Color kDarkText3       = Color(0xFF507070);
 const Color kAuthDarkBg      = Color(0xFF0A1628);
 const Color kAuthTeal        = kTeal600;
 const Color kAuthTealDark    = kTeal800;
+// Light surfaces for sign up and login.
+const Color kAuthLightBg     = Color(0xFFF5F8FB);
+const Color kAuthFieldBg     = Color(0xFFFFFFFF);
+const Color kAuthFieldBorder = Color(0xFFCBD5E1);
+const Color kAuthText        = Color(0xFF0A1628);
+const Color kAuthMuted       = Color(0xFF4B5B70);
 const Color kWelcomeGradStart = Color(0xFF0EABAB);
 const Color kWelcomeGradMid   = kTeal600;
 const Color kWelcomeGradEnd   = Color(0xFF084E4E);

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smartride_core/smartride_core.dart';
 
-class DarkField extends StatelessWidget {
-  const DarkField({
+class AuthField extends StatelessWidget {
+  const AuthField({
     super.key,
     required this.controller,
     required this.label,
@@ -34,7 +34,7 @@ class DarkField extends StatelessWidget {
           style: GoogleFonts.dmSans(
             fontSize: kFontSmall,
             fontWeight: FontWeight.w700,
-            color: Colors.white70,
+            color: kAuthMuted,
             letterSpacing: 0.6,
           ),
         ),
@@ -46,22 +46,22 @@ class DarkField extends StatelessWidget {
           onFieldSubmitted: onFieldSubmitted,
           validator: validator,
           style: GoogleFonts.dmSans(
-            color: Colors.white,
+            color: kAuthText,
             fontSize: kFontBody,
           ),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: Colors.white70),
+            hintStyle: const TextStyle(color: kAuthMuted),
             suffixIcon: suffixIcon,
             filled: true,
-            fillColor: kDarkFieldBg,
+            fillColor: kAuthFieldBg,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(kRadiusLG),
-              borderSide: const BorderSide(color: kDarkFieldBorder),
+              borderSide: const BorderSide(color: kAuthFieldBorder),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(kRadiusLG),
-              borderSide: const BorderSide(color: kDarkFieldBorder),
+              borderSide: const BorderSide(color: kAuthFieldBorder),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(kRadiusLG),

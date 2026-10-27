@@ -6,25 +6,69 @@ on:
       - "v*.*.*"
 
 permissions:
-  contents: write  # create the GitHub Release
+  contents: read
 
 jobs:
+  # A tag can be pushed on any commit. Refuse to build and publish unless the commit
+  # is on main and every CI and security check has already passed on exactly it.
+  require-green-ci:
+    name: Require green CI
+    runs-on: ubuntu-latest
+    permissions:
+      checks: read
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Tag must point at a commit on main
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::$GITHUB_SHA is not on main. Merge it, wait for CI, then tag."
+            exit 1
+          fi
+
+      - name: Check CI and security results for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          runs=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?per_page=100"             --jq '[.check_runs[] | select(.name != "Require green CI" and .name != "Build Release APKs" and .name != "Publish release")]')
+          for name in "Backend Lint" "Backend Tests" "Flutter Analyze + Test + APK"                       "Triage Service Tests" "Admin Dashboard Lint + Typecheck + Build"                       "Admin Dashboard E2E (Playwright)" "docker-compose config"                       "Python Dependency Audit" "Python Static Analysis (Bandit)"                       "Admin Dashboard Dependency Audit" "Secret Scan"; do
+            result=$(echo "$runs" | jq -r --arg n "$name" '[.[] | select(.name == $n)][0].conclusion // "missing"')
+            if [ "$result" != "success" ]; then
+              echo "::error::Check '$name' is '$result' on $GITHUB_SHA. Wait for it to pass before tagging."
+              exit 1
+            fi
+          done
+          # "Container Image Scan (Trivy)" is a matrix job, so its check names carry the
+          # matrix values: require at least one and every one to have succeeded.
+          trivy=$(echo "$runs" | jq -r '[.[] | select(.name | startswith("Container Image Scan (Trivy)"))]')
+          if [ "$(echo "$trivy" | jq 'length')" = "0" ] || [ "$(echo "$trivy" | jq '[.[] | select(.conclusion != "success")] | length')" != "0" ]; then
+            echo "::error::The container image scan has not passed on $GITHUB_SHA."
+            exit 1
+          fi
+
   build-release-apks:
     name: Build Release APKs
+    needs: require-green-ci
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           flutter-version: "3.41.4"
           channel: stable
           cache: true
 
       - name: Set up Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: "17"
@@ -74,27 +118,13 @@ jobs:
             --build-name="${BUILD_NAME#v}" \
             --build-number="$BUILD_NUMBER"
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      - name: Keep the signed APK for the publish job
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: SmartRide ${{ github.ref_name }}
-          body: |
-            ## SmartRide NEMT ${{ github.ref_name }}
-
-            ### One unified app — patients and drivers in the same install
-
-            Sign up as **Patient**, **Driver**, or **Both**. Switch portals from the drawer menu at any time.
-
-            ### Install
-            1. Download `smartride-release.apk`
-            2. On your Android phone: Settings → Security → allow Unknown Sources
-            3. Open the downloaded APK to install
-
-            > Requires Android 6.0+
-          files: |
-            apps/patient_app/build/app/outputs/flutter-apk/app-release.apk
-          draft: false
-          prerelease: false
+          name: release-apk
+          path: apps/patient_app/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 1
 
       # Hosted runners are discarded, but self-hosted or cached runners are not:
       # never leave the keystore, its passwords or the API config on disk.
@@ -105,3 +135,39 @@ jobs:
             apps/patient_app/android/key.properties \
             apps/patient_app/.env \
             apps/patient_app/android/app/google-services.json
+
+  # Only this job can write to the repository, and it never sees the keystore: it
+  # receives the already-built APK as an artifact.
+  publish-release:
+    name: Publish release
+    needs: build-release-apks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-apk
+          path: release-apk
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          name: SmartRide ${{ github.ref_name }}
+          body: |
+            ## SmartRide NEMT ${{ github.ref_name }}
+
+            ### One unified app — patients and drivers in the same install
+
+            Sign up as **Patient**, **Driver**, or **Both**. Switch portals from the drawer menu at any time.
+
+            ### Install
+            1. Download `app-release.apk`
+            2. On your Android phone: Settings → Security → allow Unknown Sources
+            3. Open the downloaded APK to install
+
+            > Requires Android 6.0+
+          files: |
+            release-apk/app-release.apk
+          draft: false
+          prerelease: false

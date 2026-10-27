@@ -19,6 +19,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isLogin && isSignedIn === false) router.replace('/login')
+    // Already signed in: the login form has nothing to offer.
+    if (isLogin && isSignedIn === true) router.replace('/')
   }, [isLogin, isSignedIn, router])
 
   if (isLogin) return <>{children}</>

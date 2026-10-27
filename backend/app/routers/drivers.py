@@ -256,14 +256,15 @@ def _topup_amount(body: WalletTopUpRequest) -> Decimal:
 async def topup_wallet(
     driver_id: UUID,
     body: WalletTopUpRequest,
-    idempotency_key: Optional[str] = Header(default=None, min_length=1, max_length=128),
+    idempotency_key: str = Header(min_length=1, max_length=128),
     admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """Admin credits a driver's wallet (manual JazzCash/EasyPaisa settlement).
 
-    Send an Idempotency-Key header to make retries safe: a replay returns the
-    current driver without crediting again.
+    The Idempotency-Key header is required: a replay returns the current driver
+    without crediting again. A NULL key would never conflict, so a keyless
+    retry would credit twice.
     """
     amount = _topup_amount(body)
     driver, user = await driver_service.get_driver_by_id(driver_id, db)
