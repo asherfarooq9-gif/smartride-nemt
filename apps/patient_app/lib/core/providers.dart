@@ -164,8 +164,16 @@ final themeModeProvider =
   (ref) => ThemeModeNotifier(),
 );
 
+/// The theme the app actually shows. Sign up and login are always light; the
+/// user's saved choice (light unless they switched to dark in Settings) only
+/// applies once they are signed in.
+final effectiveThemeModeProvider = Provider<ThemeMode>((ref) {
+  final isSignedIn = ref.watch(sessionTokenProvider) != null;
+  return isSignedIn ? ref.watch(themeModeProvider) : ThemeMode.light;
+});
+
 class ThemeModeNotifier extends StateNotifier<ThemeMode> {
-  ThemeModeNotifier() : super(ThemeMode.system) {
+  ThemeModeNotifier() : super(ThemeMode.light) {
     _load();
   }
 
