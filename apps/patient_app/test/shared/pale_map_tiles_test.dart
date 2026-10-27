@@ -36,8 +36,20 @@ void main() {
     expect(pale, everyElement(closeTo(255, 0.5)));
   });
 
+  test('the dark style turns light map areas dark and keeps text legible', () {
+    final white = _apply(darkTileMatrix, [255, 255, 255]);
+    final black = _apply(darkTileMatrix, [0, 0, 0]);
+    final park = _apply(darkTileMatrix, [170, 218, 170]);
+
+    expect(_brightness(white), lessThan(60));
+    expect(_brightness(black), greaterThan(150));
+    expect(_saturation(park), lessThan(60));
+  });
+
   test('the layer keeps the OpenStreetMap user agent and uses the filter', () {
     final layer = paleTileLayer();
+    final darkLayer = paleTileLayer(dark: true);
+    expect(darkLayer.tileBuilder, isNotNull);
 
     expect(layer, isA<TileLayer>());
     expect(
