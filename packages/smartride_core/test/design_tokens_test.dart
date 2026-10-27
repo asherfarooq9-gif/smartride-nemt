@@ -1,23 +1,8 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartride_core/smartride_core.dart';
 
-/// WCAG relative luminance and contrast ratio.
-double _luminance(Color c) {
-  double channel(double v) =>
-      v <= 0.03928 ? v / 12.92 : math.pow((v + 0.055) / 1.055, 2.4).toDouble();
-  return 0.2126 * channel(c.r) + 0.7152 * channel(c.g) + 0.0722 * channel(c.b);
-}
-
-double contrast(Color a, Color b) {
-  final l1 = _luminance(a);
-  final l2 = _luminance(b);
-  final lighter = math.max(l1, l2);
-  final darker = math.min(l1, l2);
-  return (lighter + 0.05) / (darker + 0.05);
-}
+import 'contrast_helper.dart';
 
 void main() {
   group('light theme text contrast (WCAG AA, 4.5:1)', () {
@@ -43,6 +28,32 @@ void main() {
       test(name, () {
         expect(contrast(pair.$1, pair.$2), greaterThanOrEqualTo(4.5));
       });
+    });
+  });
+
+  group('dark theme text contrast (WCAG AA, 4.5:1)', () {
+    final pairs = <String, (Color, Color)>{
+      'primary text on card': (kDarkText1, kDarkSurface),
+      'primary text on page': (kDarkText1, kDarkBg),
+      'primary text on raised card': (kDarkText1, kDarkSurface2),
+      'secondary text on card': (kDarkText2, kDarkSurface),
+      'secondary text on raised card': (kDarkText2, kDarkSurface2),
+      'hint text on card': (kDarkText3, kDarkSurface),
+      'teal on card': (kDarkTeal, kDarkSurface),
+      'teal on page': (kDarkTeal, kDarkBg),
+      'red on card': (kDarkRed, kDarkSurface),
+      'driver blue accent on card': (kBlueAccentDark, kDarkSurface),
+    };
+    pairs.forEach((name, pair) {
+      test(name, () {
+        expect(contrast(pair.$1, pair.$2), greaterThanOrEqualTo(4.5));
+      });
+    });
+
+    test('the page is near-black and cards step up from it', () {
+      expect(luminance(kDarkBg), lessThan(0.01));
+      expect(luminance(kDarkSurface), greaterThan(luminance(kDarkBg)));
+      expect(luminance(kDarkSurface2), greaterThan(luminance(kDarkSurface)));
     });
   });
 

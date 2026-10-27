@@ -29,6 +29,17 @@ class AppTheme {
       outline: dark ? kDarkBorder : kBorder,
       // No Material tint over cards and sheets; elevation is shown with shadows.
       surfaceTint: Colors.transparent,
+      // Tinted cards (Book a Ride, active ride), secondary text and grouped
+      // rows, so screens never reach for light-only constants.
+      primaryContainer: isDriver
+          ? (dark ? kDarkBlueContainer : kBlue100)
+          : (dark ? kDarkTealContainer : kTeal100),
+      onPrimaryContainer: isDriver
+          ? (dark ? kDarkOnBlueContainer : kBlue800)
+          : (dark ? kDarkOnTealContainer : kTeal800),
+      onSurfaceVariant: dark ? kDarkText2 : kText600,
+      surfaceContainerLow: dark ? kDarkSurface2 : kCanvas,
+      outlineVariant: dark ? kDarkBorder : kBorder,
     );
 
     final baseTextTheme =

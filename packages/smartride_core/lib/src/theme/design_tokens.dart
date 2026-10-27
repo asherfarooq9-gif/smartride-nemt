@@ -47,16 +47,20 @@ const Color kTextSecondary = kText600;
 const Color kDivider      = kBorder;
 
 // ── Neutrals — Dark ──────────────────────────────────────────────────────────
-const Color kDarkBg          = Color(0xFF0C1D1D);
-const Color kDarkSurface     = Color(0xFF132424);
-const Color kDarkSurface2    = Color(0xFF192C2C);
-const Color kDarkBorder      = Color(0xFF254040);
-const Color kDarkBorderLight = Color(0xFF1C3838);
+const Color kDarkBg          = Color(0xFF0A0A0C); // near-black page
+const Color kDarkSurface     = Color(0xFF1C1C1E); // cards
+const Color kDarkSurface2    = Color(0xFF2C2C2E); // raised cards, fields
+const Color kDarkBorder      = Color(0xFF3A3A3C);
+const Color kDarkBorderLight = Color(0xFF2C2C2E);
 const Color kDarkTeal        = Color(0xFF10BEBE);
-const Color kDarkRed         = Color(0xFFEF5350);
-const Color kDarkText1       = Color(0xFFE0F0F0);
-const Color kDarkText2       = Color(0xFF80AAAA);
-const Color kDarkText3       = Color(0xFF507070);
+const Color kDarkRed         = Color(0xFFFF6961);
+const Color kDarkTealContainer   = Color(0xFF12383A); // tinted card on dark
+const Color kDarkOnTealContainer = Color(0xFFB8ECEC);
+const Color kDarkBlueContainer   = Color(0xFF14324A);
+const Color kDarkOnBlueContainer = Color(0xFFBFE0F2);
+const Color kDarkText1       = Color(0xFFF2F2F7);
+const Color kDarkText2       = Color(0xFFAEAEB2);
+const Color kDarkText3       = Color(0xFF8E8E93); // 5.2:1 on cards
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 const Color kAuthDarkBg      = Color(0xFF0A1628);
