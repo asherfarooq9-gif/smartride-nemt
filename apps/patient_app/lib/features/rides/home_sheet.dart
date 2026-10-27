@@ -64,11 +64,12 @@ class HomeSheet extends ConsumerWidget {
               color: kSurface,
               child: ListView(
                 controller: controller,
-                padding: const EdgeInsets.fromLTRB(
+                // Leave room for the tab bar and safe area the sheet runs under.
+                padding: EdgeInsets.fromLTRB(
                   kSpaceXL,
                   0,
                   kSpaceXL,
-                  kSpaceXXL,
+                  kSpaceXXL + MediaQuery.paddingOf(context).bottom,
                 ),
                 children: [
                   const _Grabber(),
