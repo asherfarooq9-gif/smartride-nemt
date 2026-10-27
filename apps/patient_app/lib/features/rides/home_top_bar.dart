@@ -122,7 +122,10 @@ class _NotificationBell extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: accent,
                 shape: BoxShape.circle,
-                border: Border.all(color: kSurface, width: 1.5),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.surface,
+                  width: 1.5,
+                ),
               ),
               child: const SizedBox(width: 10, height: 10),
             ),

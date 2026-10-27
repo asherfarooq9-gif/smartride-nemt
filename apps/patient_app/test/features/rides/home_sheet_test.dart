@@ -20,6 +20,7 @@ Widget _app({
   core.RideResponse? ride,
   VoidCallback? onCallEmergency,
   double textScale = 1,
+  ThemeData? theme,
 }) {
   final router = GoRouter(routes: [
     GoRoute(
@@ -56,7 +57,7 @@ Widget _app({
         disableAnimations: true,
         textScaler: TextScaler.linear(textScale),
       ),
-      child: MaterialApp.router(routerConfig: router),
+      child: MaterialApp.router(routerConfig: router, theme: theme),
     ),
   );
 }
@@ -134,6 +135,44 @@ void main() {
 
     final after = tester.getTopLeft(find.byKey(const ValueKey('sheet-top')));
     expect(after.dy, lessThan(before.dy));
+  });
+
+  testWidgets('follows the dark theme instead of staying white',
+      (tester) async {
+    _tallPhone(tester);
+    await tester.pumpWidget(_app(theme: core.AppTheme.patient(dark: true)));
+    await tester.pumpAndSettle();
+
+    final surface = tester.widget<ColoredBox>(
+      find
+          .descendant(
+            of: find.byKey(const ValueKey('sheet-top')),
+            matching: find.byType(ColoredBox),
+          )
+          .first,
+    );
+    expect(surface.color, core.kDarkSurface);
+    final name = tester.widget<Text>(find.text('Ayesha'));
+    expect(name.style?.color, core.kDarkText1);
+  });
+
+  testWidgets('the light theme keeps a white sheet and dark text',
+      (tester) async {
+    _tallPhone(tester);
+    await tester.pumpWidget(_app(theme: core.AppTheme.patient()));
+    await tester.pumpAndSettle();
+
+    final surface = tester.widget<ColoredBox>(
+      find
+          .descendant(
+            of: find.byKey(const ValueKey('sheet-top')),
+            matching: find.byType(ColoredBox),
+          )
+          .first,
+    );
+    expect(surface.color, core.kSurface);
+    final name = tester.widget<Text>(find.text('Ayesha'));
+    expect(name.style?.color, core.kText900);
   });
 
   for (final size in const [Size(320, 640), Size(412, 860)]) {

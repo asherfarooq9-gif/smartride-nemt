@@ -29,6 +29,9 @@ const _kFullSize = 0.92;
 /// The draggable bottom sheet on the home screen: greeting, the SOS button,
 /// Book a Ride and quick actions. Drag it up for more room or down to see
 /// more of the map.
+///
+/// All colours come from the theme's colour scheme, so the sheet follows light
+/// and dark mode and the portal accent.
 class HomeSheet extends ConsumerWidget {
   const HomeSheet({super.key, this.onCallEmergency});
 
@@ -40,6 +43,7 @@ class HomeSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final activeRide = ref.watch(activeRideProvider);
     final name = ref.watch(patientNameProvider);
+    final scheme = Theme.of(context).colorScheme;
 
     return DraggableScrollableSheet(
       initialChildSize: _kRestSize,
@@ -61,7 +65,7 @@ class HomeSheet extends ConsumerWidget {
               top: Radius.circular(kRadiusSheet),
             ),
             child: ColoredBox(
-              color: kSurface,
+              color: scheme.surface,
               child: ListView(
                 controller: controller,
                 // Leave room for the tab bar and safe area the sheet runs under.
@@ -99,6 +103,7 @@ class _Grabber extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Semantics(
       label: 'Drag to resize',
       child: SizedBox(
@@ -109,7 +114,7 @@ class _Grabber extends StatelessWidget {
             width: 36,
             height: 5,
             decoration: BoxDecoration(
-              color: kBorder,
+              color: scheme.outlineVariant,
               borderRadius: BorderRadius.circular(kRadiusPill),
             ),
           ),
@@ -125,15 +130,16 @@ class _Greeting extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           _greeting(),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: kFontSmall,
             fontWeight: FontWeight.w500,
-            color: kText600,
+            color: scheme.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 2),
@@ -141,12 +147,12 @@ class _Greeting extends StatelessWidget {
           name ?? '',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 30,
             height: 1.15,
             fontWeight: FontWeight.w700,
             letterSpacing: -0.4,
-            color: kText900,
+            color: scheme.onSurface,
           ),
         ),
       ],
@@ -161,68 +167,122 @@ class _Greeting extends StatelessWidget {
   }
 }
 
-class _BookRideCard extends StatelessWidget {
-  const _BookRideCard();
+/// A tinted, tappable card: an accent-coloured icon, a title and a subtitle.
+class _TintedCard extends StatelessWidget {
+  const _TintedCard({
+    required this.semanticsLabel,
+    required this.onTap,
+    required this.leading,
+    required this.title,
+    required this.subtitle,
+    this.minHeight = kMinTapTarget,
+  });
+
+  final String semanticsLabel;
+  final VoidCallback onTap;
+  final Widget leading;
+  final String title;
+  final String subtitle;
+  final double minHeight;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Semantics(
       button: true,
-      label: 'Book a ride. Schedule a non-emergency trip',
+      label: semanticsLabel,
       excludeSemantics: true,
       child: Material(
-        color: kTeal100,
+        color: scheme.primaryContainer,
         borderRadius: BorderRadius.circular(kRadiusXL),
         child: InkWell(
           borderRadius: BorderRadius.circular(kRadiusXL),
-          onTap: () => context.push('/book-ride'),
+          onTap: onTap,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 72),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(
+            constraints: BoxConstraints(minHeight: minHeight),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
                 horizontal: kSpaceLG,
                 vertical: kSpaceMD,
               ),
               child: Row(
                 children: [
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: kTeal600,
-                    child: Icon(
-                      Icons.event_available_rounded,
-                      color: Colors.white,
-                    ),
-                  ),
-                  SizedBox(width: kSpaceMD),
+                  leading,
+                  const SizedBox(width: kSpaceMD),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Book a Ride',
+                          title,
                           style: TextStyle(
                             fontSize: kFontBody,
                             fontWeight: FontWeight.w700,
-                            color: kTeal800,
+                            color: scheme.onPrimaryContainer,
                           ),
                         ),
                         Text(
-                          'Schedule a non-emergency trip',
+                          subtitle,
                           style: TextStyle(
                             fontSize: kFontSmall,
-                            color: kText600,
+                            color: scheme.onPrimaryContainer
+                                .withValues(alpha: 0.85),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  Icon(Icons.chevron_right_rounded, color: kTeal800),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: scheme.onPrimaryContainer,
+                  ),
                 ],
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _BookRideCard extends StatelessWidget {
+  const _BookRideCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return _TintedCard(
+      semanticsLabel: 'Book a ride. Schedule a non-emergency trip',
+      onTap: () => context.push('/book-ride'),
+      minHeight: 72,
+      leading: CircleAvatar(
+        radius: 22,
+        backgroundColor: scheme.primary,
+        child: const Icon(Icons.event_available_rounded, color: Colors.white),
+      ),
+      title: 'Book a Ride',
+      subtitle: 'Schedule a non-emergency trip',
+    );
+  }
+}
+
+class _ActiveRideBanner extends StatelessWidget {
+  const _ActiveRideBanner({required this.ride});
+  final RideResponse ride;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return _TintedCard(
+      semanticsLabel: 'Active ride, ${ride.status.displayLabel}. View details',
+      onTap: () => context.push('/ride/${ride.id}'),
+      leading: Icon(
+        Icons.directions_car_rounded,
+        color: scheme.onPrimaryContainer,
+      ),
+      title: 'Active Ride',
+      subtitle: ride.status.displayLabel,
     );
   }
 }
@@ -235,7 +295,7 @@ class _QuickActions extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: kCanvas,
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(kRadiusXL),
       ),
       child: Column(
@@ -275,8 +335,11 @@ class _RowDivider extends StatelessWidget {
   const _RowDivider();
 
   @override
-  Widget build(BuildContext context) =>
-      const Divider(height: 1, indent: 56, color: kBorder);
+  Widget build(BuildContext context) => Divider(
+        height: 1,
+        indent: 56,
+        color: Theme.of(context).colorScheme.outlineVariant,
+      );
 }
 
 class _ActionRow extends StatelessWidget {
@@ -284,16 +347,19 @@ class _ActionRow extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
-    this.iconColor = kTeal600,
+    this.iconColor,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  final Color iconColor;
+
+  /// Defaults to the portal accent.
+  final Color? iconColor;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return InkWell(
       borderRadius: BorderRadius.circular(kRadiusXL),
       onTap: onTap,
@@ -303,75 +369,22 @@ class _ActionRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: kSpaceLG),
           child: Row(
             children: [
-              Icon(icon, color: iconColor, size: 22),
+              Icon(icon, color: iconColor ?? scheme.primary, size: 22),
               const SizedBox(width: kSpaceMD),
               Expanded(
                 child: Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: kFontBody,
-                    color: kText900,
+                    color: scheme.onSurface,
                   ),
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded, color: kText400),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ActiveRideBanner extends StatelessWidget {
-  const _ActiveRideBanner({required this.ride});
-  final RideResponse ride;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: 'Active ride, ${ride.status.displayLabel}. View details',
-      excludeSemantics: true,
-      child: Material(
-        color: kTeal100,
-        borderRadius: BorderRadius.circular(kRadiusXL),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(kRadiusXL),
-          onTap: () => context.push('/ride/${ride.id}'),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: kMinTapTarget),
-            child: Padding(
-              padding: const EdgeInsets.all(kSpaceMD),
-              child: Row(
-                children: [
-                  const Icon(Icons.directions_car_rounded, color: kTeal600),
-                  const SizedBox(width: kSpaceMD),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Active Ride',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: kText900,
-                          ),
-                        ),
-                        Text(
-                          ride.status.displayLabel,
-                          style: const TextStyle(
-                            fontSize: kFontSmall,
-                            color: kText600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.chevron_right_rounded, color: kText600),
-                ],
+              Icon(
+                Icons.chevron_right_rounded,
+                color: scheme.onSurfaceVariant,
               ),
-            ),
+            ],
           ),
         ),
       ),
