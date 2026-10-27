@@ -77,7 +77,15 @@ class HomeSheet extends ConsumerWidget {
                 ),
                 children: [
                   const _Grabber(),
-                  _Greeting(name: name.valueOrNull),
+                  _Greeting(
+                    // Blank while loading; "there" if the profile cannot be
+                    // read (including errors that are not Exceptions).
+                    name: name.when(
+                      data: (n) => n,
+                      loading: () => null,
+                      error: (_, __) => 'there',
+                    ),
+                  ),
                   const SizedBox(height: kSpaceLG),
                   if (activeRide != null) ...[
                     _ActiveRideBanner(ride: activeRide),

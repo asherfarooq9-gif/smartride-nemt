@@ -21,6 +21,7 @@ Widget _app({
   VoidCallback? onCallEmergency,
   double textScale = 1,
   ThemeData? theme,
+  Future<String> Function()? name,
 }) {
   final router = GoRouter(routes: [
     GoRoute(
@@ -49,7 +50,9 @@ Widget _app({
   return ProviderScope(
     overrides: [
       activeRideProvider.overrideWithValue(ride),
-      patientNameProvider.overrideWith((ref) async => 'Ayesha'),
+      patientNameProvider.overrideWith(
+        (ref) => name != null ? name() : Future.value('Ayesha'),
+      ),
     ],
     child: MediaQuery(
       data: MediaQueryData(
@@ -78,6 +81,16 @@ void main() {
     expect(find.text('Ayesha'), findsOneWidget);
     expect(find.text('Request emergency ride'), findsNothing); // semantics only
     expect(find.bySemanticsLabel('Request emergency ride'), findsOneWidget);
+  });
+
+  testWidgets('still greets when the profile cannot be loaded', (tester) async {
+    await tester.pumpWidget(
+      _app(name: () async => throw StateError('storage unreadable')),
+    );
+    await tester.pumpAndSettle();
+
+    // An Error (not an Exception) must not leave the title blank.
+    expect(find.text('there'), findsOneWidget);
   });
 
   testWidgets('Book a Ride opens the booking flow', (tester) async {

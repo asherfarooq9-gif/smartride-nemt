@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:patient_app/core/providers.dart';
 import 'package:patient_app/features/rides/home_top_bar.dart';
+import 'package:patient_app/shared/glass_surface.dart';
 
 Widget _app({
   List<String> roles = const ['patient'],
@@ -17,10 +18,9 @@ Widget _app({
     GoRoute(
       path: '/',
       builder: (_, __) => Scaffold(
-        body: Align(
-          alignment: Alignment.topCenter,
-          child: HomeTopBar(onMenu: onMenu ?? () {}),
-        ),
+        // Placed in a Stack, as on the home screen, where it gets loose
+        // constraints as tall as the screen.
+        body: Stack(children: [HomeTopBar(onMenu: onMenu ?? () {})]),
       ),
     ),
     GoRoute(
@@ -62,6 +62,19 @@ void main() {
     expect(find.text('SmartRide'), findsOneWidget);
     await tester.tap(find.byTooltip('Open menu'));
     expect(opened, isTrue);
+  });
+
+  testWidgets('is a slim bar, not a panel that fills the screen',
+      (tester) async {
+    tester.view.physicalSize = const Size(412, 860);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(_app());
+    await tester.pump();
+
+    final bar = tester.getSize(find.byType(GlassSurface));
+
+    expect(bar.height, lessThanOrEqualTo(64));
   });
 
   testWidgets('a single-role account has no portal switch', (tester) async {

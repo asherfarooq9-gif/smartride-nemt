@@ -31,36 +31,41 @@ class HomeTopBar extends ConsumerWidget {
         child: GlassSurface(
           borderRadius: BorderRadius.circular(kRadiusPill),
           padding: const EdgeInsets.symmetric(horizontal: kSpaceXS),
-          child: Row(
-            children: [
-              IconButton(
-                tooltip: 'Open menu',
-                onPressed: onMenu,
-                icon: const Icon(Icons.menu_rounded),
-                constraints: const BoxConstraints(
-                  minWidth: kMinTapTarget,
-                  minHeight: kMinTapTarget,
+          // A fixed height: the Row otherwise inherits the loose, screen-high
+          // constraints of the Stack, and its Center child fills them.
+          child: SizedBox(
+            height: kMinTapTarget + kSpaceSM,
+            child: Row(
+              children: [
+                IconButton(
+                  tooltip: 'Open menu',
+                  onPressed: onMenu,
+                  icon: const Icon(Icons.menu_rounded),
+                  constraints: const BoxConstraints(
+                    minWidth: kMinTapTarget,
+                    minHeight: kMinTapTarget,
+                  ),
                 ),
-              ),
-              Expanded(
-                child: Center(
-                  child: hasBothPortals
-                      ? const _PortalSwitch()
-                      : Semantics(
-                          header: true,
-                          child: const Text(
-                            'SmartRide',
-                            style: TextStyle(
-                              fontSize: kFontSubhead,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: -0.2,
+                Expanded(
+                  child: Center(
+                    child: hasBothPortals
+                        ? const _PortalSwitch()
+                        : Semantics(
+                            header: true,
+                            child: const Text(
+                              'SmartRide',
+                              style: TextStyle(
+                                fontSize: kFontSubhead,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.2,
+                              ),
                             ),
                           ),
-                        ),
+                  ),
                 ),
-              ),
-              const _NotificationBell(),
-            ],
+                const _NotificationBell(),
+              ],
+            ),
           ),
         ),
       ),
