@@ -26,6 +26,7 @@ const Color kRed800       = Color(0xFF9B1E1E);
 const Color kRed600       = Color(0xFFC62828);
 const Color kRed50        = Color(0xFFFFEBEE);
 const Color kEmergencyRed = kRed600;
+const Color kEmergencyRedHighlight = Color(0xFFCE2C2C); // top-left of the SOS button, 5.1:1 with white
 const Color kError        = kRed600;
 
 // ── Neutrals — Light ─────────────────────────────────────────────────────────

@@ -31,6 +31,10 @@ void main() {
       'white on patient teal': (kOnPrimary, kPatientPrimary),
       'white on driver blue': (kOnPrimary, kDriverPrimary),
       'white on emergency red': (Colors.white, kEmergencyRed),
+      'white on emergency red highlight': (
+        Colors.white,
+        kEmergencyRedHighlight
+      ),
       'teal link on card': (kTeal600, kSurface),
       'teal text on selected tint': (kTeal600, kTeal100),
       'error text on page': (kError, kCanvas),

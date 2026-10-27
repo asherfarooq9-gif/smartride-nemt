@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:smartride_core/smartride_core.dart';
 import 'package:patient_app/core/providers.dart';
+import 'package:patient_app/features/rides/emergency_button.dart';
 import 'package:patient_app/features/rides/rides_notifier.dart';
 import 'package:patient_app/shared/role_switcher.dart';
 
@@ -125,7 +126,7 @@ class HomeScreen extends ConsumerWidget {
                       _ActiveRideBanner(ride: activeRide),
                       const SizedBox(height: kSpaceLG),
                     ],
-                    Center(child: _EmergencyButton()),
+                    const Center(child: EmergencyButton()),
                     const SizedBox(height: kSpaceMD),
                     const Row(
                       children: [
@@ -287,162 +288,6 @@ class _PortalChip extends StatelessWidget {
                   Icon(Icons.keyboard_arrow_down, size: 18, color: kTeal600),
                 ],
               ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _EmergencyButton extends StatefulWidget {
-  @override
-  State<_EmergencyButton> createState() => _EmergencyButtonState();
-}
-
-class _EmergencyButtonState extends State<_EmergencyButton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _pulse;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2400),
-    );
-    _pulse = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (MediaQuery.disableAnimationsOf(context)) {
-      _controller.stop();
-    } else if (!_controller.isAnimating) {
-      _controller.repeat();
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final disableAnimations = MediaQuery.disableAnimationsOf(context);
-    // Grow with the system font size so the label always fits the circle.
-    final diameter = MediaQuery.textScalerOf(context)
-        .scale(kEmergencyButtonSize)
-        .clamp(kEmergencyButtonSize, kEmergencyButtonSize * 1.5);
-
-    return Semantics(
-      label: 'Request emergency ride',
-      hint: 'Double tap to get immediate help',
-      button: true,
-      excludeSemantics: true,
-      child: SizedBox(
-        width: diameter + 40,
-        height: diameter + 40,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            if (!disableAnimations)
-              _PulseRing(animation: _pulse, size: diameter),
-            Material(
-              type: MaterialType.circle,
-              color: Colors.transparent,
-              child: Ink(
-                width: diameter,
-                height: diameter,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: const RadialGradient(
-                    colors: [Color(0xFFE03535), Color(0xFFC62828)],
-                  ),
-                  boxShadow: kEmergencyButtonShadow,
-                ),
-                child: InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap: () => context.push('/symptoms'),
-                  child: const _EmergencyLabel(),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PulseRing extends StatelessWidget {
-  const _PulseRing({required this.animation, required this.size});
-  final Animation<double> animation;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: animation,
-      builder: (context, _) {
-        final t = animation.value;
-        return Transform.scale(
-          scale: 1.0 + 0.22 * t,
-          child: Opacity(
-            opacity: 0.25 * (1 - t),
-            child: Container(
-              width: size,
-              height: size,
-              decoration: const BoxDecoration(
-                color: kRed600,
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _EmergencyLabel extends StatelessWidget {
-  const _EmergencyLabel();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(kSpaceLG),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: SizedBox(
-            width: 120,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.add, color: Colors.white, size: 40),
-                SizedBox(height: 4),
-                Text(
-                  'EMERGENCY',
-                  maxLines: 1,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  'Tap for immediate help',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: kFontSmall, color: Colors.white),
-                ),
-              ],
             ),
           ),
         ),
