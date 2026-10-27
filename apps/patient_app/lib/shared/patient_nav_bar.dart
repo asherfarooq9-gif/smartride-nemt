@@ -34,6 +34,22 @@ class PatientNavBar extends StatelessWidget {
     final bar = NavigationBar(
       selectedIndex: currentIndex,
       backgroundColor: glass ? Colors.transparent : null,
+      // A compact bar: the glass variant would otherwise be a tall Material one.
+      height: glass ? 60 : null,
+      elevation: 0,
+      labelTextStyle: glass
+          ? WidgetStateProperty.resolveWith(
+              (states) => TextStyle(
+                fontSize: 12,
+                fontWeight: states.contains(WidgetState.selected)
+                    ? FontWeight.w700
+                    : FontWeight.w500,
+                color: states.contains(WidgetState.selected)
+                    ? scheme.primary
+                    : scheme.onSurfaceVariant,
+              ),
+            )
+          : null,
       indicatorColor: scheme.primaryContainer,
       onDestinationSelected: (i) => _select(context, i),
       destinations: const [
@@ -56,20 +72,20 @@ class PatientNavBar extends StatelessWidget {
     );
 
     if (!glass) return bar;
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          kSpaceLG,
-          0,
-          kSpaceLG,
-          kSpaceSM,
-        ),
-        child: GlassSurface(
-          borderRadius: BorderRadius.circular(kRadiusSheet),
-          child: bar,
-        ),
+    // Full width with rounded top corners, sitting on the bottom edge; the
+    // frosted panel runs down under the system gesture area.
+    return GlassSurface(
+      borderRadius: const BorderRadius.vertical(
+        top: Radius.circular(kRadiusSheet),
       ),
+      sigma: 24,
+      opacity: 0.82,
+      borderColor: scheme.brightness == Brightness.dark
+          ? null
+          : Colors.white.withValues(alpha: 0.85),
+      borderWidth: 1,
+      shadows: kSheetShadow,
+      child: SafeArea(top: false, child: bar),
     );
   }
 }

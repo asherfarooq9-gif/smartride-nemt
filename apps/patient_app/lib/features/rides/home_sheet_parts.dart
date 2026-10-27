@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart';
+import 'package:patient_app/features/rides/home_glass_card.dart';
 import 'package:patient_app/features/rides/rides_notifier.dart';
 import 'package:patient_app/shared/press_scale.dart';
 
@@ -45,7 +46,7 @@ class SheetGreeting extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final palette = HomePalette.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -60,28 +61,25 @@ class SheetGreeting extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 30,
+                    fontSize: 24,
                     height: 1.15,
                     fontWeight: FontWeight.w700,
-                    letterSpacing: -0.4,
-                    color: scheme.onSurface,
+                    letterSpacing: -0.3,
+                    color: palette.heading,
                   ),
                 ),
               ),
             ),
             const SizedBox(width: kSpaceSM),
             const ExcludeSemantics(
-              child: Text('👋', style: TextStyle(fontSize: 26)),
+              child: Text('👋', style: TextStyle(fontSize: 21)),
             ),
           ],
         ),
         const SizedBox(height: 2),
         Text(
           "Stay safe. We're here for you.",
-          style: TextStyle(
-            fontSize: kFontBody,
-            color: scheme.onSurfaceVariant,
-          ),
+          style: TextStyle(fontSize: kFontBody, color: palette.muted),
         ),
       ],
     );
@@ -165,65 +163,47 @@ class BookRideCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final palette = HomePalette.of(context);
     return Semantics(
       button: true,
       label: 'Book a ride. Schedule a non-emergency trip',
       excludeSemantics: true,
-      child: PressScale(
-        child: Material(
-          color: scheme.primaryContainer,
-          borderRadius: BorderRadius.circular(kRadiusXL),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(kRadiusXL),
-            onTap: onTap,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 76),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: kSpaceLG,
-                  vertical: kSpaceMD,
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: scheme.primary,
-                      child: const Icon(
-                        Icons.directions_car_rounded,
-                        color: Colors.white,
+      child: HomeGlassCard(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 72),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: kSpaceMD,
+              vertical: kSpaceSM,
+            ),
+            child: Row(
+              children: [
+                const HomeIconDisc(icon: Icons.directions_car_rounded),
+                const SizedBox(width: kSpaceMD),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Book a Ride',
+                        style: TextStyle(
+                          fontSize: kFontBody,
+                          fontWeight: FontWeight.w700,
+                          color: palette.heading,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: kSpaceMD),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Book a Ride',
-                            style: TextStyle(
-                              fontSize: kFontSubhead,
-                              fontWeight: FontWeight.w700,
-                              color: scheme.onPrimaryContainer,
-                            ),
-                          ),
-                          Text(
-                            'Schedule a non-emergency trip',
-                            style: TextStyle(
-                              fontSize: kFontSmall,
-                              color: scheme.onPrimaryContainer,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        'Schedule a non-emergency trip',
+                        style: TextStyle(
+                            fontSize: kFontSmall, color: palette.muted),
                       ),
-                    ),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      color: scheme.onPrimaryContainer,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+                Icon(Icons.chevron_right_rounded, color: palette.heading),
+              ],
             ),
           ),
         ),
@@ -232,35 +212,41 @@ class BookRideCard extends StatelessWidget {
   }
 }
 
-/// Recent Rides, Saved places and Help, side by side on wide screens and
-/// stacked as a list on narrow ones or with large text.
+/// Recent Rides, Favorites and Safety Tips as three compact cards in a row;
+/// stacked as a list with large text or on very narrow screens.
+///
+/// Favorites opens the saved places, and Safety Tips opens Help (the emergency
+/// guidance and the FAQ).
 class QuickCardsRow extends StatelessWidget {
   const QuickCardsRow({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final isStacked = MediaQuery.sizeOf(context).width < 340 ||
+        MediaQuery.textScalerOf(context).scale(1) > 1.15;
     final cards = [
       QuickCard(
         icon: Icons.history_rounded,
         title: 'Recent Rides',
         subtitle: 'View your trips',
+        isCompact: !isStacked,
         onTap: () => context.go('/rides'),
       ),
       QuickCard(
-        icon: Icons.bookmark_border_rounded,
-        title: 'Saved places',
-        subtitle: 'Your addresses',
+        icon: Icons.star_rounded,
+        title: 'Favorites',
+        subtitle: 'Saved locations',
+        isCompact: !isStacked,
         onTap: () => context.push('/saved-places'),
       ),
       QuickCard(
-        icon: Icons.help_outline_rounded,
-        title: 'Help',
-        subtitle: 'Get support',
+        icon: Icons.shield_outlined,
+        title: 'Safety Tips',
+        subtitle: 'Stay informed',
+        isCompact: !isStacked,
         onTap: () => context.push('/help'),
       ),
     ];
-    final isStacked = MediaQuery.sizeOf(context).width < 380 ||
-        MediaQuery.textScalerOf(context).scale(1) > 1.15;
 
     if (isStacked) {
       return Column(
@@ -272,6 +258,8 @@ class QuickCardsRow extends StatelessWidget {
         ],
       );
     }
+    // Three narrow cards: icon over text so the text can wrap at its real
+    // size instead of being shrunk to fit. They share the tallest card's height.
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -293,6 +281,7 @@ class QuickCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
+    this.isCompact = true,
   });
 
   final IconData icon;
@@ -300,60 +289,101 @@ class QuickCard extends StatelessWidget {
   final String subtitle;
   final VoidCallback onTap;
 
+  /// Text only, for the three-across row: each card is too narrow for an icon
+  /// beside readable text, and too short for one above it. When false, a
+  /// full-width row with icon and chevron.
+  final bool isCompact;
+
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return Semantics(
       button: true,
       label: '$title. $subtitle',
       excludeSemantics: true,
-      child: PressScale(
-        child: Material(
-          color: scheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(kRadiusXL),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(kRadiusXL),
-            onTap: onTap,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: kMinTapTarget),
-              child: Padding(
-                padding: const EdgeInsets.all(kSpaceMD),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    CircleAvatar(
-                      radius: 18,
-                      backgroundColor: scheme.primaryContainer,
-                      child: Icon(
-                        icon,
-                        size: 20,
-                        color: scheme.onPrimaryContainer,
-                      ),
-                    ),
-                    const SizedBox(height: kSpaceSM),
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: kFontSmall,
-                        fontWeight: FontWeight.w700,
-                        color: scheme.onSurface,
-                      ),
-                    ),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+      child: HomeGlassCard(
+        onTap: onTap,
+        radius: 18,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: kMinTapTarget),
+          child: Padding(
+            padding: const EdgeInsets.all(kSpaceSM),
+            child: isCompact
+                ? _CompactQuickCardBody(title, subtitle)
+                : _WideQuickCardBody(icon, title, subtitle),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _CompactQuickCardBody extends StatelessWidget {
+  const _CompactQuickCardBody(this.title, this.subtitle);
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = HomePalette.of(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          title,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: palette.heading,
+          ),
+        ),
+        Text(
+          subtitle,
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 12, color: palette.muted),
+        ),
+      ],
+    );
+  }
+}
+
+class _WideQuickCardBody extends StatelessWidget {
+  const _WideQuickCardBody(this.icon, this.title, this.subtitle);
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = HomePalette.of(context);
+    return Row(
+      children: [
+        HomeIconDisc(icon: icon, size: 36),
+        const SizedBox(width: kSpaceMD),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: kFontBody,
+                  fontWeight: FontWeight.w700,
+                  color: palette.heading,
+                ),
+              ),
+              Text(
+                subtitle,
+                style: TextStyle(fontSize: kFontSmall, color: palette.muted),
+              ),
+            ],
+          ),
+        ),
+        Icon(Icons.chevron_right_rounded, color: palette.muted),
+      ],
     );
   }
 }

@@ -6,13 +6,26 @@ import 'package:patient_app/features/rides/emergency_button.dart';
 import 'package:patient_app/features/rides/emergency_confirm_sheet.dart';
 import 'package:patient_app/features/rides/home_sheet_parts.dart';
 import 'package:patient_app/features/rides/rides_notifier.dart';
+import 'package:patient_app/shared/glass_surface.dart';
 
 const _kPeekSize = 0.30;
 
 /// Where the sheet starts: the layout in the design, with the round SOS.
-const kHomeSheetRestSize = 0.62;
+const kHomeSheetRestSize = 0.55;
 const _kRestSize = kHomeSheetRestSize;
 const _kFullSize = 0.92;
+
+/// How opaque the frosted sheet is: the map shows through, text stays legible.
+const _kSheetOpacity = 0.74;
+
+/// How strongly the map behind the sheet is blurred.
+const _kSheetBlurSigma = 24.0;
+
+/// Diameter of the round SOS button on the home sheet.
+const _kSosDiameter = 118.0;
+
+/// Room kept under the content for the floating tab bar.
+const _kNavClearance = 76.0;
 
 /// Below this fraction of the screen the sheet is "collapsed" and swaps the big
 /// SOS button for a compact one so the essentials still fit.
@@ -47,7 +60,6 @@ class _HomeSheetState extends ConsumerState<HomeSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     final activeRide = ref.watch(activeRideProvider);
 
@@ -66,68 +78,67 @@ class _HomeSheetState extends ConsumerState<HomeSheet> {
         // Flutter rejects a zero duration, so reduced motion gets a 1 ms snap.
         snapAnimationDuration: Duration(milliseconds: reduceMotion ? 1 : 320),
         builder: (context, controller) {
-          return DecoratedBox(
+          return GlassSurface(
             key: const ValueKey('sheet-top'),
-            decoration: BoxDecoration(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(kRadiusSheet),
-              ),
-              boxShadow: kSheetShadow,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(kRadiusSheet),
             ),
-            child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(kRadiusSheet),
+            // The sheet carries a lot of text, so it is milkier than the
+            // small controls.
+            opacity: _kSheetOpacity,
+            sigma: _kSheetBlurSigma,
+            // A bright hairline along the top edge, like light on glass.
+            borderColor: Theme.of(context).brightness == Brightness.dark
+                ? null
+                : Colors.white.withValues(alpha: 0.85),
+            borderWidth: 1,
+            shadows: kSheetShadow,
+            child: ListView(
+              controller: controller,
+              // Room for the tab bar and safe area the sheet runs under.
+              padding: EdgeInsets.fromLTRB(
+                kSpaceLG + 2,
+                0,
+                kSpaceLG + 2,
+                _kNavClearance + MediaQuery.paddingOf(context).bottom,
               ),
-              child: ColoredBox(
-                color: scheme.surface,
-                child: ListView(
-                  controller: controller,
-                  // Room for the tab bar and safe area the sheet runs under.
-                  padding: EdgeInsets.fromLTRB(
-                    kSpaceXL,
-                    0,
-                    kSpaceXL,
-                    kSpaceXXXL + MediaQuery.paddingOf(context).bottom,
+              children: [
+                const SheetGrabber(),
+                const SheetGreeting(),
+                const SizedBox(height: kSpaceSM),
+                if (activeRide != null) ...[
+                  ActiveRideBanner(
+                    ride: activeRide,
+                    onTap: () => context.push('/ride/${activeRide.id}'),
                   ),
-                  children: [
-                    const SheetGrabber(),
-                    const SheetGreeting(),
-                    const SizedBox(height: kSpaceMD),
-                    if (activeRide != null) ...[
-                      ActiveRideBanner(
-                        ride: activeRide,
-                        onTap: () => context.push('/ride/${activeRide.id}'),
-                      ),
-                      const SizedBox(height: kSpaceMD),
-                    ],
-                    ValueListenableBuilder<double>(
-                      valueListenable: _extent,
-                      builder: (context, extent, _) {
-                        final isCollapsed = extent < _kCollapsedBelow;
-                        return AnimatedSwitcher(
-                          duration: reduceMotion
-                              ? Duration.zero
-                              : const Duration(milliseconds: 220),
-                          child: isCollapsed
-                              ? const CompactEmergency(
-                                  key: ValueKey('compact-emergency'),
-                                )
-                              : const Center(
-                                  key: ValueKey('round-emergency'),
-                                  child: EmergencyButton(),
-                                ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: kSpaceMD),
-                    BookRideCard(onTap: () => context.push('/book-ride')),
-                    const SizedBox(height: kSpaceMD),
-                    const QuickCardsRow(),
-                    const SizedBox(height: kSpaceXL),
-                    const RecentRidesSection(),
-                  ],
+                  const SizedBox(height: kSpaceMD),
+                ],
+                ValueListenableBuilder<double>(
+                  valueListenable: _extent,
+                  builder: (context, extent, _) {
+                    final isCollapsed = extent < _kCollapsedBelow;
+                    return AnimatedSwitcher(
+                      duration: reduceMotion
+                          ? Duration.zero
+                          : const Duration(milliseconds: 220),
+                      child: isCollapsed
+                          ? const CompactEmergency(
+                              key: ValueKey('compact-emergency'),
+                            )
+                          : const Center(
+                              key: ValueKey('round-emergency'),
+                              child: EmergencyButton(size: _kSosDiameter),
+                            ),
+                    );
+                  },
                 ),
-              ),
+                const SizedBox(height: kSpaceSM),
+                BookRideCard(onTap: () => context.push('/book-ride')),
+                const SizedBox(height: kSpaceSM + 2),
+                const QuickCardsRow(),
+                const SizedBox(height: kSpaceXL),
+                const RecentRidesSection(),
+              ],
             ),
           );
         },

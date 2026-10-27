@@ -1,10 +1,16 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:smartride_core/smartride_core.dart';
 import 'package:patient_app/core/patient_location.dart';
-import 'package:patient_app/shared/pale_map_tiles.dart';
+import 'package:patient_app/features/rides/home_sheet.dart'
+    show kHomeSheetRestSize;
+import 'package:patient_app/shared/english_map_tiles.dart';
+import 'package:patient_app/shared/english_vector_map.dart';
+import 'package:vector_map_tiles/vector_map_tiles.dart';
 
 /// The map shown before we know where the patient is: a country overview, not
 /// a guess at their city.
@@ -12,7 +18,19 @@ const kNeutralMapCenter = LatLng(30.3753, 69.3451);
 const kNeutralMapZoom = 5.0;
 
 /// Zoom used once there is a real position.
-const kLocatedMapZoom = 15.0;
+const kLocatedMapZoom = 14.2;
+
+/// The map centre that puts [target] in the middle of the part of the map the
+/// home sheet leaves uncovered, rather than behind the sheet.
+///
+/// The map fills the whole screen but the sheet covers its lower part, so the
+/// screen centre is under the sheet. The screen centre is moved south of the
+/// target by half the sheet's height.
+LatLng centerAboveSheet(MapCamera camera, LatLng target, double zoom) {
+  final sheetHeight = camera.size.y * kHomeSheetRestSize;
+  final point = camera.project(target, zoom);
+  return camera.unproject(math.Point(point.x, point.y + sheetHeight / 2), zoom);
+}
 
 /// The full-screen map behind the home screen.
 ///
@@ -50,9 +68,34 @@ class _HomeMapState extends ConsumerState<HomeMap> {
     if (position == null || _hasCentered || !_isMapReady) return;
     _hasCentered = true;
     widget.controller.move(
-      LatLng(position.latitude, position.longitude),
+      centerAboveSheet(
+        widget.controller.camera,
+        LatLng(position.latitude, position.longitude),
+        kLocatedMapZoom,
+      ),
       kLocatedMapZoom,
     );
+  }
+
+  /// The colourful English map, or the plain gray English one if the style
+  /// cannot be loaded (offline, or the service is down). While it loads the map
+  /// shows only its background colour.
+  List<Widget> _basemap(bool isDark) {
+    return ref.watch(englishMapStyleProvider(isDark)).when(
+          data: (style) => [
+            VectorTileLayer(
+              tileProviders: style.providers,
+              theme: style.theme,
+              sprites: style.sprites,
+              maximumZoom: 19,
+              // OpenMapTiles styles are drawn for 512px tiles; at the default
+              // 256px the labels and icons come out twice too big.
+              tileOffset: TileOffset.mapbox,
+            ),
+          ],
+          loading: () => const [],
+          error: (_, __) => englishTileLayers(dark: isDark),
+        );
   }
 
   @override
@@ -90,7 +133,10 @@ class _HomeMapState extends ConsumerState<HomeMap> {
         },
       ),
       children: [
-        widget.tileLayer ?? paleTileLayer(dark: isDark),
+        if (widget.tileLayer != null)
+          widget.tileLayer!
+        else
+          ..._basemap(isDark),
         if (here != null && position != null) ...[
           CircleLayer(
             circles: [
@@ -144,3 +190,8 @@ class _LocationDot extends StatelessWidget {
     );
   }
 }
+
+/// True while the colourful vector basemap is what the map actually shows.
+final isVectorMapShownProvider = Provider.family<bool, bool>((ref, isDark) {
+  return ref.watch(englishMapStyleProvider(isDark)).hasValue;
+});

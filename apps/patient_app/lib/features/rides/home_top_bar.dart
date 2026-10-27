@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart';
 import 'package:patient_app/core/providers.dart';
 import 'package:patient_app/shared/glass_circle_button.dart';
-import 'package:patient_app/shared/glass_surface.dart';
+import 'package:patient_app/shared/glass_segmented_control.dart';
 import 'package:patient_app/shared/role_switcher.dart';
 
 /// The controls floating over the home map: a round menu button, a round
@@ -69,26 +69,15 @@ class _PortalSwitch extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return GlassSurface(
-      borderRadius: BorderRadius.circular(kRadiusPill),
-      padding: const EdgeInsets.all(2),
-      child: SegmentedButton<String>(
-        showSelectedIcon: false,
-        style: const ButtonStyle(
-          visualDensity: VisualDensity.compact,
-          tapTargetSize: MaterialTapTargetSize.padded,
-        ),
-        segments: const [
-          ButtonSegment(value: 'patient', label: Text('Patient')),
-          ButtonSegment(value: 'driver', label: Text('Driver')),
-        ],
-        selected: const {'patient'},
-        onSelectionChanged: (choice) {
-          if (choice.first == 'driver') {
-            switchPortal(context, ref, 'driver', '/driver');
-          }
-        },
-      ),
+    return GlassSegmentedControl<String>(
+      segments: const [
+        GlassSegment(value: 'patient', label: 'Patient'),
+        GlassSegment(value: 'driver', label: 'Driver'),
+      ],
+      selected: 'patient',
+      onChanged: (choice) {
+        if (choice == 'driver') switchPortal(context, ref, 'driver', '/driver');
+      },
     );
   }
 }

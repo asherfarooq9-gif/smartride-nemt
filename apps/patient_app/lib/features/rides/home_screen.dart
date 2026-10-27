@@ -36,6 +36,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final height = MediaQuery.sizeOf(context).height;
+    // A test-supplied tile layer replaces the real basemap (and its network).
+    final isVectorMap = widget.tileLayer == null &&
+        ref.watch(isVectorMapShownProvider(
+          Theme.of(context).brightness == Brightness.dark,
+        ));
 
     return Scaffold(
       // The map and sheet continue behind the floating tab bar.
@@ -64,9 +69,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ValueListenableBuilder<double>(
             valueListenable: _sheetExtent,
             builder: (context, extent, _) => Positioned(
+              left: kSpaceLG,
               right: kSpaceLG,
               bottom: extent * height + kSpaceMD,
-              child: RecenterButton(controller: _map),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.bottomLeft,
+                      child: MapAttribution(isVectorMap: isVectorMap),
+                    ),
+                  ),
+                  const SizedBox(width: kSpaceSM),
+                  RecenterButton(controller: _map),
+                ],
+              ),
             ),
           ),
         ],

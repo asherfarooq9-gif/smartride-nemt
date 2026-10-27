@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:patient_app/core/patient_location.dart';
 import 'package:patient_app/features/rides/home_sheet.dart';
+import 'package:patient_app/features/rides/home_sheet_parts.dart';
 import 'package:patient_app/features/rides/rides_notifier.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 
@@ -146,8 +147,72 @@ void main() {
       expect(_roundSos, findsOneWidget);
       expect(find.text('Book a Ride'), findsOneWidget);
       expect(find.text('Recent Rides'), findsOneWidget);
-      expect(find.text('Saved places'), findsOneWidget);
-      expect(find.text('Help'), findsOneWidget);
+      expect(find.text('Favorites'), findsOneWidget);
+      expect(find.text('Safety Tips'), findsOneWidget);
+    });
+
+    testWidgets('all three quick cards sit above the tab bar at rest',
+        (tester) async {
+      tester.view.physicalSize = const Size(393, 852);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(_app());
+      await tester.pumpAndSettle();
+
+      // The tab bar covers the bottom 60px (plus the safe area, none here).
+      const tabBarTop = 852 - 60;
+      for (final title in ['Recent Rides', 'Favorites', 'Safety Tips']) {
+        final card = tester.getRect(find.text(title));
+        expect(card.bottom, lessThan(tabBarTop), reason: '$title is covered');
+      }
+    });
+
+    testWidgets(
+        'quick cards in the row keep their text at its real size, '
+        'never shrunk to fit', (tester) async {
+      _phone(tester);
+      await tester.pumpWidget(_app());
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byType(QuickCard),
+          matching: find.byType(FittedBox),
+        ),
+        findsNothing,
+      );
+      for (final text in [
+        'Recent Rides',
+        'View your trips',
+        'Saved locations',
+        'Stay informed',
+      ]) {
+        final fontSize = tester.widget<Text>(find.text(text)).style?.fontSize;
+        expect(fontSize, greaterThanOrEqualTo(12),
+            reason: '$text is too small');
+      }
+    });
+
+    testWidgets(
+        'with large text the quick cards stack, each with icon, '
+        'subtitle and chevron', (tester) async {
+      _phone(tester);
+      await tester.pumpWidget(_app(textScale: 1.3));
+      await tester.pumpAndSettle();
+      // Stacked, the cards sit below the fold of the resting sheet.
+      await _dragSheet(tester, -500);
+
+      expect(find.byType(QuickCard), findsNWidgets(3));
+      for (final icon in [
+        Icons.history_rounded,
+        Icons.star_rounded,
+        Icons.shield_outlined,
+      ]) {
+        expect(find.byIcon(icon), findsOneWidget);
+      }
+      expect(find.byIcon(Icons.chevron_right_rounded), findsWidgets);
+      expect(find.text('View your trips'), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('Book a Ride opens the booking flow', (tester) async {
@@ -163,8 +228,8 @@ void main() {
 
     for (final (card, route) in const [
       ('Recent Rides', '/rides'),
-      ('Saved places', '/saved-places'),
-      ('Help', '/help'),
+      ('Favorites', '/saved-places'),
+      ('Safety Tips', '/help'),
     ]) {
       testWidgets('the $card card opens $route', (tester) async {
         _phone(tester);
@@ -327,21 +392,39 @@ void main() {
     }
   });
 
-  group('dark mode', () {
+  group('frosted glass', () {
+    Color fillOf(WidgetTester tester) {
+      final box = tester.widget<DecoratedBox>(
+        find.descendant(
+          of: find.byKey(const ValueKey('sheet-top')),
+          matching: find.byKey(const ValueKey('glass-fill')),
+        ),
+      );
+      return (box.decoration as BoxDecoration).color!;
+    }
+
+    testWidgets('blurs the map behind it and lets it show through',
+        (tester) async {
+      _phone(tester);
+      await tester.pumpWidget(_app());
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('sheet-top')),
+          matching: find.byType(BackdropFilter),
+        ),
+        findsOneWidget,
+      );
+      expect(fillOf(tester).a, inExclusiveRange(0.5, 1));
+    });
+
     testWidgets('the sheet follows the dark theme', (tester) async {
       _phone(tester);
       await tester.pumpWidget(_app(theme: core.AppTheme.patient(dark: true)));
       await tester.pumpAndSettle();
 
-      final surface = tester.widget<ColoredBox>(
-        find
-            .descendant(
-              of: find.byKey(const ValueKey('sheet-top')),
-              matching: find.byType(ColoredBox),
-            )
-            .first,
-      );
-      expect(surface.color, core.kDarkSurface);
+      expect(fillOf(tester).withValues(alpha: 1), core.kDarkSurface);
     });
 
     testWidgets('the light theme keeps a white sheet', (tester) async {
@@ -349,15 +432,7 @@ void main() {
       await tester.pumpWidget(_app(theme: core.AppTheme.patient()));
       await tester.pumpAndSettle();
 
-      final surface = tester.widget<ColoredBox>(
-        find
-            .descendant(
-              of: find.byKey(const ValueKey('sheet-top')),
-              matching: find.byType(ColoredBox),
-            )
-            .first,
-      );
-      expect(surface.color, core.kSurface);
+      expect(fillOf(tester).withValues(alpha: 1), core.kSurface);
     });
   });
 }

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:patient_app/shared/english_map_tiles.dart';
 import 'package:patient_app/driver/ride_events.dart' show rideHasEnded;
 
 const _genericLoadError =
@@ -295,10 +296,7 @@ class _TrackingMap extends StatelessWidget {
         onMapReady: onMapReady,
       ),
       children: [
-        TileLayer(
-          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          userAgentPackageName: 'com.smartride.patient',
-        ),
+        ...englishTileLayers(),
         MarkerLayer(markers: [
           if (pickup != null)
             Marker(
@@ -435,7 +433,8 @@ class _ConnectionNotice extends StatelessWidget {
                 onPressed: onRetry,
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.white,
-                  minimumSize: const Size(core.kMinTapTarget, core.kMinTapTarget),
+                  minimumSize:
+                      const Size(core.kMinTapTarget, core.kMinTapTarget),
                 ),
                 child: const Text('Retry'),
               ),

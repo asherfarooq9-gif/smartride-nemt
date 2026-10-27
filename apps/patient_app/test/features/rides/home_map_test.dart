@@ -8,6 +8,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:patient_app/core/patient_location.dart';
 import 'package:patient_app/features/rides/home_map.dart';
+import 'package:patient_app/features/rides/home_sheet.dart'
+    show kHomeSheetRestSize;
 
 /// A 1x1 transparent PNG, so tests never touch the network.
 final _blankTile = MemoryImage(base64Decode(
@@ -79,9 +81,14 @@ void main() {
 
     expect(find.byKey(const ValueKey('you-are-here')), findsOneWidget);
     expect(find.byType(CircleLayer), findsOneWidget);
-    expect(controller.camera.center.latitude, closeTo(31.5204, 0.001));
-    expect(controller.camera.center.longitude, closeTo(74.3587, 0.001));
     expect(controller.camera.zoom, greaterThan(13));
+    // The position is centred in the part of the map the sheet leaves
+    // uncovered, not behind the sheet.
+    final camera = controller.camera;
+    final spot = camera.latLngToScreenPoint(const LatLng(31.5204, 74.3587));
+    final visibleHeight = camera.size.y * (1 - kHomeSheetRestSize);
+    expect(spot.x, closeTo(camera.size.x / 2, 2));
+    expect(spot.y, closeTo(visibleHeight / 2, 2));
   });
 
   testWidgets('without permission there is no dot and no invented city',

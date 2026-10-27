@@ -5,6 +5,8 @@ import 'package:latlong2/latlong.dart';
 import 'package:smartride_core/smartride_core.dart';
 import 'package:patient_app/core/patient_location.dart';
 import 'package:patient_app/features/rides/home_map.dart';
+import 'package:patient_app/shared/english_map_tiles.dart';
+import 'package:patient_app/shared/english_vector_map.dart';
 import 'package:patient_app/shared/glass_circle_button.dart';
 import 'package:patient_app/shared/glass_surface.dart';
 import 'package:patient_app/shared/press_scale.dart';
@@ -60,17 +62,19 @@ class _RecenterButtonState extends ConsumerState<RecenterButton>
 
   Future<void> _flyTo(LatLng target) async {
     final camera = widget.controller.camera;
+    // Land with the position in the visible part of the map, not under the sheet.
+    final focus = centerAboveSheet(camera, target, kLocatedMapZoom);
     if (MediaQuery.disableAnimationsOf(context)) {
-      widget.controller.move(target, kLocatedMapZoom);
+      widget.controller.move(focus, kLocatedMapZoom);
       return;
     }
     final lat = Tween<double>(
       begin: camera.center.latitude,
-      end: target.latitude,
+      end: focus.latitude,
     );
     final lng = Tween<double>(
       begin: camera.center.longitude,
-      end: target.longitude,
+      end: focus.longitude,
     );
     final zoom = Tween<double>(begin: camera.zoom, end: kLocatedMapZoom);
     final curved =
@@ -152,6 +156,41 @@ class LocationHint extends ConsumerWidget {
                   ),
                 ],
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The map provider's credit. Its terms require it to stay visible, so it sits
+/// just above the sheet, opposite the recenter button.
+class MapAttribution extends StatelessWidget {
+  const MapAttribution({super.key, required this.isVectorMap});
+
+  /// Which basemap is showing, so the right provider is credited.
+  final bool isVectorMap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ExcludeSemantics(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: scheme.surface.withValues(alpha: 0.72),
+          borderRadius: BorderRadius.circular(kRadiusPill),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: kSpaceSM,
+            vertical: kSpaceXS,
+          ),
+          child: Text(
+            isVectorMap ? kVectorMapAttribution : kMapAttribution,
+            style: TextStyle(
+              fontSize: 10,
+              color: scheme.onSurfaceVariant,
             ),
           ),
         ),

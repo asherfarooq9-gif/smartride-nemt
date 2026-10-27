@@ -64,7 +64,7 @@ void main() {
     expect(bar.backgroundColor, Colors.transparent);
   });
 
-  testWidgets('the glass variant floats with a margin and rounded corners',
+  testWidgets('the glass variant is a compact full-width bar, round on top',
       (tester) async {
     tester.view.physicalSize = const Size(412, 860);
     tester.view.devicePixelRatio = 1;
@@ -72,9 +72,11 @@ void main() {
     await tester.pumpWidget(_app(glass: true));
 
     final bar = tester.getRect(find.byType(GlassSurface));
-    expect(bar.left, greaterThanOrEqualTo(12));
-    expect(412 - bar.right, greaterThanOrEqualTo(12));
-    expect(860 - bar.bottom, greaterThanOrEqualTo(4));
+    expect(bar.left, 0);
+    expect(bar.right, 412);
+    expect(bar.bottom, 860, reason: 'sits on the bottom edge');
+    expect(bar.height, lessThanOrEqualTo(64),
+        reason: 'compact, not a tall one');
 
     final surface = tester.widget<DecoratedBox>(
       find.byKey(const ValueKey('glass-fill')),
@@ -82,7 +84,7 @@ void main() {
     final radius =
         (surface.decoration as BoxDecoration).borderRadius! as BorderRadius;
     expect(radius.topLeft.x, greaterThanOrEqualTo(24));
-    expect(radius.bottomLeft.x, greaterThanOrEqualTo(24));
+    expect(radius.bottomLeft.x, 0, reason: 'flat along the screen edge');
   });
 
   testWidgets('changing tab gives a light haptic tick', (tester) async {

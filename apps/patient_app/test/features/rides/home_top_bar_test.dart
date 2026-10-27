@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:patient_app/core/providers.dart';
 import 'package:patient_app/features/rides/home_top_bar.dart';
+import 'package:patient_app/shared/glass_segmented_control.dart';
 
 Widget _app({
   List<String> roles = const ['patient'],
@@ -85,7 +86,7 @@ void main() {
     await tester.pumpWidget(_app());
     await tester.pump();
 
-    expect(find.byType(SegmentedButton<String>), findsNothing);
+    expect(find.byType(GlassSegmentedControl<String>), findsNothing);
   });
 
   testWidgets('a patient and driver account can switch portals from the bar',
@@ -93,10 +94,10 @@ void main() {
     await tester.pumpWidget(_app(roles: const ['patient', 'driver']));
     await tester.pump();
 
-    final control = tester.widget<SegmentedButton<String>>(
-      find.byType(SegmentedButton<String>),
+    final control = tester.widget<GlassSegmentedControl<String>>(
+      find.byType(GlassSegmentedControl<String>),
     );
-    expect(control.selected, {'patient'});
+    expect(control.selected, 'patient');
     expect(find.text('Patient'), findsOneWidget);
     expect(find.text('Driver'), findsOneWidget);
   });

@@ -8,6 +8,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:patient_app/core/patient_location.dart';
 import 'package:patient_app/features/rides/home_map.dart';
+import 'package:patient_app/features/rides/home_sheet.dart'
+    show kHomeSheetRestSize;
 import 'package:patient_app/features/rides/map_controls.dart';
 
 final _blankTile = MemoryImage(base64Decode(
@@ -83,6 +85,16 @@ Widget _app(_Gateway gateway, MapController controller) => ProviderScope(
       ),
     );
 
+/// The position sits in the middle of the part of the map the home sheet
+/// leaves uncovered, not behind the sheet.
+void _expectShownAboveSheet(MapController controller, LatLng position) {
+  final camera = controller.camera;
+  final spot = camera.latLngToScreenPoint(position);
+  final visibleHeight = camera.size.y * (1 - kHomeSheetRestSize);
+  expect(spot.x, closeTo(camera.size.x / 2, 2));
+  expect(spot.y, closeTo(visibleHeight / 2, 2));
+}
+
 void main() {
   testWidgets('recenter flies back to the real position after panning away',
       (tester) async {
@@ -95,8 +107,7 @@ void main() {
     await tester.tap(find.byTooltip('Centre on my location'));
     await tester.pumpAndSettle();
 
-    expect(controller.camera.center.latitude, closeTo(31.5204, 0.01));
-    expect(controller.camera.center.longitude, closeTo(74.3587, 0.01));
+    _expectShownAboveSheet(controller, const LatLng(31.5204, 74.3587));
   });
 
   testWidgets('recenter asks for permission when it is missing, then centres',
@@ -114,7 +125,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(gateway.requests, 1);
-    expect(controller.camera.center.latitude, closeTo(33.0, 0.01));
+    _expectShownAboveSheet(controller, const LatLng(33.0, 73.0));
   });
 
   testWidgets('the hint offers to turn location on only when it is off',

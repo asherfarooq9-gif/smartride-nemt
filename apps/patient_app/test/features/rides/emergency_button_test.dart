@@ -93,6 +93,16 @@ void main() {
     expect(find.text('Tap for immediate help'), findsOneWidget);
   });
 
+  testWidgets('the SOS label text is at least 13 pt, the hint included',
+      (tester) async {
+    await tester.pumpWidget(_app(disableAnimations: true));
+
+    for (final text in ['EMERGENCY', 'Tap for immediate help']) {
+      final fontSize = tester.widget<Text>(find.text(text)).style?.fontSize;
+      expect(fontSize, greaterThanOrEqualTo(13), reason: '$text is too small');
+    }
+  });
+
   testWidgets(
       'the glow is a circle outside the ink, so it is never clipped '
       'to a square', (tester) async {

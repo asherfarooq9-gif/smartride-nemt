@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
+import 'package:patient_app/shared/english_map_tiles.dart';
 import 'package:patient_app/core/providers.dart';
 import 'package:patient_app/driver/dashboard_notifier.dart';
 import 'package:patient_app/driver/ride_events.dart';
@@ -179,16 +180,11 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
                 child: FlutterMap(
                   mapController: _mapController,
                   options: MapOptions(
-                    initialCenter:
-                        pickupPos ?? _myPos ?? const LatLng(0, 0),
+                    initialCenter: pickupPos ?? _myPos ?? const LatLng(0, 0),
                     initialZoom: 14,
                   ),
                   children: [
-                    TileLayer(
-                      urlTemplate:
-                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.smartride.driver',
-                    ),
+                    ...englishTileLayers(),
                     MarkerLayer(
                       markers: [
                         if (pickupPos != null)

@@ -4,6 +4,11 @@ import 'package:smartride_core/smartride_core.dart';
 import 'package:patient_app/features/rides/emergency_confirm_sheet.dart';
 import 'package:patient_app/shared/press_scale.dart';
 
+/// The gradient runs from a bright red to a deep one. The label sits in the
+/// deeper half, where white text keeps a readable contrast.
+const _kRedLight = Color(0xFFFF4B50);
+const _kRedDeep = Color(0xFFC91F2C);
+
 /// The round red SOS button on the home screen.
 ///
 /// Tapping it opens a confirmation that shows the real pickup location; the
@@ -13,7 +18,10 @@ import 'package:patient_app/shared/press_scale.dart';
 /// ink decorations are clipped to their own rectangle, which used to turn the
 /// glow into a visible square behind the circle.
 class EmergencyButton extends StatefulWidget {
-  const EmergencyButton({super.key});
+  const EmergencyButton({super.key, this.size = kEmergencyButtonSize});
+
+  /// Diameter of the red circle (before the system font scaling is applied).
+  final double size;
 
   @override
   State<EmergencyButton> createState() => _EmergencyButtonState();
@@ -58,9 +66,9 @@ class _EmergencyButtonState extends State<EmergencyButton>
     final disableAnimations = MediaQuery.disableAnimationsOf(context);
     // Grow with the system font size so the label always fits the circle.
     final diameter = MediaQuery.textScalerOf(context)
-        .scale(kEmergencyButtonSize)
-        .clamp(kEmergencyButtonSize, kEmergencyButtonSize * 1.5);
-    final outer = diameter * 1.3;
+        .scale(widget.size)
+        .clamp(widget.size, widget.size * 1.5);
+    final outer = diameter * 1.28;
 
     return Semantics(
       label: 'Request emergency ride',
@@ -103,10 +111,11 @@ class _EmergencyButtonState extends State<EmergencyButton>
                     height: diameter,
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
+                      // Bright red lit from the top left into a deeper red.
                       gradient: RadialGradient(
-                        center: Alignment(-0.3, -0.4),
-                        radius: 1.0,
-                        colors: [kEmergencyRedHighlight, kEmergencyRed],
+                        center: Alignment(-0.35, -0.5),
+                        radius: 1.15,
+                        colors: [_kRedLight, _kRedDeep],
                       ),
                     ),
                     child: InkWell(
@@ -145,17 +154,17 @@ class _PulseRing extends StatelessWidget {
       animation: animation,
       builder: (context, _) {
         final t = Curves.easeOut.transform((animation.value + delay) % 1);
+        // A soft filled halo, no outline: it reads as a glow, not a ring.
         return Transform.scale(
-          scale: 1.0 + 0.42 * t,
+          scale: 1.0 + 0.24 * t,
           child: Opacity(
-            opacity: 0.30 * (1 - t),
+            opacity: 0.22 * (1 - t),
             child: Container(
               width: size,
               height: size,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: kEmergencyRed, width: 3),
-                color: kEmergencyRed.withValues(alpha: 0.10),
+                color: _kRedLight,
               ),
             ),
           ),
@@ -172,31 +181,31 @@ class _EmergencyLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Center(
       child: Padding(
-        padding: EdgeInsets.all(kSpaceLG),
+        padding: EdgeInsets.all(kSpaceMD),
         child: FittedBox(
           fit: BoxFit.scaleDown,
           child: SizedBox(
-            width: 120,
+            width: 108,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.warning_rounded, color: Colors.white, size: 44),
-                SizedBox(height: 4),
+                Icon(Icons.warning_rounded, color: Colors.white, size: 34),
+                SizedBox(height: 2),
                 Text(
                   'EMERGENCY',
                   maxLines: 1,
                   style: TextStyle(
-                    fontSize: 15,
+                    fontSize: 13,
                     fontWeight: FontWeight.w800,
                     color: Colors.white,
-                    letterSpacing: 1.2,
+                    letterSpacing: 0.8,
                   ),
                 ),
-                SizedBox(height: 2),
+                SizedBox(height: 1),
                 Text(
                   'Tap for immediate help',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: kFontSmall, color: Colors.white),
+                  style: TextStyle(fontSize: 13, color: Colors.white),
                 ),
               ],
             ),
