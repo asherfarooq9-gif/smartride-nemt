@@ -29,15 +29,15 @@ const Color kEmergencyRed = kRed600;
 const Color kError        = kRed600;
 
 // ── Neutrals — Light ─────────────────────────────────────────────────────────
-const Color kText900      = Color(0xFF152626);
-const Color kText600      = Color(0xFF4A6464);
-const Color kText400      = Color(0xFF7A9494);
+const Color kText900      = Color(0xFF1C1C1E);
+const Color kText600      = Color(0xFF48484A);
+const Color kText400      = Color(0xFF6C6C70); // 5.2:1 on white
 const Color kTextOff      = Color(0xFFAECBCB);
-const Color kCanvas       = Color(0xFFECF7F7);
-const Color kBorder       = Color(0xFFC8E2E2);
-const Color kBorderLight  = Color(0xFFDAEEEE);
+const Color kCanvas       = Color(0xFFF2F2F7); // page background
+const Color kBorder       = Color(0xFFD1D1D6);
+const Color kBorderLight  = Color(0xFFE5E5EA);
 const Color kSurface      = Color(0xFFFFFFFF);
-const Color kSurface2     = Color(0xFFF3FAFA);
+const Color kSurface2     = Color(0xFFF7F7FA);
 const Color kBackground   = kCanvas;
 const Color kOnPrimary    = Color(0xFFFFFFFF);
 const Color kOnBackground = kText900;
@@ -92,10 +92,10 @@ const double kSpaceXXXL = 48;
 // ── Border radius ─────────────────────────────────────────────────────────────
 const double kRadiusSM   = 8;
 const double kRadiusMD   = 12;
-const double kRadiusLG   = 14;  // buttons, inputs
-const double kRadiusXL   = 16;  // cards
+const double kRadiusLG   = 12;  // buttons, inputs
+const double kRadiusXL   = 20;  // cards
 const double kRadiusXXL  = 20;  // large cards
-const double kRadiusSheet = 26; // bottom sheet top
+const double kRadiusSheet = 28; // bottom sheet top
 const double kRadiusPill  = 99; // pills
 
 // ── Component sizes ───────────────────────────────────────────────────────────
@@ -131,9 +131,13 @@ const double kFontXL  = kFontTitle;
 const double kFontXXL = kFontDisplay;
 
 // ── Shadows ───────────────────────────────────────────────────────────────────
+// Shadows are tinted with a deep teal ink, never pure black, so they stay clean
+// on light surfaces.
+const Color kShadowInk = Color(0xFF0B2A33);
+
 List<BoxShadow> kCardShadow = [
   BoxShadow(
-    color: const Color(0xFF000000).withValues(alpha: 0.04),
+    color: kShadowInk.withValues(alpha: 0.06),
     blurRadius: 6,
     offset: const Offset(0, 1),
   ),
@@ -141,7 +145,7 @@ List<BoxShadow> kCardShadow = [
 
 List<BoxShadow> kRaisedCardShadow = [
   BoxShadow(
-    color: const Color(0xFF000000).withValues(alpha: 0.06),
+    color: kShadowInk.withValues(alpha: 0.10),
     blurRadius: 12,
     offset: const Offset(0, 2),
   ),
@@ -168,5 +172,14 @@ List<BoxShadow> kDriverButtonShadow = [
     color: kBlue600.withValues(alpha: 0.30),
     blurRadius: 20,
     offset: const Offset(0, 5),
+  ),
+];
+
+/// Shadow for the home bottom sheet, cast upward over the map.
+List<BoxShadow> kSheetShadow = [
+  BoxShadow(
+    color: kShadowInk.withValues(alpha: 0.16),
+    blurRadius: 24,
+    offset: const Offset(0, -4),
   ),
 ];
