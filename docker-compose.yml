@@ -38,7 +38,7 @@ services:
     build: ./backend
     container_name: smartride_backend
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://smartride:${POSTGRES_PASSWORD:-password}@postgres:5432/smartride
       REDIS_URL: redis://redis:6379/0
@@ -63,7 +63,7 @@ services:
     build: ./ai-services/triage
     container_name: smartride_triage
     ports:
-      - "127.0.0.1:8001:8001"
+      - "127.0.0.1:${TRIAGE_PORT:-8001}:8001"
     volumes:
       - ./ai-services/triage:/app
     command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
