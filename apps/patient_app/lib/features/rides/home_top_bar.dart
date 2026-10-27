@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart';
 import 'package:patient_app/core/providers.dart';
+import 'package:patient_app/shared/glass_circle_button.dart';
 import 'package:patient_app/shared/glass_surface.dart';
 import 'package:patient_app/shared/role_switcher.dart';
 
-/// The frosted bar floating over the home map: menu, title (or the portal
-/// switch for accounts that hold both roles) and notifications.
+/// The controls floating over the home map: a round menu button, a round
+/// notifications button with an unread dot and, for accounts that hold both
+/// roles, a compact Patient | Driver switch between them.
 class HomeTopBar extends ConsumerWidget {
   const HomeTopBar({super.key, required this.onMenu});
 
@@ -18,54 +20,43 @@ class HomeTopBar extends ConsumerWidget {
     final roles = ref.watch(rolesProvider);
     final hasBothPortals =
         roles.contains('patient') && roles.contains('driver');
+    final hasUnread =
+        ref.watch(notificationsProvider('patient')).any((n) => !n.isRead);
 
     return SafeArea(
       bottom: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          kSpaceLG,
-          kSpaceSM,
-          kSpaceLG,
-          0,
-        ),
-        child: GlassSurface(
-          borderRadius: BorderRadius.circular(kRadiusPill),
-          padding: const EdgeInsets.symmetric(horizontal: kSpaceXS),
-          // A fixed height: the Row otherwise inherits the loose, screen-high
-          // constraints of the Stack, and its Center child fills them.
-          child: SizedBox(
-            height: kMinTapTarget + kSpaceSM,
-            child: Row(
-              children: [
-                IconButton(
-                  tooltip: 'Open menu',
-                  onPressed: onMenu,
-                  icon: const Icon(Icons.menu_rounded),
-                  constraints: const BoxConstraints(
-                    minWidth: kMinTapTarget,
-                    minHeight: kMinTapTarget,
-                  ),
-                ),
-                Expanded(
-                  child: Center(
+        padding: const EdgeInsets.fromLTRB(kSpaceLG, kSpaceSM, kSpaceLG, 0),
+        // A fixed height: the Row otherwise inherits the loose, screen-high
+        // constraints of the Stack and grows to fill them.
+        child: SizedBox(
+          height: kMinTapTarget,
+          child: Row(
+            children: [
+              GlassCircleButton(
+                tooltip: 'Open menu',
+                icon: Icons.menu_rounded,
+                onPressed: onMenu,
+              ),
+              Expanded(
+                child: Center(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
                     child: hasBothPortals
-                        ? const _PortalSwitch()
-                        : Semantics(
-                            header: true,
-                            child: const Text(
-                              'SmartRide',
-                              style: TextStyle(
-                                fontSize: kFontSubhead,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: -0.2,
-                              ),
-                            ),
-                          ),
+                        ? const _PortalSwitch(key: ValueKey('portal-switch'))
+                        : const SizedBox.shrink(key: ValueKey('no-switch')),
                   ),
                 ),
-                const _NotificationBell(),
-              ],
-            ),
+              ),
+              GlassCircleButton(
+                tooltip: hasUnread
+                    ? 'Notifications, you have unread'
+                    : 'Notifications',
+                icon: Icons.notifications_none_rounded,
+                hasBadge: hasUnread,
+                onPressed: () => context.push('/notifications'),
+              ),
+            ],
           ),
         ),
       ),
@@ -74,68 +65,30 @@ class HomeTopBar extends ConsumerWidget {
 }
 
 class _PortalSwitch extends ConsumerWidget {
-  const _PortalSwitch();
+  const _PortalSwitch({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return SegmentedButton<String>(
-      showSelectedIcon: false,
-      style: const ButtonStyle(
-        visualDensity: VisualDensity.compact,
-        tapTargetSize: MaterialTapTargetSize.padded,
-      ),
-      segments: const [
-        ButtonSegment(value: 'patient', label: Text('Patient')),
-        ButtonSegment(value: 'driver', label: Text('Driver')),
-      ],
-      selected: const {'patient'},
-      onSelectionChanged: (choice) {
-        if (choice.first == 'driver') {
-          switchPortal(context, ref, 'driver', '/driver');
-        }
-      },
-    );
-  }
-}
-
-class _NotificationBell extends ConsumerWidget {
-  const _NotificationBell();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final hasUnread =
-        ref.watch(notificationsProvider('patient')).any((n) => !n.isRead);
-    final accent = Theme.of(context).colorScheme.primary;
-
-    return Stack(
-      children: [
-        IconButton(
-          tooltip:
-              hasUnread ? 'Notifications, you have unread' : 'Notifications',
-          onPressed: () => context.push('/notifications'),
-          icon: const Icon(Icons.notifications_none_rounded),
-          constraints: const BoxConstraints(
-            minWidth: kMinTapTarget,
-            minHeight: kMinTapTarget,
-          ),
+    return GlassSurface(
+      borderRadius: BorderRadius.circular(kRadiusPill),
+      padding: const EdgeInsets.all(2),
+      child: SegmentedButton<String>(
+        showSelectedIcon: false,
+        style: const ButtonStyle(
+          visualDensity: VisualDensity.compact,
+          tapTargetSize: MaterialTapTargetSize.padded,
         ),
-        if (hasUnread)
-          Positioned(
-            top: 11,
-            right: 12,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: accent,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Theme.of(context).colorScheme.surface,
-                  width: 1.5,
-                ),
-              ),
-              child: const SizedBox(width: 10, height: 10),
-            ),
-          ),
-      ],
+        segments: const [
+          ButtonSegment(value: 'patient', label: Text('Patient')),
+          ButtonSegment(value: 'driver', label: Text('Driver')),
+        ],
+        selected: const {'patient'},
+        onSelectionChanged: (choice) {
+          if (choice.first == 'driver') {
+            switchPortal(context, ref, 'driver', '/driver');
+          }
+        },
+      ),
     );
   }
 }

@@ -6,7 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:patient_app/core/providers.dart';
 import 'package:patient_app/features/rides/home_top_bar.dart';
-import 'package:patient_app/shared/glass_surface.dart';
 
 Widget _app({
   List<String> roles = const ['patient'],
@@ -54,17 +53,17 @@ AppNotification _unread() => const AppNotification(
     );
 
 void main() {
-  testWidgets('shows the wordmark and opens the menu', (tester) async {
+  testWidgets('has a round menu button that opens the menu', (tester) async {
     var opened = false;
     await tester.pumpWidget(_app(onMenu: () => opened = true));
     await tester.pump();
 
-    expect(find.text('SmartRide'), findsOneWidget);
     await tester.tap(find.byTooltip('Open menu'));
+
     expect(opened, isTrue);
   });
 
-  testWidgets('is a slim bar, not a panel that fills the screen',
+  testWidgets('the corners hold two round 48px buttons and nothing else',
       (tester) async {
     tester.view.physicalSize = const Size(412, 860);
     tester.view.devicePixelRatio = 1;
@@ -72,9 +71,14 @@ void main() {
     await tester.pumpWidget(_app());
     await tester.pump();
 
-    final bar = tester.getSize(find.byType(GlassSurface));
-
-    expect(bar.height, lessThanOrEqualTo(64));
+    final menu = tester.getSize(find.byTooltip('Open menu'));
+    final bell = tester.getSize(find.byTooltip('Notifications'));
+    expect(menu, const Size(48, 48));
+    expect(bell, const Size(48, 48));
+    // A slim row, not a panel across the screen.
+    expect(
+        tester.getSize(find.byType(HomeTopBar)).height, lessThanOrEqualTo(80));
+    expect(find.text('SmartRide'), findsNothing);
   });
 
   testWidgets('a single-role account has no portal switch', (tester) async {

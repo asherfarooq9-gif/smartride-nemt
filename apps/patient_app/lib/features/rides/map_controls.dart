@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:smartride_core/smartride_core.dart';
 import 'package:patient_app/core/patient_location.dart';
 import 'package:patient_app/features/rides/home_map.dart';
+import 'package:patient_app/shared/glass_circle_button.dart';
 import 'package:patient_app/shared/glass_surface.dart';
 import 'package:patient_app/shared/press_scale.dart';
 
@@ -42,7 +42,6 @@ class _RecenterButtonState extends ConsumerState<RecenterButton>
   }
 
   Future<void> _recenter() async {
-    HapticFeedback.selectionClick();
     final notifier = ref.read(patientLocationProvider.notifier);
     var location = ref.read(patientLocationProvider);
     if (!location.hasPosition) {
@@ -92,25 +91,11 @@ class _RecenterButtonState extends ConsumerState<RecenterButton>
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Tooltip(
-      message: 'Centre on my location',
-      child: Semantics(
-        button: true,
-        label: 'Centre on my location',
-        excludeSemantics: true,
-        child: PressScale(
-          onTap: _recenter,
-          child: GlassSurface(
-            borderRadius: BorderRadius.circular(kRadiusPill),
-            child: SizedBox(
-              width: kMinTapTarget,
-              height: kMinTapTarget,
-              child: Icon(Icons.near_me_rounded, color: scheme.primary),
-            ),
-          ),
-        ),
-      ),
+    return GlassCircleButton(
+      tooltip: 'Centre on my location',
+      icon: Icons.near_me_rounded,
+      iconColor: Theme.of(context).colorScheme.primary,
+      onPressed: _recenter,
     );
   }
 }
