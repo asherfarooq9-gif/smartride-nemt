@@ -9,11 +9,17 @@ import 'package:patient_app/shared/role_switcher.dart';
 
 /// The controls floating over the home map: a round menu button, a round
 /// notifications button with an unread dot and, for accounts that hold both
-/// roles, a compact Patient | Driver switch between them.
+/// roles, a compact switch between the two portals.
+///
+/// [portal] is the portal this bar belongs to, `patient` or `driver`: it picks
+/// which notifications to watch, where the bell leads and which segment is lit.
 class HomeTopBar extends ConsumerWidget {
-  const HomeTopBar({super.key, required this.onMenu});
+  const HomeTopBar({super.key, required this.onMenu, this.portal = 'patient'});
 
   final VoidCallback onMenu;
+  final String portal;
+
+  bool get _isDriver => portal == 'driver';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -21,7 +27,7 @@ class HomeTopBar extends ConsumerWidget {
     final hasBothPortals =
         roles.contains('patient') && roles.contains('driver');
     final hasUnread =
-        ref.watch(notificationsProvider('patient')).any((n) => !n.isRead);
+        ref.watch(notificationsProvider(portal)).any((n) => !n.isRead);
 
     return SafeArea(
       bottom: false,
@@ -43,7 +49,10 @@ class HomeTopBar extends ConsumerWidget {
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 200),
                     child: hasBothPortals
-                        ? const _PortalSwitch(key: ValueKey('portal-switch'))
+                        ? _PortalSwitch(
+                            key: const ValueKey('portal-switch'),
+                            portal: portal,
+                          )
                         : const SizedBox.shrink(key: ValueKey('no-switch')),
                   ),
                 ),
@@ -54,7 +63,9 @@ class HomeTopBar extends ConsumerWidget {
                     : 'Notifications',
                 icon: Icons.notifications_none_rounded,
                 hasBadge: hasUnread,
-                onPressed: () => context.push('/notifications'),
+                onPressed: () => context.push(
+                  _isDriver ? '/driver/notifications' : '/notifications',
+                ),
               ),
             ],
           ),
@@ -65,18 +76,22 @@ class HomeTopBar extends ConsumerWidget {
 }
 
 class _PortalSwitch extends ConsumerWidget {
-  const _PortalSwitch({super.key});
+  const _PortalSwitch({super.key, required this.portal});
+
+  final String portal;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    const patient = GlassSegment(value: 'patient', label: 'Patient');
+    const driver = GlassSegment(value: 'driver', label: 'Driver');
     return GlassSegmentedControl<String>(
-      segments: const [
-        GlassSegment(value: 'patient', label: 'Patient'),
-        GlassSegment(value: 'driver', label: 'Driver'),
-      ],
-      selected: 'patient',
+      // Your own portal comes first.
+      segments: portal == 'driver' ? [driver, patient] : [patient, driver],
+      selected: portal,
       onChanged: (choice) {
-        if (choice == 'driver') switchPortal(context, ref, 'driver', '/driver');
+        if (choice == portal) return;
+        switchPortal(
+            context, ref, choice, choice == 'driver' ? '/driver' : '/');
       },
     );
   }

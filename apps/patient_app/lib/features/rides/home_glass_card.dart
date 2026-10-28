@@ -57,12 +57,14 @@ class HomeGlassCard extends StatelessWidget {
   const HomeGlassCard({
     super.key,
     required this.child,
-    required this.onTap,
+    this.onTap,
     this.radius = 20,
   });
 
   final Widget child;
-  final VoidCallback onTap;
+
+  /// Null for a card that only shows information.
+  final VoidCallback? onTap;
   final double radius;
 
   @override

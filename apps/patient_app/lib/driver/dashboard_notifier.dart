@@ -26,7 +26,9 @@ Future<HeartbeatResult> sendHeartbeat({
     await post(pos.latitude, pos.longitude);
     return HeartbeatResult.sent;
   } on core.AppError catch (e, st) {
-    if (reportErrors) core.ErrorReporter.report('Driver heartbeat failed', e, st);
+    if (reportErrors) {
+      core.ErrorReporter.report('Driver heartbeat failed', e, st);
+    }
     return HeartbeatResult.failed;
   }
 }
@@ -88,6 +90,7 @@ class DashboardState {
     this.pendingRides = const [],
     this.todayEarningsPkr = 0.0,
     this.isLoading = false,
+    this.isUpdatingStatus = false,
     this.error,
   });
 
@@ -98,6 +101,10 @@ class DashboardState {
   final List<core.RideResponse> pendingRides;
   final double todayEarningsPkr;
   final bool isLoading;
+
+  /// True while an online/offline request is in flight, so the controls can show
+  /// progress and a second tap cannot send a second request.
+  final bool isUpdatingStatus;
   final String? error;
 
   bool get isOnline => driver?.isOnline ?? false;
@@ -108,6 +115,7 @@ class DashboardState {
     List<core.RideResponse>? pendingRides,
     double? todayEarningsPkr,
     bool? isLoading,
+    bool? isUpdatingStatus,
     String? error,
   }) =>
       DashboardState(
@@ -116,6 +124,7 @@ class DashboardState {
         pendingRides: pendingRides ?? this.pendingRides,
         todayEarningsPkr: todayEarningsPkr ?? this.todayEarningsPkr,
         isLoading: isLoading ?? this.isLoading,
+        isUpdatingStatus: isUpdatingStatus ?? this.isUpdatingStatus,
         error: error,
       );
 }
@@ -194,6 +203,8 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
             rides.where((r) => !_declined.contains(r.id.toString())).toList(),
         todayEarningsPkr: _calcTodayEarnings(earnings),
         isLoading: false,
+        // A background refresh must not unlock the controls mid-request.
+        isUpdatingStatus: state.isUpdatingStatus,
       );
       _syncHeartbeat();
     } catch (e, st) {
@@ -222,24 +233,32 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
   void declineRide(String rideId) {
     _declined.add(rideId);
     state = state.copyWith(
-      pendingRides: state.pendingRides
-          .where((r) => r.id.toString() != rideId)
-          .toList(),
+      pendingRides:
+          state.pendingRides.where((r) => r.id.toString() != rideId).toList(),
     );
   }
 
   Future<void> toggleOnline() async {
+    if (state.isUpdatingStatus) return;
     final current = state.driver?.status ?? core.DriverStatus.offline;
     final next = current == core.DriverStatus.offline
         ? core.DriverStatus.available
         : core.DriverStatus.offline;
+    state = state.copyWith(isUpdatingStatus: true, error: null);
     try {
       await core.updateDriverStatus(next);
       await refresh();
     } catch (e) {
+      if (!mounted) return;
+      // The driver is left as the server last confirmed them.
       state = state.copyWith(
         error: e is core.AppError ? e.message : 'Status update failed',
       );
+    } finally {
+      if (mounted) {
+        // copyWith clears the error unless it is passed again.
+        state = state.copyWith(isUpdatingStatus: false, error: state.error);
+      }
     }
   }
 

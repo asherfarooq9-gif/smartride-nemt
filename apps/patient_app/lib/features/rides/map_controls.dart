@@ -146,12 +146,16 @@ class LocationHint extends ConsumerWidget {
                     color: scheme.primary,
                   ),
                   const SizedBox(width: kSpaceSM),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: kFontSmall,
-                      fontWeight: FontWeight.w600,
-                      color: scheme.primary,
+                  // Flexible: with very large text the label wraps rather than
+                  // running off the end of the pill.
+                  Flexible(
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: kFontSmall,
+                        fontWeight: FontWeight.w600,
+                        color: scheme.primary,
+                      ),
                     ),
                   ),
                 ],

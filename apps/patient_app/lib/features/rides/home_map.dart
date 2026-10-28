@@ -26,8 +26,13 @@ const kLocatedMapZoom = 14.2;
 /// The map fills the whole screen but the sheet covers its lower part, so the
 /// screen centre is under the sheet. The screen centre is moved south of the
 /// target by half the sheet's height.
-LatLng centerAboveSheet(MapCamera camera, LatLng target, double zoom) {
-  final sheetHeight = camera.size.y * kHomeSheetRestSize;
+LatLng centerAboveSheet(
+  MapCamera camera,
+  LatLng target,
+  double zoom, {
+  double sheetFraction = kHomeSheetRestSize,
+}) {
+  final sheetHeight = camera.size.y * sheetFraction;
   final point = camera.project(target, zoom);
   return camera.unproject(math.Point(point.x, point.y + sheetHeight / 2), zoom);
 }
@@ -39,9 +44,22 @@ LatLng centerAboveSheet(MapCamera camera, LatLng target, double zoom) {
 /// shows a neutral overview and never invents a location. Opening the screen
 /// only reads the location state, it never asks for permission.
 class HomeMap extends ConsumerStatefulWidget {
-  const HomeMap({super.key, required this.controller, this.tileLayer});
+  const HomeMap({
+    super.key,
+    required this.controller,
+    this.tileLayer,
+    this.sheetFraction = kHomeSheetRestSize,
+    this.isPulsing = false,
+  });
 
   final MapController controller;
+
+  /// How much of the screen the resting sheet covers, so the position is
+  /// centred in the part of the map that stays visible.
+  final double sheetFraction;
+
+  /// Whether the location dot gently pulses (off for reduced motion).
+  final bool isPulsing;
 
   /// Overridable so tests can avoid the network.
   final TileLayer? tileLayer;
@@ -72,6 +90,7 @@ class _HomeMapState extends ConsumerState<HomeMap> {
         widget.controller.camera,
         LatLng(position.latitude, position.longitude),
         kLocatedMapZoom,
+        sheetFraction: widget.sheetFraction,
       ),
       kLocatedMapZoom,
     );
@@ -154,16 +173,93 @@ class _HomeMapState extends ConsumerState<HomeMap> {
             markers: [
               Marker(
                 point: here,
-                width: 28,
-                height: 28,
+                width: 56,
+                height: 56,
                 child: Semantics(
                   label: 'Your location',
-                  child: const _LocationDot(key: ValueKey('you-are-here')),
+                  child: _PulsingLocationDot(
+                    isPulsing: widget.isPulsing &&
+                        !MediaQuery.disableAnimationsOf(context),
+                  ),
                 ),
               ),
             ],
           ),
         ],
+      ],
+    );
+  }
+}
+
+/// The blue dot, with a soft ring that grows and fades around it.
+class _PulsingLocationDot extends StatefulWidget {
+  const _PulsingLocationDot({required this.isPulsing});
+
+  final bool isPulsing;
+
+  @override
+  State<_PulsingLocationDot> createState() => _PulsingLocationDotState();
+}
+
+class _PulsingLocationDotState extends State<_PulsingLocationDot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    // Created up front, not lazily: a lazy one would first be built in dispose.
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    );
+    if (widget.isPulsing) _pulse.repeat();
+  }
+
+  @override
+  void didUpdateWidget(_PulsingLocationDot old) {
+    super.didUpdateWidget(old);
+    if (widget.isPulsing && !_pulse.isAnimating) {
+      _pulse.repeat();
+    } else if (!widget.isPulsing && _pulse.isAnimating) {
+      _pulse.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        if (widget.isPulsing)
+          AnimatedBuilder(
+            animation: _pulse,
+            builder: (context, _) {
+              final t = Curves.easeOut.transform(_pulse.value);
+              return Opacity(
+                opacity: 0.35 * (1 - t),
+                child: Container(
+                  width: 28 + 28 * t,
+                  height: 28 + 28 * t,
+                  decoration: const BoxDecoration(
+                    color: kBlueIos,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              );
+            },
+          ),
+        const SizedBox(
+          width: 28,
+          height: 28,
+          child: _LocationDot(key: ValueKey('you-are-here')),
+        ),
       ],
     );
   }
