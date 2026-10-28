@@ -52,79 +52,92 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final height = MediaQuery.sizeOf(context).height;
-    final isVectorMap = widget.tileLayer == null &&
-        ref.watch(isVectorMapShownProvider(
-          Theme.of(context).brightness == Brightness.dark,
-        ));
-
     // The driver home wears the patient's blue glass look, as in the design;
     // the other driver screens keep the portal's own colours.
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Theme(
       data: AppTheme.patient(dark: isDark),
-      child: _scaffold(isVectorMap, height),
+      child: Scaffold(
+        // The map continues behind the tab bar; the sheet does not (see below).
+        extendBody: true,
+        drawer: const PortalDrawer(),
+        body: Builder(builder: _body),
+        bottomNavigationBar: const DriverNavBar(),
+      ),
     );
   }
 
-  Widget _scaffold(bool isVectorMap, double height) {
-    return Scaffold(
-      // The map and sheet continue behind the floating tab bar.
-      extendBody: true,
-      drawer: const PortalDrawer(),
-      body: Stack(
-        children: [
-          HomeMap(
-            controller: _map,
-            tileLayer: widget.tileLayer,
-            sheetFraction: kDriverSheetRestSize,
-            isPulsing: true,
-          ),
-          Builder(
-            builder: (ctx) => HomeTopBar(
-              portal: 'driver',
-              onMenu: () => Scaffold.of(ctx).openDrawer(),
+  Widget _body(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    // Everything the tab bar takes: the bar and the system inset under it.
+    final navArea =
+        kDriverNavBarHeight + MediaQuery.viewPaddingOf(context).bottom;
+    // The sheet ends exactly where the bar begins, so no control can ever sit
+    // behind it: content scrolls and is clipped at that edge instead.
+    final sheetBottom = navArea;
+    final sheetRegion = size.height - sheetBottom;
+    final isVectorMap = widget.tileLayer == null &&
+        ref.watch(isVectorMapShownProvider(
+          Theme.of(context).brightness == Brightness.dark,
+        ));
+
+    return Stack(
+      children: [
+        HomeMap(
+          controller: _map,
+          tileLayer: widget.tileLayer,
+          // Where the resting sheet's top edge is, as a share of the screen.
+          sheetFraction: kDriverSheetRestSize * sheetRegion / size.height,
+          isPulsing: true,
+        ),
+        HomeTopBar(
+          portal: 'driver',
+          onMenu: () => Scaffold.of(context).openDrawer(),
+        ),
+        // Under the top buttons, only when location is not working.
+        const SafeArea(
+          child: Padding(
+            padding: EdgeInsets.only(top: kMinTapTarget + kSpaceXL),
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: LocationHint(),
             ),
           ),
-          // Under the top buttons, only when location is not working.
-          const SafeArea(
-            child: Padding(
-              padding: EdgeInsets.only(top: kMinTapTarget + kSpaceXL),
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: LocationHint(),
-              ),
-            ),
-          ),
-          DriverHomeSheet(
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          top: 0,
+          bottom: sheetBottom,
+          child: DriverHomeSheet(
             onAccept: _accept,
             onExtentChanged: (e) => _sheetExtent.value = e,
+            bottomPadding: kSpaceMD,
           ),
-          // Rides just above the sheet, whatever position it is in.
-          ValueListenableBuilder<double>(
-            valueListenable: _sheetExtent,
-            builder: (context, extent, _) => Positioned(
-              left: kSpaceLG,
-              right: kSpaceLG,
-              bottom: extent * height + kSpaceMD,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.bottomLeft,
-                      child: MapAttribution(isVectorMap: isVectorMap),
-                    ),
+        ),
+        // Rides just above the sheet, whatever position it is in.
+        ValueListenableBuilder<double>(
+          valueListenable: _sheetExtent,
+          builder: (context, extent, _) => Positioned(
+            left: kSpaceLG,
+            right: kSpaceLG,
+            bottom: sheetBottom + extent * sheetRegion + kSpaceMD,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.bottomLeft,
+                    child: MapAttribution(isVectorMap: isVectorMap),
                   ),
-                  const SizedBox(width: kSpaceSM),
-                  RecenterButton(controller: _map),
-                ],
-              ),
+                ),
+                const SizedBox(width: kSpaceSM),
+                RecenterButton(controller: _map),
+              ],
             ),
           ),
-        ],
-      ),
-      bottomNavigationBar: const DriverNavBar(),
+        ),
+      ],
     );
   }
 

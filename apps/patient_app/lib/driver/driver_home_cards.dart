@@ -35,7 +35,7 @@ class DriverGreeting extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 24,
+                    fontSize: core.kFontHeading,
                     height: 1.15,
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.3,
@@ -46,14 +46,14 @@ class DriverGreeting extends StatelessWidget {
             ),
             const SizedBox(width: core.kSpaceSM),
             const ExcludeSemantics(
-              child: Text('👋', style: TextStyle(fontSize: 21)),
+              child: Text('👋', style: TextStyle(fontSize: 19)),
             ),
           ],
         ),
         const SizedBox(height: 2),
         Text(
           "Stay safe. You're on the road.",
-          style: TextStyle(fontSize: core.kFontBody, color: palette.muted),
+          style: TextStyle(fontSize: core.kFontSmall, color: palette.muted),
         ),
       ],
     );
@@ -80,7 +80,7 @@ class VerificationCard extends StatelessWidget {
           border: Border.all(color: _kAmber.withValues(alpha: 0.45)),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(core.kSpaceMD),
+          padding: const EdgeInsets.all(core.kSpaceSM + 2),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -93,7 +93,7 @@ class VerificationCard extends StatelessWidget {
                     Text(
                       'Verification pending',
                       style: TextStyle(
-                        fontSize: core.kFontBody,
+                        fontSize: core.kFontSmall + 1,
                         fontWeight: FontWeight.w700,
                         color: isDark ? Colors.white : _kAmberText,
                       ),
@@ -102,7 +102,7 @@ class VerificationCard extends StatelessWidget {
                     Text(
                       'You cannot go online until your account is verified.',
                       style: TextStyle(
-                        fontSize: core.kFontSmall,
+                        fontSize: 12.5,
                         color: isDark ? Colors.white70 : _kAmberText,
                       ),
                     ),
@@ -125,14 +125,16 @@ class DriverStatsRow extends StatelessWidget {
     required this.rating,
   });
 
-  final double todayEarningsPkr;
+  /// Null while the server has not said: shown as a dash, never as PKR 0.
+  final double? todayEarningsPkr;
 
   /// Null while the driver has no rating yet.
   final double? rating;
 
   @override
   Widget build(BuildContext context) {
-    final earnings = formatPkr(todayEarningsPkr);
+    final earnings =
+        todayEarningsPkr == null ? '—' : formatPkr(todayEarningsPkr!);
     final ratingText = rating == null ? '—' : rating!.toStringAsFixed(1);
     return Row(
       children: [
@@ -143,7 +145,9 @@ class DriverStatsRow extends StatelessWidget {
             iconColor: _kGreenText,
             label: "Today's Earnings",
             value: earnings,
-            semanticsLabel: "Today's earnings, $earnings. View earnings",
+            semanticsLabel: todayEarningsPkr == null
+                ? "Today's earnings, not available. View earnings"
+                : "Today's earnings, $earnings. View earnings",
             onTap: () => context.push('/driver/earnings'),
           ),
         ),
@@ -191,13 +195,14 @@ class _StatCard extends StatelessWidget {
       excludeSemantics: true,
       child: HomeGlassCard(
         onTap: onTap,
-        radius: 18,
+        radius: 16,
+        isSeeThrough: true,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 64),
+          constraints: const BoxConstraints(minHeight: 56),
           child: Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: core.kSpaceMD,
-              vertical: core.kSpaceSM,
+              horizontal: core.kSpaceSM + 2,
+              vertical: 6,
             ),
             child: Row(
               children: [
@@ -207,11 +212,11 @@ class _StatCard extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   child: SizedBox(
-                    width: 32,
-                    height: 32,
+                    width: 30,
+                    height: 30,
                     child: Icon(
                       icon,
-                      size: 20,
+                      size: 18,
                       color: iconColor ?? palette.iconColor,
                     ),
                   ),
@@ -226,7 +231,7 @@ class _StatCard extends StatelessWidget {
                         label,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 12, color: palette.muted),
+                        style: TextStyle(fontSize: 11.5, color: palette.muted),
                       ),
                       // A money amount is never cut off: it shrinks a little to fit.
                       FittedBox(
@@ -236,7 +241,7 @@ class _StatCard extends StatelessWidget {
                           value,
                           maxLines: 1,
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: 17,
                             fontWeight: FontWeight.w700,
                             color: palette.heading,
                           ),
@@ -278,30 +283,31 @@ class WalletCard extends StatelessWidget {
     required this.isLowBalance,
   });
 
-  final double balancePkr;
+  /// Null until the account has loaded: shown as a dash, never as PKR 0.
+  final double? balancePkr;
   final bool isLowBalance;
 
   @override
   Widget build(BuildContext context) {
-    final balance = formatPkr(balancePkr);
+    final balance = balancePkr == null ? '—' : formatPkr(balancePkr!);
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: isLowBalance ? _kWalletLowGradient : _kWalletGradient,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF2569BC).withValues(alpha: 0.28),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
+            color: const Color(0xFF2569BC).withValues(alpha: 0.26),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 68),
+        constraints: const BoxConstraints(minHeight: 58),
         child: Padding(
           padding: const EdgeInsets.symmetric(
-            horizontal: core.kSpaceMD,
-            vertical: core.kSpaceSM,
+            horizontal: core.kSpaceSM + 2,
+            vertical: 6,
           ),
           child: Row(
             children: [
@@ -311,15 +317,16 @@ class WalletCard extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: const SizedBox(
-                  width: 44,
-                  height: 44,
+                  width: 36,
+                  height: 36,
                   child: Icon(
                     Icons.account_balance_wallet_rounded,
+                    size: 20,
                     color: Colors.white,
                   ),
                 ),
               ),
-              const SizedBox(width: core.kSpaceMD),
+              const SizedBox(width: core.kSpaceSM + 2),
               Expanded(
                 child: Semantics(
                   label:
@@ -333,7 +340,7 @@ class WalletCard extends StatelessWidget {
                       Text(
                         isLowBalance ? 'Low balance' : 'Wallet Balance',
                         style: const TextStyle(
-                          fontSize: core.kFontSmall,
+                          fontSize: 12.5,
                           color: Colors.white,
                         ),
                       ),
@@ -342,7 +349,7 @@ class WalletCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 22,
+                          fontSize: 20,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
                         ),
@@ -372,34 +379,40 @@ class _TopUpButton extends StatelessWidget {
       button: true,
       label: 'Top up wallet',
       excludeSemantics: true,
-      child: Material(
-        // A darker tint, not a lighter one: white text stays readable on it.
-        color: Colors.black.withValues(alpha: 0.18),
-        shape: StadiumBorder(
-          side: BorderSide(color: Colors.white.withValues(alpha: 0.45)),
-        ),
-        child: InkWell(
-          customBorder: const StadiumBorder(),
-          onTap: onTap,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: core.kMinTapTarget),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: core.kSpaceMD),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Top Up',
-                    style: TextStyle(
-                      fontSize: core.kFontSmall,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
+      // The pill is compact, but the area that answers a tap is still 44 high.
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Center(
+            widthFactor: 1,
+            child: DecoratedBox(
+              decoration: ShapeDecoration(
+                // A darker tint, not a lighter one: white text stays readable.
+                color: Colors.black.withValues(alpha: 0.18),
+                shape: StadiumBorder(
+                  side: BorderSide(color: Colors.white.withValues(alpha: 0.45)),
+                ),
+              ),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Top Up',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                  SizedBox(width: 4),
-                  Icon(Icons.arrow_forward_rounded,
-                      size: 16, color: Colors.white),
-                ],
+                    SizedBox(width: 4),
+                    Icon(Icons.arrow_forward_rounded,
+                        size: 14, color: Colors.white),
+                  ],
+                ),
               ),
             ),
           ),

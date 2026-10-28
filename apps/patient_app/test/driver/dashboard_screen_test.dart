@@ -11,6 +11,7 @@ import 'package:patient_app/core/patient_location.dart';
 import 'package:patient_app/core/providers.dart';
 import 'package:patient_app/driver/dashboard_notifier.dart';
 import 'package:patient_app/driver/dashboard_screen.dart';
+import 'package:patient_app/driver/driver_home_controls.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 
 /// A 1x1 transparent PNG, so tests never touch the network.
@@ -175,6 +176,10 @@ Future<void> _reveal(WidgetTester tester, Finder target) async {
   );
   await tester.pumpAndSettle();
 }
+
+/// The account has not loaded: still asking, or the request failed.
+DashboardState _noAccount({bool isLoading = false, String? error}) =>
+    DashboardState(isLoading: isLoading, error: error);
 
 DashboardState _state({
   core.DriverResponse? driver,
@@ -435,6 +440,96 @@ void main() {
     });
   });
 
+  group('an account that has not loaded', () {
+    testWidgets('while genuinely loading it says so and shows no figures',
+        (tester) async {
+      await _show(tester, _noAccount(isLoading: true), settle: false);
+
+      expect(find.text('Checking your status'), findsOneWidget);
+      expect(find.text('Loading your account'), findsOneWidget);
+      expect(find.text("You're Offline"), findsNothing);
+      expect(find.text('PKR 0'), findsNothing, reason: 'nothing is made up');
+      expect(find.text('—'), findsWidgets);
+      expect(find.byType(CircularProgressIndicator), findsWidgets);
+    });
+
+    testWidgets('after a failure it shows the error, a retry, and no spinner',
+        (tester) async {
+      await _show(
+        tester,
+        _noAccount(error: 'No internet connection'),
+      );
+
+      expect(find.text('Could not load your account'), findsOneWidget);
+      expect(find.text('No internet connection'), findsOneWidget);
+      expect(find.text('Status unavailable'), findsOneWidget);
+      expect(find.text("You're Offline"), findsNothing,
+          reason: 'a failed request is not an offline driver');
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.text('PKR 0'), findsNothing);
+
+      final before = _fake.refreshes;
+      await tester.tap(find.text('Try again'));
+      await tester.pump();
+      expect(_fake.refreshes, before + 1);
+    });
+
+    testWidgets('Online stays locked, and a tap explains why', (tester) async {
+      await _show(tester, _noAccount(error: 'No internet connection'));
+
+      await _reveal(tester, find.text('Go Online'));
+      await tester.tap(find.text('Go Online'));
+      await tester.pump();
+
+      expect(find.text('Your account could not be loaded'), findsWidgets);
+      expect(_fake.toggles, 0);
+    });
+  });
+
+  group('the tab bar and the sheet', () {
+    for (final size in const [
+      Size(360, 800),
+      Size(393, 852),
+      Size(430, 932),
+    ]) {
+      testWidgets(
+          'the sheet ends at the tab bar, not behind it, at '
+          '${size.width.toInt()}x${size.height.toInt()}', (tester) async {
+        await _show(
+          tester,
+          _state(driver: _driver(status: core.DriverStatus.offline)),
+          size: size,
+          open: false,
+        );
+
+        // The sheet ends where the bar begins: nothing in it can be behind the
+        // bar, whatever the content, and long content scrolls instead.
+        final navTop = tester.getRect(find.byType(NavigationBar)).top;
+        final sheet =
+            tester.getRect(find.byKey(const ValueKey('driver-sheet')));
+        expect(sheet.bottom, lessThanOrEqualTo(navTop));
+      });
+    }
+
+    testWidgets('Go Online is fully above the tab bar and can be tapped',
+        (tester) async {
+      await _show(
+        tester,
+        _state(driver: _driver(status: core.DriverStatus.offline)),
+        size: const Size(393, 852),
+        open: false,
+      );
+
+      final button = tester.getRect(find.text('Go Online'));
+      final navTop = tester.getRect(find.byType(NavigationBar)).top;
+      expect(button.bottom, lessThan(navTop));
+
+      await tester.tap(find.text('Go Online'));
+      await tester.pump();
+      expect(_fake.toggles, 1);
+    });
+  });
+
   group('layout', () {
     for (final (size, scale) in const [
       (Size(360, 800), 1.0),
@@ -463,6 +558,21 @@ void main() {
         expect(tester.takeException(), isNull);
       });
     }
+
+    testWidgets('the four shortcut cards keep a real, tappable height',
+        (tester) async {
+      await _show(tester, _state());
+
+      final cards = find.byType(DriverActionCard);
+      expect(cards, findsNWidgets(4));
+      for (var i = 0; i < 4; i++) {
+        expect(
+          tester.getSize(cards.at(i)).height,
+          greaterThanOrEqualTo(48),
+          reason: 'card $i collapsed',
+        );
+      }
+    });
 
     testWidgets('the greeting and tab bar are not hidden by each other',
         (tester) async {

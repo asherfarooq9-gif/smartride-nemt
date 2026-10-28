@@ -15,7 +15,11 @@ const Color _kOnline = Color(0xFF22A55A);
 /// (`driver.status`); nothing here is a guess. A driver who is already online
 /// can always go offline.
 String? onlineLockReason(DashboardState dash) {
-  if (dash.driver == null) return 'Loading your account';
+  if (dash.driver == null) {
+    return dash.isLoading
+        ? 'Loading your account'
+        : 'Your account could not be loaded';
+  }
   if (!dash.driver!.isVerified && !dash.isOnline) {
     return 'Available once your account is verified';
   }
@@ -48,7 +52,13 @@ class AvailabilityCard extends ConsumerWidget {
     final palette = HomePalette.of(context);
     final isOnline = dash.isOnline;
     final lock = onlineLockReason(dash);
-    final title = isOnline ? "You're Online" : "You're Offline";
+    // Until the account is known the card claims neither Online nor Offline.
+    final isUnknown = dash.driver == null;
+    final title = isUnknown
+        ? (dash.isLoading ? 'Checking your status' : 'Status unavailable')
+        : isOnline
+            ? "You're Online"
+            : "You're Offline";
     final subtitle = lock != null && !isOnline
         ? lock
         : isOnline
@@ -61,18 +71,19 @@ class AvailabilityCard extends ConsumerWidget {
       label: '$title. $subtitle',
       excludeSemantics: true,
       child: HomeGlassCard(
-        radius: 18,
+        radius: 16,
+        isSeeThrough: true,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 64),
+          constraints: const BoxConstraints(minHeight: 56),
           child: Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: core.kSpaceMD,
-              vertical: core.kSpaceSM,
+              horizontal: core.kSpaceSM + 2,
+              vertical: 4,
             ),
             child: Row(
               children: [
                 _StatusDot(isOnline: isOnline),
-                const SizedBox(width: core.kSpaceMD),
+                const SizedBox(width: core.kSpaceSM + 2),
                 Expanded(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -81,7 +92,7 @@ class AvailabilityCard extends ConsumerWidget {
                       Text(
                         title,
                         style: TextStyle(
-                          fontSize: core.kFontBody,
+                          fontSize: core.kFontSmall + 2,
                           fontWeight: FontWeight.w700,
                           color: palette.heading,
                         ),
@@ -89,7 +100,7 @@ class AvailabilityCard extends ConsumerWidget {
                       Text(
                         subtitle,
                         style: TextStyle(
-                          fontSize: core.kFontSmall,
+                          fontSize: 12.5,
                           color: palette.muted,
                         ),
                       ),
@@ -99,7 +110,9 @@ class AvailabilityCard extends ConsumerWidget {
                 const SizedBox(width: core.kSpaceSM),
                 _AvailabilitySwitch(
                   isOnline: isOnline,
-                  isBusy: dash.isUpdatingStatus,
+                  // Genuinely waiting: a status change, or the first load.
+                  isBusy:
+                      dash.isUpdatingStatus || (isUnknown && dash.isLoading),
                   isLocked: lock != null,
                   onTap: () => requestOnlineChange(context, ref),
                 ),
@@ -206,7 +219,7 @@ class GoOnlineButton extends ConsumerWidget {
           // Locked still answers, to say why; busy ignores the tap.
           onTap: isBusy ? null : () => requestOnlineChange(context, ref),
           child: SizedBox(
-            height: 56,
+            height: 48,
             child: Center(
               child: isBusy
                   ? const SizedBox(
@@ -226,7 +239,7 @@ class GoOnlineButton extends ConsumerWidget {
                         Text(
                           label,
                           style: const TextStyle(
-                            fontSize: core.kFontSubhead,
+                            fontSize: core.kFontBody,
                             fontWeight: FontWeight.w700,
                             color: Colors.white,
                           ),
@@ -249,12 +262,16 @@ class DriverActionCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
+    this.showChevron = true,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
+
+  /// Left out on a narrow card: the words matter more than the arrow.
+  final bool showChevron;
 
   @override
   Widget build(BuildContext context) {
@@ -263,44 +280,50 @@ class DriverActionCard extends StatelessWidget {
       button: true,
       label: '$title. $subtitle',
       excludeSemantics: true,
-      child: HomeGlassCard(
-        onTap: onTap,
-        radius: 18,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 60),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: core.kSpaceSM + 2,
-              vertical: core.kSpaceSM,
-            ),
-            child: Row(
-              children: [
-                HomeIconDisc(icon: icon, size: 32),
-                const SizedBox(width: core.kSpaceSM),
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: palette.heading,
-                        ),
+      child: _card(context, palette),
+    );
+  }
+
+  Widget _card(BuildContext context, HomePalette palette) {
+    return HomeGlassCard(
+      onTap: onTap,
+      radius: 16,
+      isSeeThrough: true,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 52),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: core.kSpaceSM,
+            vertical: 6,
+          ),
+          child: Row(
+            children: [
+              HomeIconDisc(icon: icon, size: 30),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: palette.heading,
                       ),
-                      Text(
-                        subtitle,
-                        style: TextStyle(fontSize: 12, color: palette.muted),
-                      ),
-                    ],
-                  ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: TextStyle(fontSize: 11.5, color: palette.muted),
+                    ),
+                  ],
                 ),
+              ),
+              if (showChevron)
                 Icon(Icons.chevron_right_rounded,
                     size: 16, color: palette.muted),
-              ],
-            ),
+            ],
           ),
         ),
       ),
@@ -317,8 +340,25 @@ class DriverActionsGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    return LayoutBuilder(
+      builder: (context, box) {
+        final cardWidth = (box.maxWidth - 6) / 2;
+        return _grid(context, ref, showChevron: cardWidth >= _chevronMinWidth);
+      },
+    );
+  }
+
+  /// Below this card width the chevron is left out.
+  static const _chevronMinWidth = 190.0;
+
+  Widget _grid(
+    BuildContext context,
+    WidgetRef ref, {
+    required bool showChevron,
+  }) {
     final cards = [
       DriverActionCard(
+        showChevron: showChevron,
         icon: Icons.place_outlined,
         title: 'Ride Requests',
         subtitle: 'View nearby requests',
@@ -333,6 +373,7 @@ class DriverActionsGrid extends ConsumerWidget {
         },
       ),
       DriverActionCard(
+        showChevron: showChevron,
         icon: Icons.navigation_rounded,
         title: 'Navigation',
         subtitle: 'Start your trip',
@@ -346,12 +387,14 @@ class DriverActionsGrid extends ConsumerWidget {
         },
       ),
       DriverActionCard(
+        showChevron: showChevron,
         icon: Icons.account_balance_wallet_outlined,
         title: 'Earnings',
         subtitle: 'View your earnings',
         onTap: () => context.push('/driver/earnings'),
       ),
       DriverActionCard(
+        showChevron: showChevron,
         icon: Icons.settings_rounded,
         title: 'Settings',
         subtitle: 'App preferences',
@@ -361,7 +404,7 @@ class DriverActionsGrid extends ConsumerWidget {
     return Column(
       children: [
         for (var row = 0; row < cards.length; row += 2) ...[
-          if (row > 0) const SizedBox(height: core.kSpaceSM),
+          if (row > 0) const SizedBox(height: 6),
           IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,

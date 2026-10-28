@@ -83,12 +83,35 @@ core.RideResponse? findActiveDriverRide(List<core.RideResponse> rides) {
   return null;
 }
 
+/// The server calls the dashboard makes. A seam so tests can say what the server
+/// answers; the app uses the real endpoints.
+class DashboardApi {
+  const DashboardApi({
+    this.getDriver = core.getDriverMe,
+    this.getPendingRides = core.getDriverPendingRides,
+    this.getEarnings = core.getDriverEarnings,
+    this.getMyRides = core.getMyRides,
+    this.updateStatus = core.updateDriverStatus,
+    this.timeout = const Duration(seconds: 20),
+  });
+
+  final Future<core.DriverResponse> Function() getDriver;
+  final Future<List<core.RideResponse>> Function() getPendingRides;
+  final Future<Map<String, dynamic>> Function() getEarnings;
+  final Future<core.RideListResponse> Function({int pageSize}) getMyRides;
+  final Future<void> Function(core.DriverStatus) updateStatus;
+
+  /// How long any one request may take before the screen stops waiting and says
+  /// so, instead of loading for ever.
+  final Duration timeout;
+}
+
 class DashboardState {
   const DashboardState({
     this.driver,
     this.activeRide,
     this.pendingRides = const [],
-    this.todayEarningsPkr = 0.0,
+    this.todayEarningsPkr,
     this.isLoading = false,
     this.isUpdatingStatus = false,
     this.error,
@@ -99,7 +122,9 @@ class DashboardState {
   /// A ride in progress for this driver, so the dashboard can offer to resume it.
   final core.RideResponse? activeRide;
   final List<core.RideResponse> pendingRides;
-  final double todayEarningsPkr;
+
+  /// Null until the server has said; never a made-up zero.
+  final double? todayEarningsPkr;
   final bool isLoading;
 
   /// True while an online/offline request is in flight, so the controls can show
@@ -136,11 +161,14 @@ final dashboardProvider =
 });
 
 class DashboardNotifier extends StateNotifier<DashboardState> {
-  DashboardNotifier(this._ref) : super(const DashboardState()) {
+  DashboardNotifier(this._ref, {DashboardApi api = const DashboardApi()})
+      : _api = api,
+        super(const DashboardState()) {
     refresh();
   }
 
   final Ref _ref;
+  final DashboardApi _api;
 
   /// Rides this driver passed on; they stay hidden on later refreshes.
   final _declined = <String>{};
@@ -186,44 +214,77 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
     super.dispose();
   }
 
+  /// One server call that never throws: its answer, or the words to show.
+  Future<({T? value, String? error})> _attempt<T>(
+    Future<T> Function() call,
+  ) async {
+    try {
+      return (value: await call().timeout(_api.timeout), error: null);
+    } on TimeoutException {
+      return (
+        value: null,
+        error: 'This is taking too long. Check your connection and try again.',
+      );
+    } on core.AppError catch (e) {
+      return (value: null, error: e.message);
+    } catch (e, st) {
+      // A parsing bug must not hide behind a bare "Failed to load".
+      core.ErrorReporter.report('Driver dashboard refresh failed', e, st);
+      return (value: null, error: 'Failed to load');
+    }
+  }
+
+  /// Loads the driver's account first, then the rest, each on its own: one
+  /// refused or failed call no longer discards the others. (The server refuses
+  /// the request list to a driver who is not verified; that used to fail the
+  /// whole load and leave the account blank.)
   Future<void> refresh() async {
     state = state.copyWith(isLoading: true, error: null);
-    try {
-      final (driver, rides, earnings) = await (
-        core.getDriverMe(),
-        core.getDriverPendingRides(),
-        core.getDriverEarnings(),
-      ).wait;
-      final active = await _loadActiveRide();
-      if (!mounted) return; // signed out while this was in flight
-      state = DashboardState(
-        driver: driver,
-        activeRide: active,
-        pendingRides:
-            rides.where((r) => !_declined.contains(r.id.toString())).toList(),
-        todayEarningsPkr: _calcTodayEarnings(earnings),
-        isLoading: false,
-        // A background refresh must not unlock the controls mid-request.
-        isUpdatingStatus: state.isUpdatingStatus,
-      );
-      _syncHeartbeat();
-    } catch (e, st) {
-      if (e is! core.AppError) {
-        // A parsing bug must not hide behind a bare "Failed to load".
-        core.ErrorReporter.report('Driver dashboard refresh failed', e, st);
-      }
-      if (!mounted) return;
+
+    final account = await _attempt(_api.getDriver);
+    if (!mounted) return; // signed out while this was in flight
+    final driver = account.value;
+    if (driver == null) {
       state = state.copyWith(
         isLoading: false,
-        error: e is core.AppError ? e.message : 'Failed to load',
+        error: account.error ?? 'Failed to load',
       );
+      return;
     }
+
+    // An unverified driver cannot receive requests, and asking is a 403.
+    final (rides, earnings, active) = await (
+      driver.isVerified
+          ? _attempt(_api.getPendingRides)
+          : Future.value((value: <core.RideResponse>[], error: null)),
+      _attempt(_api.getEarnings),
+      _loadActiveRide(),
+    ).wait;
+    if (!mounted) return;
+
+    state = DashboardState(
+      driver: driver,
+      activeRide: active,
+      pendingRides: rides.value == null
+          ? state.pendingRides
+          : rides.value!
+              .where((r) => !_declined.contains(r.id.toString()))
+              .toList(),
+      todayEarningsPkr: earnings.value == null
+          ? state.todayEarningsPkr
+          : _calcTodayEarnings(earnings.value!),
+      isLoading: false,
+      // A background refresh must not unlock the controls mid-request.
+      isUpdatingStatus: state.isUpdatingStatus,
+      error: rides.error ?? earnings.error,
+    );
+    _syncHeartbeat();
   }
 
   /// A failure here must not break the dashboard: keep what was shown before.
   Future<core.RideResponse?> _loadActiveRide() async {
     try {
-      final mine = await core.getMyRides(pageSize: 10);
+      final mine = await _api.getMyRides(pageSize: 10);
       return findActiveDriverRide(mine.items);
     } on core.AppError {
       return state.activeRide;
@@ -246,7 +307,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
         : core.DriverStatus.offline;
     state = state.copyWith(isUpdatingStatus: true, error: null);
     try {
-      await core.updateDriverStatus(next);
+      await _api.updateStatus(next);
       await refresh();
     } catch (e) {
       if (!mounted) return;

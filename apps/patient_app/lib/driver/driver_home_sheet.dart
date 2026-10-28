@@ -12,14 +12,14 @@ import 'package:patient_app/features/rides/home_sheet_parts.dart'
 import 'package:patient_app/shared/glass_surface.dart';
 
 /// Where the sheet starts: every control is in view, the map above it.
-const kDriverSheetRestSize = 0.74;
+///
+/// A fraction of the space above the tab bar, not of the whole screen: the sheet
+/// ends where the tab bar begins, so it can never be covered by it.
+const kDriverSheetRestSize = 0.76;
 const _kPeekSize = 0.36;
 const _kFullSize = 0.92;
-const _kSheetOpacity = 0.74;
+const _kSheetOpacity = 0.6;
 const _kSheetBlurSigma = 24.0;
-
-/// Room kept under the content for the floating tab bar.
-const _kNavClearance = 76.0;
 
 /// The frosted bottom sheet on the driver home screen: greeting, verification
 /// notice, earnings and rating, wallet, availability, shortcuts and the ride
@@ -29,7 +29,11 @@ class DriverHomeSheet extends ConsumerStatefulWidget {
     super.key,
     required this.onAccept,
     this.onExtentChanged,
+    this.bottomPadding = 0,
   });
+
+  /// Room kept under the last row of the sheet, which ends at the tab bar.
+  final double bottomPadding;
 
   /// Accepts a ride; owned by the screen, which also routes to the ride.
   final Future<void> Function(String rideId) onAccept;
@@ -96,15 +100,28 @@ class _DriverHomeSheetState extends ConsumerState<DriverHomeSheet> {
               core.kSpaceLG + 2,
               0,
               core.kSpaceLG + 2,
-              _kNavClearance + MediaQuery.paddingOf(context).bottom,
+              widget.bottomPadding,
             ),
             children: [
               const SheetGrabber(),
               DriverGreeting(name: dash.driver?.fullName),
-              const SizedBox(height: core.kSpaceMD),
+              const SizedBox(height: 6),
+              if (dash.driver == null && !dash.isLoading) ...[
+                // The account itself did not load: say so up here, with a way
+                // to retry, rather than showing zeros.
+                _MessageCard(
+                  key: const ValueKey('account-error'),
+                  icon: Icons.cloud_off_rounded,
+                  title: 'Could not load your account',
+                  message: dash.error ?? 'Failed to load',
+                  actionLabel: 'Try again',
+                  onAction: ref.read(dashboardProvider.notifier).refresh,
+                ),
+                const SizedBox(height: 6),
+              ],
               if (dash.driver != null && !dash.driver!.isVerified) ...[
                 const VerificationCard(),
-                const SizedBox(height: core.kSpaceSM),
+                const SizedBox(height: 6),
               ],
               if (dash.activeRide != null) ...[
                 ResumeRideBanner(
@@ -112,24 +129,25 @@ class _DriverHomeSheetState extends ConsumerState<DriverHomeSheet> {
                   onResume: () =>
                       context.push('/driver/ride/${dash.activeRide!.id}'),
                 ),
-                const SizedBox(height: core.kSpaceSM),
+                const SizedBox(height: 6),
               ],
               DriverStatsRow(
-                todayEarningsPkr: dash.todayEarningsPkr,
+                todayEarningsPkr:
+                    dash.driver == null ? null : dash.todayEarningsPkr,
                 rating: dash.driver?.rating,
               ),
-              const SizedBox(height: core.kSpaceSM),
+              const SizedBox(height: 6),
               WalletCard(
-                balancePkr: dash.driver?.walletBalancePkr ?? 0,
+                balancePkr: dash.driver?.walletBalancePkr,
                 isLowBalance: dash.driver?.isLowBalance ?? false,
               ),
-              const SizedBox(height: core.kSpaceSM),
+              const SizedBox(height: 6),
               const AvailabilityCard(),
-              const SizedBox(height: core.kSpaceSM),
+              const SizedBox(height: 6),
               DriverActionsGrid(onShowRequests: _openFully),
-              const SizedBox(height: core.kSpaceMD),
+              const SizedBox(height: core.kSpaceSM),
               const GoOnlineButton(),
-              const SizedBox(height: core.kSpaceLG),
+              const SizedBox(height: core.kSpaceMD),
               RequestsSection(onAccept: widget.onAccept),
             ],
           ),
@@ -156,7 +174,8 @@ class RequestsSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (dash.error != null) ...[
+        // An account that failed to load has its own card at the top.
+        if (dash.error != null && dash.driver != null) ...[
           _MessageCard(
             key: const ValueKey('requests-error'),
             icon: Icons.error_outline_rounded,
@@ -165,7 +184,7 @@ class RequestsSection extends ConsumerWidget {
             actionLabel: 'Try again',
             onAction: notifier.refresh,
           ),
-          const SizedBox(height: core.kSpaceSM),
+          const SizedBox(height: 6),
         ],
         if (isFirstLoad)
           const _MessageCard(
@@ -187,7 +206,7 @@ class RequestsSection extends ConsumerWidget {
               ),
             ),
           ),
-          const SizedBox(height: core.kSpaceSM),
+          const SizedBox(height: 6),
           if (dash.pendingRides.isEmpty)
             const _MessageCard(
               key: ValueKey('requests-empty'),

@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart';
 import 'package:patient_app/shared/glass_surface.dart';
 
+/// Height of the bar itself, without the system inset under it.
+const kDriverNavBarHeight = 60.0;
+
 /// The driver tab bar: Home, Earnings and Profile, in the same frosted bar as
 /// the patient's. Home is the dashboard itself; the other two open on top of it,
 /// as they always have, so Back returns to the dashboard.
@@ -37,7 +40,7 @@ class DriverNavBar extends StatelessWidget {
         child: NavigationBar(
           selectedIndex: 0,
           backgroundColor: Colors.transparent,
-          height: 60,
+          height: kDriverNavBarHeight,
           elevation: 0,
           indicatorColor: scheme.primaryContainer,
           labelTextStyle: WidgetStateProperty.resolveWith(

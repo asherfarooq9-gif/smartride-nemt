@@ -59,9 +59,15 @@ class HomeGlassCard extends StatelessWidget {
     required this.child,
     this.onTap,
     this.radius = 20,
+    this.isSeeThrough = false,
   });
 
   final Widget child;
+
+  /// A lighter fill on the light theme, so the map shows faintly through the
+  /// card as well as through the sheet. Text stays readable: the sheet behind
+  /// is already frosted.
+  final bool isSeeThrough;
 
   /// Null for a card that only shows information.
   final VoidCallback? onTap;
@@ -70,6 +76,7 @@ class HomeGlassCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = HomePalette.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final shape = BorderRadius.circular(radius);
     return PressScale(
       child: DecoratedBox(
@@ -84,10 +91,16 @@ class HomeGlassCard extends StatelessWidget {
           ],
         ),
         child: Material(
-          color: palette.cardFill,
+          color: isSeeThrough && !isDark
+              ? Colors.white.withValues(alpha: 0.5)
+              : palette.cardFill,
           shape: RoundedRectangleBorder(
             borderRadius: shape,
-            side: BorderSide(color: palette.cardEdge),
+            side: BorderSide(
+              color: isSeeThrough && !isDark
+                  ? Colors.white.withValues(alpha: 0.85)
+                  : palette.cardEdge,
+            ),
           ),
           child: InkWell(
             borderRadius: shape,
