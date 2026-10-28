@@ -280,24 +280,25 @@ Dispatch pipeline runs in background. Target: driver assigned within 60 seconds.
 
 ---
 
-### `POST /rides/book`
+### `POST /rides/scheduled`
 **Auth:** patient
 
 **Request body:**
 ```json
 {
-  "ride_type": "scheduled",
   "pickup_lat": 33.7005,
   "pickup_lng": 73.0679,
   "pickup_address": "House 5, Street 3, F-8/2",
-  "scheduled_for": "2026-06-01T09:00:00Z"
+  "scheduled_for": "2026-06-01T09:00:00Z",
+  "hospital_id": "<uuid, optional>"
 }
 ```
 
-**Response `201`:**
-```json
-{ "ride_id": "<uuid>", "status": "pending", "scheduled_for": "2026-06-01T09:00:00Z" }
-```
+`scheduled_for` must be in the future. `hospital_id` is the destination the patient
+chose; an unknown or inactive hospital returns `404`.
+
+**Response `201`:** the ride (`id`, `status: "pending"`, `ride_type: "scheduled"`,
+`scheduled_for`, `hospital_id`, ...).
 
 ---
 

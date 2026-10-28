@@ -22,12 +22,15 @@ class SecureStorage {
     required String role,
     List<String> roles = const [],
   }) async {
-    await Future.wait([
-      _storage.write(key: _keyToken, value: token),
-      _storage.write(key: _keyUserId, value: userId),
-      _storage.write(key: _keyRole, value: role),
-      _storage.write(key: _keyRoles, value: roles.join(',')),
-    ]);
+    // One at a time. On web the encryption key is created by the first write
+    // that finds none, so four concurrent first writes each make their own key
+    // and only the last survives: the other values can then never be
+    // decrypted, the token reads back as signed out, and the first request
+    // after login goes out with no token (a 401).
+    await _storage.write(key: _keyToken, value: token);
+    await _storage.write(key: _keyUserId, value: userId);
+    await _storage.write(key: _keyRole, value: role);
+    await _storage.write(key: _keyRoles, value: roles.join(','));
   }
 
   /// Replace only the access token (used by token refresh).
@@ -54,7 +57,11 @@ class SecureStorage {
   Future<String?> _readAuth(String key) async {
     try {
       return await _storage.read(key: key);
-    } on PlatformException catch (e, st) {
+      // Not just PlatformException: on web a value the browser cannot decrypt
+      // rejects with a bare JS DOMException (OperationError), which is neither
+      // a PlatformException nor a Dart Exception. Whatever the cause, an
+      // unreadable store means signed out, never a startup that never ends.
+    } catch (e, st) {
       ErrorReporter.report('Secure storage unreadable; signing out', e, st);
       await clear();
       return null;
@@ -64,7 +71,8 @@ class SecureStorage {
   Future<String?> readValue(String key) async {
     try {
       return await _storage.read(key: key);
-    } on PlatformException catch (e, st) {
+    } catch (e, st) {
+      // Same as _readAuth: web decrypt failures are not PlatformExceptions.
       ErrorReporter.report('Secure storage value unreadable: $key', e, st);
       return null;
     }

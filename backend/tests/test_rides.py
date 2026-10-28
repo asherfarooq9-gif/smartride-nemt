@@ -59,6 +59,67 @@ async def test_scheduled_ride_created(client: AsyncClient):
     assert r.json()["ride_type"] == "scheduled"
 
 
+async def _hospital(db, **overrides):
+    from app.models.models import Hospital
+
+    hospital = Hospital(
+        name="Scheduled Trip Hospital",
+        address="A",
+        city="Islamabad",
+        lat=33.76,
+        lng=73.04,
+        **overrides,
+    )
+    db.add(hospital)
+    await db.commit()
+    return hospital
+
+
+def _scheduled_body(**extra) -> dict:
+    return {
+        **PICKUP,
+        "scheduled_for": (datetime.now(timezone.utc) + timedelta(days=1)).isoformat(),
+        **extra,
+    }
+
+
+@pytest.mark.asyncio
+async def test_scheduled_ride_keeps_the_chosen_hospital(client: AsyncClient, db):
+    # The app lets the patient pick a destination hospital; it used to be dropped.
+    token = await _token(client, "+92300720002", "patient")
+    hospital = await _hospital(db)
+    r = await client.post(
+        "/api/v1/rides/scheduled",
+        json=_scheduled_body(hospital_id=str(hospital.id)),
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["hospital_id"] == str(hospital.id)
+
+
+@pytest.mark.asyncio
+async def test_scheduled_ride_rejects_an_unknown_hospital(client: AsyncClient):
+    token = await _token(client, "+92300720003", "patient")
+    r = await client.post(
+        "/api/v1/rides/scheduled",
+        json=_scheduled_body(hospital_id="00000000-0000-0000-0000-000000000000"),
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_scheduled_ride_rejects_an_inactive_hospital(client: AsyncClient, db):
+    token = await _token(client, "+92300720004", "patient")
+    hospital = await _hospital(db, is_active=False)
+    r = await client.post(
+        "/api/v1/rides/scheduled",
+        json=_scheduled_body(hospital_id=str(hospital.id)),
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 404
+
+
 @pytest.mark.asyncio
 async def test_get_ride_by_patient_owner(client: AsyncClient):
     token = await _token(client, "+92300710002", "patient")

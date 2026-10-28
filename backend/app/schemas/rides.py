@@ -21,6 +21,8 @@ class ScheduledRideRequest(BaseModel):
     pickup_lng: float = Field(ge=-180, le=180)
     pickup_address: Optional[str] = Field(default=None, max_length=MAX_ADDRESS_LENGTH)
     scheduled_for: datetime
+    # The destination the patient chose; optional, a trip may be booked without.
+    hospital_id: Optional[UUID] = None
 
     @field_validator("scheduled_for")
     @classmethod

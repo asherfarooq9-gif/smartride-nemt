@@ -175,8 +175,19 @@ async def create_scheduled_ride(
     patient: Patient, body: ScheduledRideRequest, db: AsyncSession
 ) -> Ride:
     ensure_in_service_area(body.pickup_lat, body.pickup_lng)
+    if body.hospital_id is not None:
+        hospital = (
+            await db.execute(
+                select(Hospital).where(
+                    Hospital.id == body.hospital_id, Hospital.is_active.is_(True)
+                )
+            )
+        ).scalar_one_or_none()
+        if hospital is None:
+            raise HTTPException(404, "Hospital not found")
     ride = Ride(
         patient_id=patient.id,
+        hospital_id=body.hospital_id,
         ride_type=RideType.scheduled,
         status=RideStatus.pending,
         pickup_lat=body.pickup_lat,

@@ -247,6 +247,7 @@ class ScheduledRideRequest {
         'scheduled_for': scheduledFor.toUtc().toIso8601String(),
         'pickup_lat': pickupLat,
         'pickup_lng': pickupLng,
+        if (hospitalId != null) 'hospital_id': hospitalId,
       };
 }
 

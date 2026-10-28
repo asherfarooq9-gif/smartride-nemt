@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_secure_storage_platform_interface/flutter_secure_storage_platform_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:patient_app/core/providers.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
@@ -39,6 +40,48 @@ class _Always401 implements HttpClientAdapter {
   void close({bool force = false}) {}
 }
 
+/// Throws what the web plugin throws when it cannot decrypt a saved value.
+class _UndecryptablePlatform extends FlutterSecureStoragePlatform {
+  bool wasWiped = false;
+
+  @override
+  Future<String?> read({
+    required String key,
+    required Map<String, String> options,
+  }) async =>
+      throw 'OperationError'; // not an Exception, like a JS DOMException
+
+  @override
+  Future<void> deleteAll({required Map<String, String> options}) async =>
+      wasWiped = true;
+
+  @override
+  Future<bool> containsKey({
+    required String key,
+    required Map<String, String> options,
+  }) async =>
+      true;
+
+  @override
+  Future<void> delete({
+    required String key,
+    required Map<String, String> options,
+  }) async {}
+
+  @override
+  Future<Map<String, String>> readAll({
+    required Map<String, String> options,
+  }) async =>
+      {};
+
+  @override
+  Future<void> write({
+    required String key,
+    required String value,
+    required Map<String, String> options,
+  }) async {}
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -66,6 +109,26 @@ void main() {
     expect(auth.hasError, isFalse);
     expect(auth.valueOrNull, isNull);
     expect(calls, contains('deleteAll'), reason: 'broken store is wiped');
+  });
+
+  test(
+      'a saved session the browser cannot decrypt means signed out, '
+      'not a login button that spins forever', () async {
+    // On web a failed WebCrypto decrypt rejects with a bare JS DOMException
+    // (OperationError). It is neither a PlatformException nor a Dart
+    // Exception, so it used to escape and leave auth loading for good.
+    final platform = _UndecryptablePlatform();
+    FlutterSecureStoragePlatform.instance = platform;
+    addTearDown(() => FlutterSecureStoragePlatform.instance =
+        MethodChannelFlutterSecureStorage());
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    final auth = await _settled(container);
+
+    expect(auth.hasError, isFalse);
+    expect(auth.valueOrNull, isNull);
+    expect(platform.wasWiped, isTrue, reason: 'broken store is wiped');
   });
 
   test('a stored session is restored with its roles', () async {
@@ -104,7 +167,7 @@ void main() {
     expect(container.read(authProvider).valueOrNull, isNull);
     expect(container.read(rolesProvider), isEmpty);
     expect(await core.SecureStorage.instance.readToken(), isNull);
-    expect(await core.SecureStorage.instance.readValue('app_theme_mode'),
-        'dark');
+    expect(
+        await core.SecureStorage.instance.readValue('app_theme_mode'), 'dark');
   });
 }
