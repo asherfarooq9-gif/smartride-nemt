@@ -343,13 +343,6 @@ async def find_available_drivers_by_distance(
     return [d for d, _ in drivers_with_dist]
 
 
-async def find_nearest_available_driver(
-    db: AsyncSession, patient_lat: float, patient_lng: float
-) -> Optional[Driver]:
-    drivers = await find_available_drivers_by_distance(db, patient_lat, patient_lng)
-    return drivers[0] if drivers else None
-
-
 async def claim_driver(db: AsyncSession, candidates: list[Driver]) -> Optional[Driver]:
     """Atomically mark the first still-available candidate busy.
 

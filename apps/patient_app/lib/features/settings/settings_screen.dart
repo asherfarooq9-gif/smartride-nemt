@@ -4,8 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 import 'package:patient_app/core/providers.dart';
 
+/// Shared by the patient and driver apps. [isDriver] picks the profile route,
+/// the sign-out wording and destination, and stops GPS streaming on sign-out.
 class SettingsScreen extends ConsumerWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({super.key, this.isDriver = false});
+
+  final bool isDriver;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -18,7 +22,8 @@ class SettingsScreen extends ConsumerWidget {
             leading: const Icon(Icons.person),
             title: const Text('Profile'),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () => context.push('/profile'),
+            onTap: () =>
+                context.push(isDriver ? '/driver/profile' : '/profile'),
           ),
           const Divider(),
           const _SectionHeader('Appearance'),
@@ -48,7 +53,10 @@ class SettingsScreen extends ConsumerWidget {
           const ListTile(
             leading: Icon(Icons.info_outline),
             title: Text('App Version'),
-            trailing: Text('1.0.0', style: TextStyle(color: core.kTextSecondary)),
+            trailing: Text(
+              '1.0.0',
+              style: TextStyle(color: core.kTextSecondary),
+            ),
           ),
           const Divider(),
           ListTile(
@@ -64,12 +72,16 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  void _confirmSignOut(BuildContext context, WidgetRef ref) {
-    showDialog<bool>(
+  Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out?'),
+        content: Text(
+          isDriver
+              ? 'This will stop GPS streaming and sign you out.'
+              : 'Are you sure you want to sign out?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -82,12 +94,14 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ],
       ),
-    ).then((confirmed) async {
-      if (confirmed == true) {
-        await ref.read(authProvider.notifier).signOut();
-        if (context.mounted) context.go('/login');
-      }
-    });
+    );
+    if (confirmed != true || !context.mounted) return;
+    if (isDriver) {
+      await ref.read(gpsStreamProvider.notifier).stopStreaming();
+      if (!context.mounted) return;
+    }
+    await ref.read(authProvider.notifier).signOut();
+    if (context.mounted) context.go(isDriver ? '/welcome' : '/login');
   }
 }
 

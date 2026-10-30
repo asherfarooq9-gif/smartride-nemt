@@ -24,7 +24,6 @@ import 'package:patient_app/driver/dashboard_screen.dart';
 import 'package:patient_app/driver/active_ride_screen.dart';
 import 'package:patient_app/driver/earnings_screen.dart';
 import 'package:patient_app/driver/profile_screen.dart';
-import 'package:patient_app/driver/settings_screen.dart';
 import 'package:patient_app/driver/wallet_screen.dart';
 import 'package:patient_app/driver/top_up_screen.dart';
 import 'package:patient_app/driver/history_screen.dart';
@@ -131,7 +130,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/driver/settings',
-        builder: (_, __) => const DriverSettingsScreen(),
+        builder: (_, __) => const SettingsScreen(isDriver: true),
       ),
       GoRoute(
         path: '/driver/history',

@@ -24,12 +24,6 @@ Future<TokenResponse> register(RegisterRequest req) async {
   return TokenResponse.fromJson(data);
 }
 
-/// GET /auth/me — which roles + profiles this account holds.
-Future<MeResponse> getMe() async {
-  final data = await _c.get('/api/v1/auth/me');
-  return MeResponse.fromJson(data);
-}
-
 /// POST /auth/switch-role — flip the active portal; returns a fresh token.
 Future<TokenResponse> switchRole(String activeRole) async {
   final data = await _c.post('/api/v1/auth/switch-role', {'active_role': activeRole});
