@@ -22,9 +22,10 @@ from app.schemas.drivers import (
     WalletTransaction,
     EarningsResponse,
     EarningsRide,
+    DemandForecastResponse,
 )
 from app.models.models import Ride, RideStatus, WalletEntry
-from app.services import driver_service
+from app.services import demand_forecast, driver_service
 from sqlalchemy import select, func, and_
 
 router = APIRouter()
@@ -168,6 +169,23 @@ async def get_earnings(
     ]
     return EarningsResponse(
         total_earned_pkr=total_earned, ride_count=int(ride_count), rides=rides
+    )
+
+
+# ── Demand forecast ───────────────────────────────────────────────────────────
+
+
+@router.get("/demand-forecast", response_model=DemandForecastResponse)
+@limiter.limit("60/minute")
+async def get_demand_forecast(
+    request: Request,
+    hours_ahead: int = Query(6, ge=1, le=24),
+    _driver: User = Depends(require_driver),
+    db: AsyncSession = Depends(get_db),
+):
+    """Busy hours ahead: average ride requests per hour. Counts only, no patient data."""
+    return await demand_forecast.hourly_demand(
+        db, datetime.now(timezone.utc), hours_ahead
     )
 
 

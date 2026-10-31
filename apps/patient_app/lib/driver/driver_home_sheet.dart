@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 import 'package:patient_app/driver/dashboard_notifier.dart';
+import 'package:patient_app/driver/driver_demand_card.dart';
 import 'package:patient_app/driver/driver_home_cards.dart';
 import 'package:patient_app/driver/driver_home_controls.dart';
 import 'package:patient_app/driver/ride_request_card.dart';
@@ -144,6 +145,7 @@ class _DriverHomeSheetState extends ConsumerState<DriverHomeSheet> {
               const SizedBox(height: 6),
               const AvailabilityCard(),
               const SizedBox(height: 6),
+              const DriverDemandSection(),
               DriverActionsGrid(onShowRequests: _openFully),
               const SizedBox(height: core.kSpaceSM),
               const GoOnlineButton(),

@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import Annotated, Optional, List
+from typing import Annotated, Literal, Optional, List
 from datetime import datetime
 from pydantic import BaseModel, Field, PlainSerializer, condecimal, field_validator
 from app.models.models import DriverStatus
@@ -55,6 +55,20 @@ class EarningsResponse(BaseModel):
     total_earned_pkr: Money
     ride_count: int
     rides: List[EarningsRide]
+
+
+class DemandHour(BaseModel):
+    hour: datetime  # start of the hour, UTC
+    predicted_rides: float
+    level: Literal["low", "medium", "high"]
+
+
+class DemandForecastResponse(BaseModel):
+    generated_at: datetime
+    method: str
+    # False while there are no past rides to learn from; every hour is then low.
+    has_data: bool
+    forecast: List[DemandHour]
 
 
 class WalletTransaction(BaseModel):

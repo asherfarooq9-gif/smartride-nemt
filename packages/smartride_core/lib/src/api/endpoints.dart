@@ -1,5 +1,6 @@
 ﻿import '../models/user.dart';
 import '../models/patient.dart';
+import '../models/demand.dart';
 import '../models/driver.dart';
 import '../models/hospital.dart';
 import '../models/ride.dart';
@@ -158,5 +159,14 @@ Future<void> registerFcmToken(String token) async {
 
 Future<Map<String, dynamic>> getDriverWallet() async {
   return _c.get('/api/v1/drivers/wallet');
+}
+
+/// Busy hours ahead for a driver (GET /drivers/demand-forecast).
+Future<DemandForecast> getDemandForecast({int hoursAhead = 6}) async {
+  final data = await _c.get(
+    '/api/v1/drivers/demand-forecast',
+    queryParams: {'hours_ahead': hoursAhead},
+  );
+  return DemandForecast.fromJson(data);
 }
 

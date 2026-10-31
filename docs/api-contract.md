@@ -157,6 +157,29 @@ All authenticated endpoints require: `Authorization: Bearer <jwt_token>`
 
 ---
 
+### `GET /drivers/demand-forecast`
+**Auth:** driver
+
+Busy hours ahead: the average number of ride requests per hour, from the same hour of the day over the last 28 days. Hours are counted in Pakistan time (UTC+5). Counts only; no patient data.
+
+**Query params:** `hours_ahead` (1-24, default 6)
+
+**Response `200`:**
+```json
+{
+  "generated_at": "2026-10-30T10:00:00Z",
+  "method": "hourly_average_28d",
+  "has_data": true,
+  "forecast": [
+    { "hour": "2026-10-30T11:00:00Z", "predicted_rides": 1.3, "level": "high" }
+  ]
+}
+```
+
+`hour` is the start of the hour in UTC. `level` is `low`, `medium` or `high`, relative to the busiest hour of the day. When there are no past rides, `has_data` is `false` and every hour is `low` with 0 predicted rides.
+
+---
+
 ### `GET /drivers`
 **Auth:** admin
 

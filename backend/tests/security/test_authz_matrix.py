@@ -48,6 +48,7 @@ POLICY = {
     ("PATCH", "/api/v1/drivers/status"): {D},
     ("POST", "/api/v1/drivers/location"): {D},
     ("GET", "/api/v1/drivers/earnings"): {D},
+    ("GET", "/api/v1/drivers/demand-forecast"): {D},
     ("GET", "/api/v1/drivers/wallet"): {D},
     ("GET", "/api/v1/rides/pending"): {D},
     ("POST", "/api/v1/rides/{ride_id}/accept"): {D},
