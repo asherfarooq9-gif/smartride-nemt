@@ -85,7 +85,11 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
         ref.read(dashboardProvider.notifier).refresh();
         if (mounted) context.go('/driver');
       }
-    } catch (e) {
+    } catch (e, st) {
+      // A server refusal carries its own words; anything else is a bug to report.
+      if (e is! core.AppError) {
+        core.ErrorReporter.report('Driver ride status update failed', e, st);
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

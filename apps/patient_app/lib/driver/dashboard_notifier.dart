@@ -309,7 +309,10 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
     try {
       await _api.updateStatus(next);
       await refresh();
-    } catch (e) {
+    } catch (e, st) {
+      if (e is! core.AppError) {
+        core.ErrorReporter.report('Driver status update failed', e, st);
+      }
       if (!mounted) return;
       // The driver is left as the server last confirmed them.
       state = state.copyWith(

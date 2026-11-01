@@ -87,10 +87,27 @@ async def _revoked(token: str) -> bool:
     """True once the token has been logged out. Checked on a timer, not per frame:
     the handshake checks it, but a socket lives for the whole ride."""
     try:
-        jti = decode_token(token)["jti"]
-    except (jwt.PyJWTError, KeyError):
+        payload = decode_token(token)
+        jti, user_id = payload["jti"], payload["sub"]
+        token_version = int(payload.get("tv", 0))
+    except (jwt.PyJWTError, KeyError, ValueError):
         return True
-    return await is_token_blocked(jti)
+    if await is_token_blocked(jti):
+        return True
+    # Log out everywhere bumps users.token_version; HTTP checks it per request, so
+    # a socket must stop streaming once it changes (or the account is disabled).
+    try:
+        async with AsyncSessionLocal() as db:
+            row = (
+                await db.execute(
+                    select(User.token_version, User.is_active).where(User.id == user_id)
+                )
+            ).first()
+    except SQLAlchemyError as exc:
+        # Same stance as the blocklist: a database blip must not drop a live ride.
+        log.warning("ws revocation check skipped (%s)", type(exc).__name__)
+        return False
+    return row is None or not row.is_active or row.token_version != token_version
 
 
 async def _auth_user(token: str) -> User | None:
@@ -110,7 +127,12 @@ async def _auth_user(token: str) -> User | None:
     async with AsyncSessionLocal() as db:
         result = await db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
-    return user if (user and user.is_active) else None
+    if not (user and user.is_active):
+        return None
+    # Tokens issued before the version existed carry none and count as version 0.
+    if int(payload.get("tv", 0)) != user.token_version:
+        return None
+    return user
 
 
 async def _receive_auth(websocket: WebSocket) -> str | None:

@@ -457,7 +457,8 @@ async def test_relay_does_not_query_the_database_for_every_gps_frame(
             )
 
     assert len(fake.sent) == 6
-    assert opened.call_count == 1  # the first check only
+    # The first check only (token version, then ride status), never one per frame.
+    assert opened.call_count == 2
 
 
 async def test_relay_still_ends_when_the_ride_finishes_while_quiet(

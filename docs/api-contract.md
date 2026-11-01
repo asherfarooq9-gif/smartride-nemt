@@ -1,6 +1,6 @@
 # SmartRide NEMT — API Contract
 
-Base URL: `http://localhost:8000/api/v1`
+Base URL: `http://localhost:18020/api/v1` (Docker compose default; WebSockets are under `/ws`, not `/api/v1`)
 
 All authenticated endpoints require: `Authorization: Bearer <jwt_token>`
 
@@ -16,10 +16,13 @@ All authenticated endpoints require: `Authorization: Bearer <jwt_token>`
 {
   "phone": "+923001234567",
   "password": "securepass",
-  "role": "patient | driver | admin",
+  "roles": ["patient", "driver"],
+  "active_role": "patient",
   "full_name": "Ali Khan",
 
-  // Driver-only fields (required when role=driver):
+  // `roles` is one or more of patient | driver. The legacy single `role`
+  // field is still accepted. `active_role` defaults to the first role.
+  // Driver-only fields (required when "driver" is among the roles):
   "license_no": "LHR-123456",
   "vehicle_plate": "ABC-1234",
   "vehicle_type": "sedan"
@@ -31,12 +34,16 @@ All authenticated endpoints require: `Authorization: Bearer <jwt_token>`
 {
   "access_token": "<jwt>",
   "token_type": "bearer",
+  "roles": ["patient"],
+  "active_role": "patient",
   "role": "patient",
   "user_id": "<uuid>"
 }
 ```
 
-**Errors:** `400` duplicate phone | `400` driver missing vehicle fields
+**Errors:** `400` duplicate phone | `403` admin accounts cannot be self-registered | `422` driver missing vehicle fields or bad `active_role`
+
+`role` is the legacy copy of `active_role`. Rate limit 5/min.
 
 ---
 
@@ -45,7 +52,7 @@ All authenticated endpoints require: `Authorization: Bearer <jwt_token>`
 
 **Request body:**
 ```json
-{ "phone": "+923001234567", "password": "securepass" }
+{ "phone": "+923001234567", "password": "securepass", "active_role": "patient" }
 ```
 
 **Response `200`:**
@@ -53,12 +60,14 @@ All authenticated endpoints require: `Authorization: Bearer <jwt_token>`
 {
   "access_token": "<jwt>",
   "token_type": "bearer",
+  "roles": ["patient"],
+  "active_role": "patient",
   "role": "patient",
   "user_id": "<uuid>"
 }
 ```
 
-**Errors:** `401` wrong credentials | `403` account inactive
+`active_role` is optional. **Errors:** `401` wrong credentials | `403` account disabled or role not held | `429` too many failed attempts. Rate limit 10/min.
 
 ---
 
@@ -110,15 +119,18 @@ All authenticated endpoints require: `Authorization: Bearer <jwt_token>`
 ```json
 {
   "id": "<uuid>",
+  "phone": "+923001234567",
   "full_name": "Usman Ahmed",
   "license_no": "ISB-789",
   "vehicle_plate": "LHR-5678",
   "vehicle_type": "sedan",
   "is_verified": true,
   "status": "available",
+  "wallet_balance_pkr": 0,
   "current_lat": 33.7005,
   "current_lng": 73.0679,
-  "last_seen_at": "2026-01-01T12:00:00Z"
+  "last_seen_at": "2026-01-01T12:00:00Z",
+  "created_at": "2026-01-01T00:00:00Z"
 }
 ```
 
@@ -141,7 +153,7 @@ All authenticated endpoints require: `Authorization: Bearer <jwt_token>`
 { "status": "available | busy | offline" }
 ```
 
-**Response `200`:** `{ "status": "available" }`
+**Response `200`:** the driver object (as `GET /drivers/me`). Rate limit 30/min.
 
 ---
 
@@ -153,7 +165,7 @@ All authenticated endpoints require: `Authorization: Bearer <jwt_token>`
 { "lat": 33.7005, "lng": 73.0679 }
 ```
 
-**Response `200`:** `{ "updated": true }`
+**Response `200`:** the driver object. Rate limit 60/min.
 
 ---
 
@@ -183,7 +195,7 @@ Busy hours ahead: the average number of ride requests per hour, from the same ho
 ### `GET /drivers`
 **Auth:** admin
 
-**Query params:** `status`, `is_verified`, `page`, `page_size`
+**Query params:** `status`, `is_verified`, `search`, `page`, `page_size`
 
 **Response `200`:**
 ```json
@@ -199,7 +211,9 @@ Busy hours ahead: the average number of ride requests per hour, from the same ho
 ### `PATCH /drivers/{id}/verify`
 **Auth:** admin
 
-**Response `200`:** `{ "id": "<uuid>", "is_verified": true }`
+**Request body (optional):** `{ "is_verified": true }` (defaults to `true`; send `false` to revoke)
+
+**Response `200`:** the driver object
 
 **Errors:** `404` driver not found
 
@@ -210,7 +224,7 @@ Busy hours ahead: the average number of ride requests per hour, from the same ho
 ### `GET /hospitals`
 **Auth:** public
 
-**Query params:** `city`, `specialty`, `page`, `page_size`
+**Query params:** `active_only` (default `true`; only admins can list inactive hospitals), `page` (default 1), `page_size` (1-200, default 50)
 
 **Response `200`:**
 ```json
@@ -238,9 +252,9 @@ Busy hours ahead: the average number of ride requests per hour, from the same ho
 ### `GET /hospitals/{id}`
 **Auth:** public
 
-**Response `200`:** single hospital object (full detail including `fhir_endpoint`, `coordinator_phone`)
+**Response `200`:** single hospital object. `fhir_endpoint` and `coordinator_phone` are `null` unless the caller is an admin.
 
-**Errors:** `404` not found
+**Errors:** `404` not found (inactive hospitals are hidden from non-admins)
 
 ---
 
@@ -286,20 +300,15 @@ Busy hours ahead: the average number of ride requests per hour, from the same ho
 {
   "pickup_lat": 33.7005,
   "pickup_lng": 73.0679,
+  "pickup_address": "optional, max length enforced",
   "symptom_text": "Severe chest pain, can't breathe"
 }
 ```
 
-**Response `202`:**
-```json
-{
-  "ride_id": "<uuid>",
-  "status": "pending",
-  "message": "Emergency dispatched. Poll GET /rides/{id} for driver assignment."
-}
-```
+**Response `201`:** the ride object (`id`, `status: "pending"`, `ride_type: "emergency"`, ...; same shape as `GET /rides/{id}`).
+**Response `200`:** the patient already has a live emergency ride, or the same `Idempotency-Key` was replayed. That ride is returned and no new dispatch starts.
 
-Dispatch pipeline runs in background. Target: driver assigned within 60 seconds.
+Dispatch runs in the background; poll `GET /rides/{id}` or open the ride WebSocket. Rate limit 5/min.
 
 ---
 
@@ -321,41 +330,38 @@ Dispatch pipeline runs in background. Target: driver assigned within 60 seconds.
 chose; an unknown or inactive hospital returns `404`.
 
 **Response `201`:** the ride (`id`, `status: "pending"`, `ride_type: "scheduled"`,
-`scheduled_for`, `hospital_id`, ...).
+`scheduled_for`, `hospital_id`, ...). `200` on an `Idempotency-Key` replay. Rate limit 10/min.
 
 ---
 
 ### `GET /rides/{id}`
 **Auth:** patient (own ride) | driver (assigned ride) | admin (any)
 
-**Response `200`:**
+**Response `200`:** a flat ride object. Driver, hospital and triage details are in `GET /rides/{id}/detail`.
 ```json
 {
   "id": "<uuid>",
+  "patient_id": "<uuid>",
+  "driver_id": "<uuid | null>",
+  "hospital_id": "<uuid | null>",
   "ride_type": "emergency",
   "status": "driver_assigned",
   "pickup_lat": 33.7005,
   "pickup_lng": 73.0679,
-  "driver": {
-    "id": "<uuid>",
-    "full_name": "Usman Ahmed",
-    "vehicle_plate": "LHR-5678",
-    "current_lat": 33.695,
-    "current_lng": 73.060
-  },
-  "hospital": {
-    "id": "<uuid>",
-    "name": "PIMS",
-    "lat": 33.7005,
-    "lng": 73.0679
-  },
-  "triage": {
-    "specialty": "cardiology",
-    "severity": "5",
-    "confidence": 0.78
-  },
+  "pickup_address": null,
+  "scheduled_for": null,
   "requested_at": "2026-01-01T12:00:00Z",
-  "driver_assigned_at": "2026-01-01T12:00:45Z"
+  "driver_assigned_at": "2026-01-01T12:00:45Z",
+  "pickup_at": null,
+  "arrived_at": null,
+  "completed_at": null,
+  "cancelled_at": null,
+  "cancel_reason": null,
+  "estimated_fare_pkr": null,
+  "final_fare_pkr": null,
+  "patient_rating": null,
+  "rating_comment": null,
+  "hospital_name": null
 }
 ```
 
@@ -364,89 +370,115 @@ chose; an unknown or inactive hospital returns `404`.
 ---
 
 ### `PATCH /rides/{id}/status`
-**Auth:** driver (assigned to this ride)
+**Auth:** the assigned driver (verified), the owning patient, or an admin. The caller must hold the role that owns the ride.
 
 **Request body:**
 ```json
-{ "status": "driver_en_route | patient_picked_up | arrived_at_hospital | completed" }
+{ "status": "driver_en_route | patient_picked_up | arrived_at_hospital | completed | cancelled", "cancel_reason": "optional" }
 ```
 
-**Response `200`:** `{ "id": "<uuid>", "status": "driver_en_route" }`
+Drivers move the ride forward and may cancel before pickup. Patients and admins can only set `cancelled`.
 
-**Errors:** `400` invalid status transition | `403` not assigned driver
+**Response `200`:** the ride object.
+
+**Errors:** `400` invalid transition | `403` not your ride, or driver not verified | `409` driver cancelling after pickup
 
 ---
 
 ## Analytics
 
-### `GET /analytics/overview`
-**Auth:** admin
+All admin only. Response bodies are not yet schema-typed; see `backend/app/routers/analytics.py`.
 
-**Query params:** `city`, `start_date`, `end_date`
+| Endpoint | Purpose |
+|---|---|
+| `GET /analytics/summary` | Dashboard counters (cached `SUMMARY_CACHE_SECONDS`, default 15 s) |
+| `POST /analytics/snapshot` | Write the current hourly snapshot (`201`) |
+| `GET /analytics/forecast` | Demand forecast for the dashboard charts |
+| `GET /analytics/history` | Stored hourly snapshots |
 
-**Response `200`:**
-```json
-{
-  "total_rides": 1250,
-  "emergency_rides": 340,
-  "scheduled_rides": 910,
-  "avg_eta_seconds": 38.4,
-  "missed_appointments": 22,
-  "driver_utilisation_pct": 67.3,
-  "by_specialty": {
-    "cardiology": 120,
-    "neurology": 45,
-    "general_emergency": 175
-  },
-  "by_status": {
-    "completed": 1180,
-    "cancelled": 48,
-    "pending": 22
-  }
-}
-```
+CSV export is `GET /rides/export.csv` (admin), not an analytics route.
 
 ---
 
-### `GET /analytics/export.csv`
-**Auth:** admin
+## Endpoints added since the first draft
 
-**Query params:** `start_date`, `end_date`, `city`
+These exist in code and were missing from this contract. Request and response
+models live in `backend/app/schemas/`.
 
-**Response `200`:** `Content-Type: text/csv`
+**Auth** (rate limits per client: register 5/min, login 10/min, add-role 5/min, switch-role and refresh 20/min)
 
-CSV columns: `ride_id, ride_type, status, patient_id, driver_id, hospital_name, specialty, severity, requested_at, driver_assigned_at, completed_at, pickup_lat, pickup_lng, city`
+| Endpoint | Auth | Purpose |
+|---|---|---|
+| `POST /auth/add-role` | any user | Add the patient or driver role to an account (admin cannot be added) |
+| `POST /auth/switch-role` | any user | Change the active portal; returns a new token |
+| `GET /auth/me` | any user | Profiles, held roles, `driver_verified` |
+| `POST /auth/fcm-token` | any user | Register the device push token (`204`) |
+| `POST /auth/logout` | any user | Revoke this token (`204`) |
+| `POST /auth/logout-all` | any user | Bump `token_version`: every token, HTTP and WebSocket, stops working (`204`) |
+| `POST /auth/refresh` | the token itself | New token; the session is capped at `SESSION_MAX_DAYS` |
+
+**Patients:** `GET /patients` (admin list).
+
+**Drivers**
+
+| Endpoint | Auth | Purpose |
+|---|---|---|
+| `GET /drivers/earnings` | driver | Earnings summary and recent rides |
+| `GET /drivers/wallet` | driver | Balance, plan, ledger entries (read only) |
+| `POST /drivers/{driver_id}/wallet/topup` | admin | Credit a wallet. `Idempotency-Key` header is **required**; reusing a key with a different amount or driver returns `409`. Body: `amount_pkr`, `payment_method` (free text label: no payment provider is integrated), optional `plan_id` |
+
+**Rides**
+
+| Endpoint | Auth | Purpose |
+|---|---|---|
+| `GET /rides/mine` | any user | Rides of the caller |
+| `GET /rides/{id}/detail` | admin, owner patient, assigned driver | Ride with driver, hospital and timeline. The driver sees the patient's phone and mobility needs only while the ride is active |
+| `GET /rides/pending` | verified driver | Unassigned rides near the driver |
+| `POST /rides/{id}/accept` | verified driver | Atomic claim; `409` if taken. When accepting chooses the hospital, the hospital is pre-alerted afterwards |
+| `POST /rides/{id}/rate` | patient | Rate a completed ride (1-5) |
+| `GET /rides` | admin | Paged list with filters |
+| `GET /rides/export.csv` | admin | CSV export |
+
+`POST /rides/emergency` and `POST /rides/scheduled` accept an optional
+`Idempotency-Key` header. A replay returns the original ride; the same key with a
+different body returns `409`.
+
+`GET /hospitals` and `GET /hospitals/{id}` are readable without a token; fields
+are trimmed for non-admins.
+
+Ride states: `pending`, `driver_assigned`, `driver_en_route`, `patient_picked_up`,
+`arrived_at_hospital`, `completed`, `cancelled`. A driver cannot cancel after
+pickup (`409`, contact dispatch).
 
 ---
 
 ## WebSocket
 
-### `WS /ws/driver/{driver_id}/location`
-**Auth:** driver (JWT in query param `?token=<jwt>`)
-
-Driver streams location every ~5 seconds:
+Authentication is the **first message** after connecting, not a query parameter
+(so the token never reaches server logs):
 ```json
-{ "lat": 33.7005, "lng": 73.0679, "timestamp": "2026-01-01T12:00:00Z" }
+{ "token": "<jwt>" }
 ```
+No first message within 5 s closes the socket with code `1008`. A token that is
+logged out, from before a "log out everywhere", or for a disabled account is
+refused at the handshake and closes an open socket at its next check.
 
-Server acknowledges: `{ "ok": true }`
+### `WS /ws/driver/{ride_id}`
+**Auth:** the driver assigned to that ride. `ride_id` is the ride, not the driver.
 
----
-
-### `WS /ws/ride/{ride_id}/track`
-**Auth:** patient or admin (JWT in query param `?token=<jwt>`)
-
-Server pushes driver location updates in real time:
+Driver streams location:
 ```json
-{
-  "driver_id": "<uuid>",
-  "lat": 33.6980,
-  "lng": 73.0650,
-  "timestamp": "2026-01-01T12:00:05Z"
-}
+{ "lat": 33.7005, "lng": 73.0679 }
 ```
+Server replies `{ "ack": true, "lat": ..., "lng": ... }`, or `{ "error": "invalid or too frequent update" }`.
+When the ride is no longer live the server sends `{ "event": "ride_ended" }` and closes.
 
-Connection closes automatically when ride status becomes `completed` or `cancelled`.
+### `WS /ws/ride/{ride_id}`
+**Auth:** admin, the patient who owns the ride, or the assigned driver.
+
+Server relays each driver frame `{ "lat": ..., "lng": ... }`, sends
+`{ "event": "ping" }` when quiet, and `{ "event": "ride_ended", "status": "<final status>" }`
+when the ride completes or is cancelled.
 
 ---
 

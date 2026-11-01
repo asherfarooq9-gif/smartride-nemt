@@ -581,3 +581,66 @@ async def match_hospital_for_ride(
 async def load_patient(db: AsyncSession, patient_id):
     result = await db.execute(select(Patient).where(Patient.id == patient_id))
     return result.scalar_one()
+
+
+async def prealert_hospital_for_accepted_ride(ride_id: str) -> bool:
+    """Pre-alert the hospital of a ride a driver accepted by hand. Never raises.
+
+    Runs after the accept response, in its own session. True when the hospital
+    was told; a False is logged and counted like a failed dispatch pre-alert.
+    """
+    from app.core.database import AsyncSessionLocal
+
+    try:
+        async with AsyncSessionLocal() as db:
+            ride = (
+                await db.execute(select(Ride).where(Ride.id == ride_id))
+            ).scalar_one_or_none()
+            if ride is None or ride.hospital_id is None or not ride.symptom_text:
+                return False
+            hospital = (
+                await db.execute(
+                    select(Hospital).where(Hospital.id == ride.hospital_id)
+                )
+            ).scalar_one()
+            row = await load_patient(db, ride.patient_id)
+            triage = await load_stored_triage(db, ride.id) or normalise_triage(
+                fallback_triage(ride.symptom_text), ride.symptom_text
+            )
+            info = _snapshot_ride(ride, ride.symptom_text)
+            patient = PatientInfo(
+                id=row.id,
+                user_id=row.user_id,
+                full_name=row.full_name,
+                emergency_contact_phone=row.emergency_contact_phone,
+            )
+            match = MatchResult(
+                hospital_id=str(hospital.id),
+                hospital_name=hospital.name,
+                score=0.0,
+                distance_km=haversine_km(
+                    info.pickup_lat, info.pickup_lng, hospital.lat, hospital.lng
+                ),
+                ed_occupancy_pct=100.0
+                * hospital.ed_current_load
+                / max(hospital.ed_capacity, 1),
+                fhir_endpoint=hospital.fhir_endpoint,
+                has_fhir=bool(hospital.fhir_endpoint),
+                coordinator_phone=hospital.coordinator_phone,
+                ed_full=hospital.ed_current_load >= hospital.ed_capacity,
+            )
+            await db.commit()  # end the transaction before any network call
+        prealerted = await send_hospital_alert(
+            ride=info, triage=triage, hospital=match, patient=patient
+        )
+    except Exception as exc:
+        log.error(
+            "hospital pre-alert crashed after manual accept ride_id=%s (%s)",
+            ride_id,
+            type(exc).__name__,
+        )
+        prealerted = False
+    if not prealerted:
+        metrics.dispatch_failures_total.labels(reason="hospital_not_prealerted").inc()
+        log.error("hospital NOT pre-alerted after manual accept ride_id=%s", ride_id)
+    return prealerted

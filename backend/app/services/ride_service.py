@@ -603,8 +603,15 @@ async def _hospital_placement(ride_id: str, db: AsyncSession) -> dict:
     }
 
 
-async def accept_ride(ride_id: str, driver: Driver, db: AsyncSession) -> Ride:
-    """Atomically assign a driver to a ride; raises 409 if already taken."""
+async def accept_ride(
+    ride_id: str, driver: Driver, db: AsyncSession
+) -> tuple[Ride, bool]:
+    """Atomically assign a driver to a ride; raises 409 if already taken.
+
+    Returns the ride and whether accepting is what chose its hospital. Dispatch
+    pre-alerts the hospital for rides it places itself, so only a True here means
+    nobody has told the hospital yet.
+    """
     requester_user_id = (
         await db.execute(
             select(Patient.user_id)
@@ -661,7 +668,7 @@ async def accept_ride(ride_id: str, driver: Driver, db: AsyncSession) -> Ride:
     await db.commit()
 
     ride = (await db.execute(select(Ride).where(Ride.id == ride_id))).scalar_one()
-    return ride
+    return ride, "hospital_id" in placement
 
 
 async def list_rides_admin(
