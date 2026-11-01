@@ -5,7 +5,8 @@ import 'package:smartride_core/smartride_core.dart' as core;
 void main() {
   test('a 409 says another driver took it, in the server words', () {
     final outcome = acceptOutcomeForError(
-      const core.AppError('Ride already taken by another driver', statusCode: 409),
+      const core.AppError('Ride already taken by another driver',
+          statusCode: 409),
     );
     expect(outcome.result, AcceptResult.alreadyTaken);
     expect(outcome.message, 'Ride already taken by another driver');
@@ -35,7 +36,8 @@ void main() {
 
   test('every outcome has a message to show, so nothing fails silently', () {
     for (final code in [null, 400, 401, 403, 404, 409, 429, 500]) {
-      final outcome = acceptOutcomeForError(core.AppError('x', statusCode: code));
+      final outcome =
+          acceptOutcomeForError(core.AppError('x', statusCode: code));
       expect(outcome.message, isNotEmpty, reason: 'status $code');
     }
   });

@@ -6,7 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:patient_app/features/rides/dispatching_screen.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 
-core.RideDetailResponse _ride(String status) => core.RideDetailResponse.fromJson({
+core.RideDetailResponse _ride(String status) =>
+    core.RideDetailResponse.fromJson({
       'id': 'r1',
       'ride_type': 'emergency',
       'status': status,

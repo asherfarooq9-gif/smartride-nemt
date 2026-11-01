@@ -21,7 +21,8 @@ void main() {
       expect(formatPkr(0.004), 'PKR 0');
     });
 
-    test('a negative balance shows its sign even when it is under one rupee', () {
+    test('a negative balance shows its sign even when it is under one rupee',
+        () {
       expect(formatPkr(-12.5), '−PKR 12.50');
       expect(formatPkr(-0.5), '−PKR 0.50');
       expect(formatPkr(-1500), '−PKR 1,500');
@@ -33,7 +34,8 @@ void main() {
   });
 
   group('formatSignedPkr', () {
-    test('credits get a plus and debits a minus, by the amount, not the type', () {
+    test('credits get a plus and debits a minus, by the amount, not the type',
+        () {
       expect(formatSignedPkr(500), '+PKR 500');
       expect(formatSignedPkr(-27), '−PKR 27');
       expect(formatSignedPkr(-27.5), '−PKR 27.50');

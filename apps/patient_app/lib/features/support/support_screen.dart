@@ -48,7 +48,8 @@ class HelpScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: core.kEmergencyRed.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(core.kRadiusLG),
-              border: Border.all(color: core.kEmergencyRed.withValues(alpha: 0.3)),
+              border:
+                  Border.all(color: core.kEmergencyRed.withValues(alpha: 0.3)),
             ),
             child: const Row(
               children: [
@@ -81,7 +82,8 @@ class HelpScreen extends StatelessWidget {
               children: [
                 Text(
                   faq.answer,
-                  style: const TextStyle(color: core.kTextSecondary, height: 1.4),
+                  style:
+                      const TextStyle(color: core.kTextSecondary, height: 1.4),
                 ),
               ],
             ),

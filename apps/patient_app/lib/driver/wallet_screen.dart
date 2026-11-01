@@ -40,14 +40,11 @@ class WalletScreen extends ConsumerWidget {
               ),
             ),
             data: (wallet) {
-              final balance =
-                  (wallet['balance_pkr'] as num?)?.toDouble() ?? 0;
+              final balance = (wallet['balance_pkr'] as num?)?.toDouble() ?? 0;
               final lowBalance = wallet['low_balance'] as bool? ?? false;
-              final plan =
-                  wallet['plan'] as String? ?? 'Pay Per Ride · 10%';
+              final plan = wallet['plan'] as String? ?? 'Pay Per Ride · 10%';
               final weeklyCommission =
-                  (wallet['weekly_commission_paid'] as num?)?.toDouble() ??
-                      0;
+                  (wallet['weekly_commission_paid'] as num?)?.toDouble() ?? 0;
               final weeklyNet =
                   (wallet['weekly_net_earnings'] as num?)?.toDouble() ?? 0;
               final transactions =
@@ -172,8 +169,7 @@ class _BalanceCard extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(kRadiusMD),
                 ),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: kSpaceXL),
+                padding: const EdgeInsets.symmetric(horizontal: kSpaceXL),
               ),
               child: const Text(
                 'Top Up',
@@ -277,7 +273,8 @@ class _WeekSummaryRow extends StatelessWidget {
               valueColor: kRed600,
             ),
           ),
-          const SizedBox(width: 1, height: 40, child: ColoredBox(color: kBorder)),
+          const SizedBox(
+              width: 1, height: 40, child: ColoredBox(color: kBorder)),
           Expanded(
             child: _SummaryItem(
               label: 'Net earnings',
@@ -345,8 +342,8 @@ class _TransactionsList extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Padding(
-            padding: EdgeInsets.fromLTRB(
-                kSpaceLG, kSpaceLG, kSpaceLG, kSpaceSM),
+            padding:
+                EdgeInsets.fromLTRB(kSpaceLG, kSpaceLG, kSpaceLG, kSpaceSM),
             child: Text(
               'Recent Transactions',
               style: TextStyle(
@@ -359,10 +356,8 @@ class _TransactionsList extends StatelessWidget {
           const Divider(height: 1, color: kBorder),
           ...transactions.map((tx) {
             final txMap = tx as Map<String, dynamic>;
-            final amount =
-                (txMap['amount_pkr'] as num?)?.toDouble() ?? 0;
-            final description =
-                txMap['description'] as String? ?? '';
+            final amount = (txMap['amount_pkr'] as num?)?.toDouble() ?? 0;
+            final description = txMap['description'] as String? ?? '';
             final createdAt = txMap['created_at'] as String? ?? '';
             // By the sign of the amount, not the type: commissions are stored
             // negative and an opening 'adjustment' can be either.

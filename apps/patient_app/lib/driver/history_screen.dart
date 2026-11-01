@@ -25,14 +25,16 @@ class DriverHistoryScreen extends ConsumerWidget {
               child: CircularProgressIndicator(color: kBlue600),
             ),
             error: (e, _) => ErrorState(
-              message: e is AppError ? e.message : 'Failed to load trip history',
+              message:
+                  e is AppError ? e.message : 'Failed to load trip history',
               onRetry: () => ref.invalidate(_historyProvider),
             ),
             data: (data) {
               final rides = data['rides'] as List<dynamic>? ?? [];
               if (rides.isEmpty) {
                 return const EmptyState(
-                  message: 'No completed trips yet.\nAccept a ride to get started.',
+                  message:
+                      'No completed trips yet.\nAccept a ride to get started.',
                   icon: Icons.directions_car_outlined,
                 );
               }
@@ -69,9 +71,8 @@ class _TripCard extends StatelessWidget {
     final isEmergency = rideType == 'emergency';
     final fareFormatted = formatPkr(fareRaw);
     final dateLabel = _formatDate(completedAt);
-    final routeLabel = hospitalName != null
-        ? '$pickupAddress → $hospitalName'
-        : pickupAddress;
+    final routeLabel =
+        hospitalName != null ? '$pickupAddress → $hospitalName' : pickupAddress;
 
     return Container(
       margin: const EdgeInsets.only(bottom: kSpaceMD),
@@ -93,9 +94,7 @@ class _TripCard extends StatelessWidget {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: isEmergency
-                        ? kRed50
-                        : kBlue100,
+                    color: isEmergency ? kRed50 : kBlue100,
                     borderRadius: BorderRadius.circular(kRadiusSM),
                   ),
                   child: Icon(
@@ -178,8 +177,18 @@ class _TripCard extends StatelessWidget {
     if (isYesterday) return 'Yesterday, $timeStr';
 
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[local.month - 1]} ${local.day}, $timeStr';
   }
@@ -193,8 +202,7 @@ class _TypeBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     if (isEmergency) {
       return Container(
-        padding: const EdgeInsets.symmetric(
-            horizontal: kSpaceSM, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: kSpaceSM, vertical: 2),
         decoration: BoxDecoration(
           color: kRed50,
           borderRadius: BorderRadius.circular(kRadiusSM),

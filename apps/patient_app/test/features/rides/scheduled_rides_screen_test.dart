@@ -131,7 +131,8 @@ void main() {
       expect(find.text('Try again'), findsOneWidget);
     });
 
-    testWidgets('error state is scrollable for pull-to-refresh', (tester) async {
+    testWidgets('error state is scrollable for pull-to-refresh',
+        (tester) async {
       await tester.pumpWidget(
         _buildUnderTest(rides: () async => throw Exception('oops')),
       );
@@ -141,7 +142,8 @@ void main() {
       expect(find.byType(SingleChildScrollView), findsOneWidget);
     });
 
-    testWidgets('empty state is scrollable for pull-to-refresh', (tester) async {
+    testWidgets('empty state is scrollable for pull-to-refresh',
+        (tester) async {
       await tester.pumpWidget(
         _buildUnderTest(rides: () async => _emptyList()),
       );

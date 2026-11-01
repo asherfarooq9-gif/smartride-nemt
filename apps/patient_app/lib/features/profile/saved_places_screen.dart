@@ -31,14 +31,13 @@ class SavedPlacesScreen extends ConsumerWidget {
                 if (i == places.length) {
                   return Padding(
                     padding: const EdgeInsets.only(top: kSpaceSM),
-                    child: _AddPlaceButton(
-                        onTap: () => _openSheet(context, ref)),
+                    child:
+                        _AddPlaceButton(onTap: () => _openSheet(context, ref)),
                   );
                 }
                 return _PlaceCard(
                   place: places[i],
-                  onEdit: () =>
-                      _openSheet(context, ref, existing: places[i]),
+                  onEdit: () => _openSheet(context, ref, existing: places[i]),
                   onDelete: () => _confirmDelete(context, ref, places[i]),
                 );
               },
@@ -52,8 +51,7 @@ class SavedPlacesScreen extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(kRadiusSheet)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(kRadiusSheet)),
       ),
       builder: (_) => _PlaceSheet(
         existing: existing,
@@ -204,8 +202,8 @@ class _EmptyState extends StatelessWidget {
           TextButton(
             onPressed: onAdd,
             child: const Text('Add your first place',
-                style: TextStyle(
-                    color: kPatient600, fontWeight: FontWeight.w600)),
+                style:
+                    TextStyle(color: kPatient600, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -259,8 +257,7 @@ class _PlaceSheetState extends State<_PlaceSheet> {
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
     widget.onSave(SavedPlace(
-      id: widget.existing?.id ??
-          '${DateTime.now().millisecondsSinceEpoch}',
+      id: widget.existing?.id ?? '${DateTime.now().millisecondsSinceEpoch}',
       label: _labelCtrl.text.trim(),
       address: _addressCtrl.text.trim(),
       iconType: _iconType,
@@ -313,9 +310,7 @@ class _PlaceSheetState extends State<_PlaceSheet> {
                       children: [
                         Icon(icon,
                             size: 15,
-                            color: _iconType == type
-                                ? kPatient600
-                                : kText600),
+                            color: _iconType == type ? kPatient600 : kText600),
                         const SizedBox(width: 4),
                         Text(lbl),
                       ],

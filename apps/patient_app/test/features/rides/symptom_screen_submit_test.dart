@@ -52,8 +52,8 @@ class _Harness {
     await tester.pumpWidget(ProviderScope(
       overrides: [
         locationReaderProvider.overrideWithValue(() => location.future),
-        emergencyRideCreatorProvider.overrideWithValue((request,
-            {String? idempotencyKey}) async {
+        emergencyRideCreatorProvider
+            .overrideWithValue((request, {String? idempotencyKey}) async {
           requests.add(request);
           keys.add(idempotencyKey);
           return _ride();
@@ -79,7 +79,8 @@ void main() {
     await tester.tap(find.text('Send for Help'));
     await tester.pump();
     final button = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
-    expect(button.onPressed, isNull, reason: 'button must be disabled while busy');
+    expect(button.onPressed, isNull,
+        reason: 'button must be disabled while busy');
     await tester.tap(find.byType(ElevatedButton), warnIfMissed: false);
     await tester.pump();
 

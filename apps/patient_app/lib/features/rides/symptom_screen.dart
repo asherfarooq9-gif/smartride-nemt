@@ -336,8 +336,7 @@ class _SubmitBar extends StatelessWidget {
               foregroundColor: Colors.white,
               disabledBackgroundColor: core.kRed800,
               disabledForegroundColor: Colors.white70,
-              minimumSize:
-                  const Size.fromHeight(core.kMinTapTarget + 8),
+              minimumSize: const Size.fromHeight(core.kMinTapTarget + 8),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(core.kRadiusLG),
               ),

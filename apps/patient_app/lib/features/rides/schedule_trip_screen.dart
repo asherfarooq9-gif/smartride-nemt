@@ -6,9 +6,16 @@ import 'package:patient_app/core/location.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 
 const _specialties = [
-  'General OPD', 'Cardiology', 'Gynecology / Maternity',
-  'Orthopedics', 'Pediatrics', 'Dialysis',
-  'Eye / ENT', 'Neurology', 'Oncology', 'Dental',
+  'General OPD',
+  'Cardiology',
+  'Gynecology / Maternity',
+  'Orthopedics',
+  'Pediatrics',
+  'Dialysis',
+  'Eye / ENT',
+  'Neurology',
+  'Oncology',
+  'Dental',
 ];
 
 final _hospitalsProvider =
@@ -50,8 +57,8 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
     );
     if (time == null || !mounted) return;
     setState(() {
-      _selectedDateTime = DateTime(
-          date.year, date.month, date.day, time.hour, time.minute);
+      _selectedDateTime =
+          DateTime(date.year, date.month, date.day, time.hour, time.minute);
     });
   }
 
@@ -138,14 +145,12 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Book a Ride',
-                      style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold)),
+                      style:
+                          TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
                   SizedBox(height: core.kSpaceXS),
                   Text('Schedule a medical trip in advance',
                       style: TextStyle(
-                          fontSize: core.kFontSM,
-                          color: core.kTextSecondary)),
+                          fontSize: core.kFontSM, color: core.kTextSecondary)),
                 ],
               ),
             ),
@@ -184,8 +189,7 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                       data: (hospitals) => _HospitalPicker(
                         hospitals: hospitals,
                         selected: _selectedHospital,
-                        onChanged: (h) =>
-                            setState(() => _selectedHospital = h),
+                        onChanged: (h) => setState(() => _selectedHospital = h),
                       ),
                     ),
                     const SizedBox(height: core.kSpaceXL),
@@ -201,15 +205,14 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                         return FilterChip(
                           label: Text(s),
                           selected: selected,
-                          onSelected: (_) => setState(() =>
-                              _selectedSpecialty = selected ? null : s),
+                          onSelected: (_) => setState(
+                              () => _selectedSpecialty = selected ? null : s),
                           showCheckmark: false,
                           backgroundColor: Colors.white,
                           selectedColor: core.kPatientPrimary,
                           side: BorderSide(
-                            color: selected
-                                ? core.kPatientPrimary
-                                : core.kDivider,
+                            color:
+                                selected ? core.kPatientPrimary : core.kDivider,
                           ),
                           labelStyle: TextStyle(
                             fontSize: core.kFontSM,
@@ -236,25 +239,25 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                       onTap: _pickDateTime,
                       padding: core.kSpaceLG,
                       child: Row(
-                          children: [
-                            const Icon(Icons.calendar_today,
-                                color: core.kPatientPrimary, size: 20),
-                            const SizedBox(width: core.kSpaceMD),
-                            Text(
-                              _selectedDateTime == null
-                                  ? 'Select date & time'
-                                  : formatDateTime(_selectedDateTime!),
-                              style: TextStyle(
-                                color: _selectedDateTime == null
-                                    ? core.kTextSecondary
-                                    : core.kOnSurface,
-                                fontSize: core.kFontMD,
-                              ),
+                        children: [
+                          const Icon(Icons.calendar_today,
+                              color: core.kPatientPrimary, size: 20),
+                          const SizedBox(width: core.kSpaceMD),
+                          Text(
+                            _selectedDateTime == null
+                                ? 'Select date & time'
+                                : formatDateTime(_selectedDateTime!),
+                            style: TextStyle(
+                              color: _selectedDateTime == null
+                                  ? core.kTextSecondary
+                                  : core.kOnSurface,
+                              fontSize: core.kFontMD,
                             ),
-                            const Spacer(),
-                            const Icon(Icons.arrow_forward_ios,
-                                size: 14, color: core.kTextSecondary),
-                          ],
+                          ),
+                          const Spacer(),
+                          const Icon(Icons.arrow_forward_ios,
+                              size: 14, color: core.kTextSecondary),
+                        ],
                       ),
                     ),
                     const SizedBox(height: core.kSpaceXXL),
@@ -284,7 +287,6 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
       ),
     );
   }
-
 }
 
 class _SectionLabel extends StatelessWidget {
@@ -326,8 +328,7 @@ class _LocationTile extends StatelessWidget {
             const SizedBox(width: core.kSpaceMD),
             Flexible(
               child: Text(title,
-                  style:
-                      TextStyle(color: color, fontWeight: FontWeight.w600)),
+                  style: TextStyle(color: color, fontWeight: FontWeight.w600)),
             ),
           ],
         ),

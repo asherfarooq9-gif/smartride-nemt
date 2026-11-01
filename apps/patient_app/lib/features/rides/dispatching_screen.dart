@@ -119,7 +119,8 @@ class _DispatchingScreenState extends State<DispatchingScreen>
     _consecutiveFailures++;
     final isFirstLoss = _consecutiveFailures == _maxConsecutiveFailures;
     if (isFirstLoss) {
-      core.ErrorReporter.report('Ride status polling keeps failing', error, stack);
+      core.ErrorReporter.report(
+          'Ride status polling keeps failing', error, stack);
     }
     if (isFirstLoss && _problem == _StatusProblem.none) {
       setState(() => _problem = _StatusProblem.offline);

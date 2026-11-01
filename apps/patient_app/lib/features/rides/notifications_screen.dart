@@ -28,8 +28,7 @@ class NotificationsScreen extends ConsumerWidget {
                   .markAllRead(),
               child: Text(
                 'Mark all read',
-                style: TextStyle(
-                    color: primary, fontWeight: FontWeight.w600),
+                style: TextStyle(color: primary, fontWeight: FontWeight.w600),
               ),
             ),
         ],

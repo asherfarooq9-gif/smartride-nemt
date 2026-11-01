@@ -57,7 +57,8 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Icon(Icons.location_on_outlined, size: 64, color: kPatient600),
+            const Icon(Icons.location_on_outlined,
+                size: 64, color: kPatient600),
             const SizedBox(height: kSpaceXL),
             const Text(
               'Enable Location',
@@ -82,8 +83,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
             ),
             const SizedBox(height: kSpaceXXL),
             PrimaryButton(
-              label:
-                  _permanentlyDenied ? 'Open App Settings' : 'Allow Access',
+              label: _permanentlyDenied ? 'Open App Settings' : 'Allow Access',
               onPressed: _requestOrOpenSettings,
               color: kPatient600,
               height: kButtonHeight,
@@ -116,7 +116,8 @@ class NoDriversScreen extends StatelessWidget {
       await launchUrl(uri);
     } else if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open dialler — call 1122 manually')),
+        const SnackBar(
+            content: Text('Could not open dialler — call 1122 manually')),
       );
     }
   }

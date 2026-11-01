@@ -53,7 +53,8 @@ class _PaymentMethod {
 
 const _paymentMethods = [
   _PaymentMethod(label: 'JazzCash', icon: Icons.phone_android),
-  _PaymentMethod(label: 'EasyPaisa', icon: Icons.account_balance_wallet_outlined),
+  _PaymentMethod(
+      label: 'EasyPaisa', icon: Icons.account_balance_wallet_outlined),
   _PaymentMethod(label: 'Bank Transfer', icon: Icons.account_balance_outlined),
   _PaymentMethod(label: 'Card', icon: Icons.credit_card_outlined),
 ];
@@ -412,9 +413,7 @@ class _CustomAmountTile extends StatelessWidget {
                       },
                       child: Chip(
                         label: Text(
-                          amt >= 1000
-                              ? '${amt ~/ 1000},000'
-                              : amt.toString(),
+                          amt >= 1000 ? '${amt ~/ 1000},000' : amt.toString(),
                         ),
                         backgroundColor: kCanvas,
                         side: const BorderSide(color: kBorder),

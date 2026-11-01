@@ -18,8 +18,7 @@ final activeRoleProvider = StateProvider<String>((ref) => 'patient');
 
 // ── Auth ───────────────────────────────────────────────────────────────────────
 
-final authProvider =
-    StateNotifierProvider<AuthNotifier, AsyncValue<String?>>(
+final authProvider = StateNotifierProvider<AuthNotifier, AsyncValue<String?>>(
   (ref) => AuthNotifier(ref),
 );
 
@@ -100,7 +99,8 @@ class AuthNotifier extends StateNotifier<AsyncValue<String?>> {
     unawaited(registerPushToken());
   }
 
-  Future<void> signIn(String phone, String password, {String? activeRole}) async {
+  Future<void> signIn(String phone, String password,
+      {String? activeRole}) async {
     state = const AsyncValue.loading();
     try {
       final res = await core.login(phone, password, activeRole: activeRole);
@@ -159,8 +159,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<String?>> {
 
 const _kThemeModeKey = 'app_theme_mode';
 
-final themeModeProvider =
-    StateNotifierProvider<ThemeModeNotifier, ThemeMode>(
+final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>(
   (ref) => ThemeModeNotifier(),
 );
 
@@ -178,8 +177,7 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
   }
 
   Future<void> _load() async {
-    final val =
-        await core.SecureStorage.instance.readValue(_kThemeModeKey);
+    final val = await core.SecureStorage.instance.readValue(_kThemeModeKey);
     if (val == 'dark') state = ThemeMode.dark;
     if (val == 'light') state = ThemeMode.light;
   }
@@ -242,8 +240,7 @@ class SavedPlacesNotifier extends StateNotifier<List<SavedPlace>> {
   }
 
   Future<void> _load() async {
-    final raw =
-        await core.SecureStorage.instance.readValue(_kSavedPlacesKey);
+    final raw = await core.SecureStorage.instance.readValue(_kSavedPlacesKey);
     if (!mounted || raw == null || raw.isEmpty) return;
     try {
       final list = jsonDecode(raw) as List<dynamic>;
@@ -298,8 +295,7 @@ class AppNotification {
   final bool isRead;
 
   AppNotification withRead() => AppNotification(
-        id: id, title: title, body: body,
-        time: time, icon: icon, isRead: true);
+      id: id, title: title, body: body, time: time, icon: icon, isRead: true);
 }
 
 final notificationsProvider = StateNotifierProvider.family<
@@ -369,7 +365,13 @@ extension GpsStreamStatusX on GpsStreamStatus {
   bool get isActive => this != GpsStreamStatus.idle;
 }
 
-enum GpsStartResult { started, alreadyStreaming, permissionDenied, notSignedIn, cancelled }
+enum GpsStartResult {
+  started,
+  alreadyStreaming,
+  permissionDenied,
+  notSignedIn,
+  cancelled
+}
 
 /// Set to the ride id when the server tells the driver's GPS socket that the ride
 /// has ended, so the active ride screen can leave it. Cleared by the screen.
@@ -413,7 +415,8 @@ class GpsStreamNotifier extends StateNotifier<GpsStreamStatus> {
     if (state != GpsStreamStatus.starting) return GpsStartResult.cancelled;
 
     _rideId = rideId;
-    final uri = Uri.parse('${core.ApiClient.instance.wsBaseUrl}/ws/driver/$rideId');
+    final uri =
+        Uri.parse('${core.ApiClient.instance.wsBaseUrl}/ws/driver/$rideId');
     final ws = core.WsClient(
       onMessage: _onSocketMessage,
       tokenProvider: core.SecureStorage.instance.readToken,
@@ -454,7 +457,9 @@ class GpsStreamNotifier extends StateNotifier<GpsStreamStatus> {
 
   void _onSocketError(Object error) {
     if (error is FormatException) return; // bad frame; the link itself is fine
-    if (state == GpsStreamStatus.starting) _setIfActive(GpsStreamStatus.degraded);
+    if (state == GpsStreamStatus.starting) {
+      _setIfActive(GpsStreamStatus.degraded);
+    }
   }
 
   void _onPositionError(Object error, StackTrace stack) {

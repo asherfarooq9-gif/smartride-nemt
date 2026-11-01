@@ -26,7 +26,8 @@ class EarningsScreen extends ConsumerWidget {
           return Column(
             children: [
               _SummaryCard(
-                totalEarned: (data['total_earned_pkr'] as num?)?.toDouble() ?? 0,
+                totalEarned:
+                    (data['total_earned_pkr'] as num?)?.toDouble() ?? 0,
                 rideCount: (data['ride_count'] as int?) ?? 0,
               ),
               Expanded(
@@ -114,9 +115,7 @@ class _EarningsTile extends StatelessWidget {
           color: isEmergency ? core.kEmergencyRed : core.kDriverPrimary,
         ),
         title: Text(address, maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: completedAt != null
-            ? Text(_formatDate(completedAt))
-            : null,
+        subtitle: completedAt != null ? Text(_formatDate(completedAt)) : null,
         trailing: Text(
           'PKR ${fare.toStringAsFixed(0)}',
           style: const TextStyle(

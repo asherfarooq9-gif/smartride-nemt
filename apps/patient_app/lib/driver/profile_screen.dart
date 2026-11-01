@@ -32,7 +32,8 @@ class DriverProfileScreen extends ConsumerStatefulWidget {
   const DriverProfileScreen({super.key});
 
   @override
-  ConsumerState<DriverProfileScreen> createState() => _DriverProfileScreenState();
+  ConsumerState<DriverProfileScreen> createState() =>
+      _DriverProfileScreenState();
 }
 
 class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
@@ -104,9 +105,11 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
                 const SizedBox(height: core.kSpaceLG),
                 _field(_licenseCtrl, 'License number', Icons.badge),
                 const SizedBox(height: core.kSpaceLG),
-                _field(_vehicleModelCtrl, 'Vehicle model', Icons.directions_car),
+                _field(
+                    _vehicleModelCtrl, 'Vehicle model', Icons.directions_car),
                 const SizedBox(height: core.kSpaceLG),
-                _field(_vehiclePlateCtrl, 'Vehicle plate', Icons.confirmation_number),
+                _field(_vehiclePlateCtrl, 'Vehicle plate',
+                    Icons.confirmation_number),
                 if (!_editing) ...[
                   const SizedBox(height: core.kSpaceXL),
                   const Divider(),
@@ -171,9 +174,11 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
     if (!_formKey.currentState!.validate()) return;
     final ok = await ref.read(_updateProvider.notifier).update(
           core.DriverUpdate(
-            fullName: _nameCtrl.text.trim().isEmpty ? null : _nameCtrl.text.trim(),
-            licenseNumber:
-                _licenseCtrl.text.trim().isEmpty ? null : _licenseCtrl.text.trim(),
+            fullName:
+                _nameCtrl.text.trim().isEmpty ? null : _nameCtrl.text.trim(),
+            licenseNumber: _licenseCtrl.text.trim().isEmpty
+                ? null
+                : _licenseCtrl.text.trim(),
             vehicleModel: _vehicleModelCtrl.text.trim().isEmpty
                 ? null
                 : _vehicleModelCtrl.text.trim(),

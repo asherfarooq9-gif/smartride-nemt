@@ -103,9 +103,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           if (i == 1) context.go('/rides');
         },
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.history_outlined), selectedIcon: Icon(Icons.history), label: 'My Rides'),
-          NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
+          NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home),
+              label: 'Home'),
+          NavigationDestination(
+              icon: Icon(Icons.history_outlined),
+              selectedIcon: Icon(Icons.history),
+              label: 'My Rides'),
+          NavigationDestination(
+              icon: Icon(Icons.person_outline),
+              selectedIcon: Icon(Icons.person),
+              label: 'Profile'),
         ],
       ),
       appBar: AppBar(
@@ -149,7 +158,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   onCancel: () => setState(() => _editing = false),
                 )
               : _ViewMode(profile: profile),
-
         ),
       ),
     );
@@ -240,10 +248,8 @@ class _ViewMode extends StatelessWidget {
         ]),
         const SizedBox(height: core.kSpaceLG),
         _InfoCard(title: 'Emergency Contact', rows: [
-          _InfoRow(
-              label: 'Name', value: profile.emergencyContactName ?? '—'),
-          _InfoRow(
-              label: 'Phone', value: profile.emergencyContactPhone ?? '—'),
+          _InfoRow(label: 'Name', value: profile.emergencyContactName ?? '—'),
+          _InfoRow(label: 'Phone', value: profile.emergencyContactPhone ?? '—'),
         ]),
         const SizedBox(height: core.kSpaceLG),
         const _QuickLinksCard(),
@@ -334,7 +340,8 @@ class _NavRow extends StatelessWidget {
                     ?.copyWith(fontWeight: FontWeight.w500),
               ),
             ),
-            const Icon(Icons.chevron_right, size: 20, color: core.kTextSecondary),
+            const Icon(Icons.chevron_right,
+                size: 20, color: core.kTextSecondary),
           ],
         ),
       ),
@@ -416,7 +423,10 @@ class _InfoRow extends StatelessWidget {
 
 class _EditForm extends StatelessWidget {
   final GlobalKey<FormState> formKey;
-  final TextEditingController nameCtrl, dobCtrl, mobilityCtrl, ecNameCtrl,
+  final TextEditingController nameCtrl,
+      dobCtrl,
+      mobilityCtrl,
+      ecNameCtrl,
       ecPhoneCtrl;
   final bool isUpdating;
   final VoidCallback onPickDate;

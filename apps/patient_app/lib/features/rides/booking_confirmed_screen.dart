@@ -25,8 +25,7 @@ class BookingConfirmedScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: const Color(0xFFE8F5E9),
                     shape: BoxShape.circle,
-                    border: Border.all(
-                        color: core.kDriverPrimary, width: 2),
+                    border: Border.all(color: core.kDriverPrimary, width: 2),
                   ),
                   child: const Icon(
                     Icons.check,
@@ -67,8 +66,7 @@ class BookingConfirmedScreen extends StatelessWidget {
                   children: [
                     _DetailRow(
                         label: 'Booking ID',
-                        value:
-                            '#SR-${rideId.substring(0, 6).toUpperCase()}'),
+                        value: '#SR-${rideId.substring(0, 6).toUpperCase()}'),
                     const Divider(height: core.kSpaceXL),
                     const _DetailRow(
                         label: 'Pickup', value: 'Current location'),
@@ -119,12 +117,10 @@ class _DetailRow extends StatelessWidget {
         children: [
           Text(label,
               style: const TextStyle(
-                  color: core.kTextSecondary,
-                  fontSize: core.kFontSM)),
+                  color: core.kTextSecondary, fontSize: core.kFontSM)),
           Text(value,
               style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: core.kFontSM)),
+                  fontWeight: FontWeight.w600, fontSize: core.kFontSM)),
         ],
       );
 }

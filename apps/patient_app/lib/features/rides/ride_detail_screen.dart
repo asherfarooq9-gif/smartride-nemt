@@ -5,8 +5,8 @@ import 'package:smartride_core/smartride_core.dart' as core;
 import 'package:patient_app/core/date_format.dart';
 import 'package:patient_app/features/rides/rides_notifier.dart';
 
-final _rideDetailProvider = FutureProvider.autoDispose
-    .family<core.RideDetailResponse, String>(
+final _rideDetailProvider =
+    FutureProvider.autoDispose.family<core.RideDetailResponse, String>(
   (ref, id) => core.getRideDetail(id),
 );
 

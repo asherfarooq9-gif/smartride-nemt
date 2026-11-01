@@ -20,7 +20,9 @@ String formatPkr(num amount) {
 /// Like [formatPkr] with a leading plus for credits.
 String formatSignedPkr(num amount) {
   final text = formatPkr(amount);
-  return amount > 0 && !text.startsWith('−') && text != 'PKR 0' ? '+$text' : text;
+  return amount > 0 && !text.startsWith('−') && text != 'PKR 0'
+      ? '+$text'
+      : text;
 }
 
 /// A ledger row is a credit when it adds money. The sign of the amount decides:

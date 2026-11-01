@@ -24,7 +24,8 @@ void main() {
       }
     });
 
-    test('lets the app see dialer and SMS apps (Android 11+ package visibility)',
+    test(
+        'lets the app see dialer and SMS apps (Android 11+ package visibility)',
         () {
       expect(manifest, contains('android:scheme="tel"'));
       expect(manifest, contains('android:scheme="sms"'));

@@ -11,7 +11,8 @@ void main() {
     });
 
     test('ignores acks, pings and malformed frames', () {
-      expect(isRideEndedMessage({'ack': true, 'lat': 1.0, 'lng': 2.0}), isFalse);
+      expect(
+          isRideEndedMessage({'ack': true, 'lat': 1.0, 'lng': 2.0}), isFalse);
       expect(isRideEndedMessage({'event': 'ping'}), isFalse);
       expect(isRideEndedMessage({'error': 'invalid or too frequent update'}),
           isFalse);
@@ -28,7 +29,8 @@ void main() {
       }
     });
 
-    test('a ride handed back to the queue is not over for the dispatch loop,'
+    test(
+        'a ride handed back to the queue is not over for the dispatch loop,'
         ' but it is no longer this driver\'s', () {
       expect(rideHasEnded(core.RideStatus.pending), isFalse);
       expect(rideLeftThisDriver(core.RideStatus.pending), isTrue);

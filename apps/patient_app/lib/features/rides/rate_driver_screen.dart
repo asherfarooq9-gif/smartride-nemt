@@ -28,10 +28,14 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
       await core.rateRide(
         widget.rideId,
         _rating,
-        comment: _commentCtrl.text.trim().isEmpty ? null : _commentCtrl.text.trim(),
+        comment:
+            _commentCtrl.text.trim().isEmpty ? null : _commentCtrl.text.trim(),
       );
       if (!mounted) return;
-      setState(() { _submitting = false; _submitted = true; });
+      setState(() {
+        _submitting = false;
+        _submitted = true;
+      });
     } on core.AppError catch (e) {
       _failed(e.message);
     } on Exception catch (e, st) {
@@ -56,14 +60,16 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
         title: const Text('Rate Your Driver'),
         automaticallyImplyLeading: false,
       ),
-      body: _submitted ? _SuccessView(onDone: () => context.go('/')) : _RatingForm(
-        rating: _rating,
-        commentCtrl: _commentCtrl,
-        submitting: _submitting,
-        onRatingChanged: (v) => setState(() => _rating = v),
-        onSubmit: _submit,
-        onSkip: () => context.go('/'),
-      ),
+      body: _submitted
+          ? _SuccessView(onDone: () => context.go('/'))
+          : _RatingForm(
+              rating: _rating,
+              commentCtrl: _commentCtrl,
+              submitting: _submitting,
+              onRatingChanged: (v) => setState(() => _rating = v),
+              onSubmit: _submit,
+              onSkip: () => context.go('/'),
+            ),
     );
   }
 }
@@ -96,18 +102,25 @@ class _RatingForm extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: core.kSpaceXL),
-          const Icon(Icons.directions_car, size: 72, color: core.kPatientPrimary),
+          const Icon(Icons.directions_car,
+              size: 72, color: core.kPatientPrimary),
           const SizedBox(height: core.kSpaceLG),
           Text(
             'How was your ride?',
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(context)
+                .textTheme
+                .headlineSmall
+                ?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: core.kSpaceSM),
           Text(
             _labels[ratingInt - 1],
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: core.kTextSecondary),
+            style: Theme.of(context)
+                .textTheme
+                .bodyLarge
+                ?.copyWith(color: core.kTextSecondary),
           ),
           const SizedBox(height: core.kSpaceXL),
           Row(
@@ -122,7 +135,9 @@ class _RatingForm extends StatelessWidget {
                     minWidth: core.kMinTapTarget,
                     minHeight: core.kMinTapTarget),
                 icon: Icon(
-                  star <= ratingInt ? Icons.star_rounded : Icons.star_outline_rounded,
+                  star <= ratingInt
+                      ? Icons.star_rounded
+                      : Icons.star_outline_rounded,
                   size: 40,
                   color: star <= ratingInt ? Colors.amber : core.kBorder,
                 ),
@@ -171,11 +186,15 @@ class _SuccessView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.check_circle_outline, size: 80, color: core.kPatientPrimary),
+            const Icon(Icons.check_circle_outline,
+                size: 80, color: core.kPatientPrimary),
             const SizedBox(height: core.kSpaceLG),
             Text(
               'Thank you!',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: core.kSpaceSM),
             const Text(
