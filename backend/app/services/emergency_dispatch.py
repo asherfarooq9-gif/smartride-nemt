@@ -644,3 +644,71 @@ async def prealert_hospital_for_accepted_ride(ride_id: str) -> bool:
         metrics.dispatch_failures_total.labels(reason="hospital_not_prealerted").inc()
         log.error("hospital NOT pre-alerted after manual accept ride_id=%s", ride_id)
     return prealerted
+
+
+async def notify_patient_and_family_of_accepted_ride(ride_id: str) -> None:
+    """Tell the patient and the family contact that a driver took the ride by hand.
+
+    Dispatch does this itself for rides it places, so it only runs after a manual
+    accept, where nobody else would. Runs after the accept response, in its own
+    session, and never raises. A message that cannot be delivered is logged and
+    counted; the accept stands.
+    """
+    from app.core.database import AsyncSessionLocal
+
+    try:
+        async with AsyncSessionLocal() as db:
+            ride = (
+                await db.execute(select(Ride).where(Ride.id == ride_id))
+            ).scalar_one_or_none()
+            if ride is None or ride.driver_id is None:
+                return
+            driver_row = (
+                await db.execute(select(Driver).where(Driver.id == ride.driver_id))
+            ).scalar_one()
+            hospital_name = None
+            if ride.hospital_id is not None:
+                hospital_name = (
+                    await db.execute(
+                        select(Hospital.name).where(Hospital.id == ride.hospital_id)
+                    )
+                ).scalar_one_or_none()
+            row = await load_patient(db, ride.patient_id)
+            patient = PatientInfo(
+                id=row.id,
+                user_id=row.user_id,
+                full_name=row.full_name,
+                emergency_contact_phone=row.emergency_contact_phone,
+            )
+            driver = DriverInfo(
+                id=driver_row.id,
+                user_id=driver_row.user_id,
+                full_name=driver_row.full_name,
+                vehicle_plate=driver_row.vehicle_plate,
+            )
+            pushed = await notify_user(
+                db,
+                patient_id=ride.patient_id,
+                title="Driver Assigned",
+                body=f"{driver.full_name} ({driver.vehicle_plate}) is on the way!",
+                data={"ride_id": str(ride.id)},
+            )
+            await db.commit()  # end the transaction before the SMS call
+        texted = await send_family_sms(
+            patient=patient,
+            ride=ride,
+            driver=driver,
+            hospital_name=hospital_name or "hospital",
+        )
+    except Exception as exc:
+        log.error(
+            "accept notifications crashed ride_id=%s (%s)", ride_id, type(exc).__name__
+        )
+        metrics.dispatch_failures_total.labels(reason="patient_not_notified").inc()
+        return
+    if not pushed:
+        metrics.dispatch_failures_total.labels(reason="patient_not_notified").inc()
+        log.warning("patient NOT notified of manual accept ride_id=%s", ride_id)
+    if patient.emergency_contact_phone and not texted:
+        metrics.dispatch_failures_total.labels(reason="family_not_notified").inc()
+        log.warning("family NOT notified of manual accept ride_id=%s", ride_id)

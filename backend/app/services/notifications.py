@@ -170,15 +170,16 @@ def _send_sms(to: str, body: str) -> bool:
         return False
 
 
-async def send_family_sms(*, patient, ride, driver, hospital_name: str) -> None:
+async def send_family_sms(*, patient, ride, driver, hospital_name: str) -> bool:
+    """True only if the family contact was sent a message."""
     if not patient.emergency_contact_phone:
-        return
+        return False
     body = (
         f"SmartRide Alert: {patient.full_name} is being transported to {hospital_name}. "
         f"Driver: {driver.full_name} ({driver.vehicle_plate}). "
         f"Ride ID: {ride.id}"
     )
-    await asyncio.to_thread(_send_sms, patient.emergency_contact_phone, body)
+    return await asyncio.to_thread(_send_sms, patient.emergency_contact_phone, body)
 
 
 async def _post_fhir_bundle(endpoint: str, bundle: dict) -> None:

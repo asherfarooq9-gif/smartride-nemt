@@ -39,7 +39,10 @@ from app.schemas.rides import (
     RideTriageInfo,
 )
 from app.services import idempotency, ride_service
-from app.services.emergency_dispatch import prealert_hospital_for_accepted_ride
+from app.services.emergency_dispatch import (
+    notify_patient_and_family_of_accepted_ride,
+    prealert_hospital_for_accepted_ride,
+)
 from app.services.ride_export import rides_csv_chunks
 
 router = APIRouter()
@@ -375,6 +378,8 @@ async def accept_ride(
         raise HTTPException(403, "Driver not verified")
     ride, hospital_chosen = await ride_service.accept_ride(ride_id, driver, db)
     metrics.rides_accepted_total.inc()
+    # Dispatch did not place this ride, so it never told the patient or family.
+    background.add_task(notify_patient_and_family_of_accepted_ride, str(ride.id))
     if hospital_chosen:
         # Dispatch did not place this ride, so it never pre-alerted the hospital.
         background.add_task(prealert_hospital_for_accepted_ride, str(ride.id))
