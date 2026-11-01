@@ -131,7 +131,7 @@ class _EarningsTile extends StatelessWidget {
     try {
       final dt = DateTime.parse(iso).toLocal();
       return '${dt.day}/${dt.month}/${dt.year}';
-    } catch (_) {
+    } on FormatException {
       return iso;
     }
   }
