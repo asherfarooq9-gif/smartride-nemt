@@ -72,13 +72,50 @@ class _HomeMapState extends ConsumerState<HomeMap> {
   bool _isMapReady = false;
   bool _hasCentered = false;
 
+  /// Where the phone last saw itself. It lets the map open in the right place
+  /// while the accurate fix, which can take seconds, is still on its way.
+  LatLng? _lastKnown;
+  bool _hasMovedToLastKnown = false;
+
   @override
   void initState() {
     super.initState();
     // After the first frame so the provider is not modified during build.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) ref.read(patientLocationProvider.notifier).refresh();
+      if (!mounted) return;
+      ref.read(patientLocationProvider.notifier).refresh();
+      _loadLastKnown();
     });
+  }
+
+  Future<void> _loadLastKnown() async {
+    try {
+      final position = await ref.read(lastKnownPositionProvider)();
+      if (!mounted || position == null) return;
+      _lastKnown = LatLng(position.latitude, position.longitude);
+      _centerOnLastKnown();
+    } on Exception catch (e, st) {
+      ErrorReporter.report('Could not read the last known location', e, st);
+    }
+  }
+
+  /// Moves to the last known spot, unless the accurate fix already centred the
+  /// map (or this has already happened).
+  void _centerOnLastKnown() {
+    final spot = _lastKnown;
+    if (spot == null || _hasCentered || _hasMovedToLastKnown || !_isMapReady) {
+      return;
+    }
+    _hasMovedToLastKnown = true;
+    widget.controller.move(
+      centerAboveSheet(
+        widget.controller.camera,
+        spot,
+        kLocatedMapZoom,
+        sheetFraction: widget.sheetFraction,
+      ),
+      kLocatedMapZoom,
+    );
   }
 
   void _centerOnce(PatientLocation location) {
@@ -97,8 +134,8 @@ class _HomeMapState extends ConsumerState<HomeMap> {
   }
 
   /// The colourful English map, or the plain gray English one if the style
-  /// cannot be loaded (offline, or the service is down). While it loads the map
-  /// shows only its background colour.
+  /// cannot be loaded (offline, or the service is down). The gray map also
+  /// shows while the colourful style loads, so the map is never blank.
   List<Widget> _basemap(bool isDark) {
     return ref.watch(englishMapStyleProvider(isDark)).when(
           data: (style) => [
@@ -112,7 +149,7 @@ class _HomeMapState extends ConsumerState<HomeMap> {
               tileOffset: TileOffset.mapbox,
             ),
           ],
-          loading: () => const [],
+          loading: () => englishTileLayers(dark: isDark),
           error: (_, __) => englishTileLayers(dark: isDark),
         );
   }
@@ -149,6 +186,7 @@ class _HomeMapState extends ConsumerState<HomeMap> {
         onMapReady: () {
           _isMapReady = true;
           _centerOnce(ref.read(patientLocationProvider));
+          _centerOnLastKnown();
         },
       ),
       children: [

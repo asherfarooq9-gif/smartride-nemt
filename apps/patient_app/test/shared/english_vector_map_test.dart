@@ -78,4 +78,65 @@ void main() {
 
     expect(original, _style());
   });
+
+  group('awaitBothKeepingFirstError', () {
+    Future<int> failsWith(Object error) async {
+      await Future<void>.delayed(const Duration(milliseconds: 1));
+      throw error;
+    }
+
+    test('returns both results', () async {
+      final (a, b) = await awaitBothKeepingFirstError(
+        Future.value(1),
+        Future.value('two'),
+      );
+
+      expect((a, b), (1, 'two'));
+    });
+
+    test('rethrows the original error, not a ParallelWaitError', () async {
+      await expectLater(
+        awaitBothKeepingFirstError(
+          failsWith(StateError('style 503')),
+          Future.value('ok'),
+        ),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('keeps the original stack trace', () async {
+      try {
+        await awaitBothKeepingFirstError(Future.value(1), failsWith('boom'));
+        fail('should have thrown');
+      } catch (e, st) {
+        expect(e, 'boom');
+        expect(st.toString(), contains('failsWith'));
+      }
+    });
+
+    test('when both fail, the first one is reported', () async {
+      await expectLater(
+        awaitBothKeepingFirstError(
+          failsWith(StateError('first')),
+          failsWith(ArgumentError('second')),
+        ),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('waits for the slower future even when one has failed', () async {
+      var slowFinished = false;
+      final slow = Future<int>.delayed(const Duration(milliseconds: 30), () {
+        slowFinished = true;
+        return 2;
+      });
+
+      await expectLater(
+        awaitBothKeepingFirstError(failsWith(StateError('x')), slow),
+        throwsA(isA<StateError>()),
+      );
+
+      expect(slowFinished, isTrue);
+    });
+  });
 }

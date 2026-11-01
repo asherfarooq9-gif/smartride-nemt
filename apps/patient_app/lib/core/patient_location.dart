@@ -72,6 +72,23 @@ class GeolocatorGateway implements LocationGateway {
 final locationGatewayProvider =
     Provider<LocationGateway>((ref) => const GeolocatorGateway());
 
+/// The position the phone last saw, read without waiting for a fresh GPS fix
+/// (which can take seconds). Null when there is none or location is not
+/// allowed. Never shows a permission prompt. A function, so tests can fake it.
+final lastKnownPositionProvider = Provider<Future<Position?> Function()>(
+  (ref) => () async {
+    try {
+      return await Geolocator.getLastKnownPosition();
+    } on PermissionDeniedException {
+      return null;
+    } on LocationServiceDisabledException {
+      return null;
+    } on UnsupportedError {
+      return null; // The web has no last known position.
+    }
+  },
+);
+
 final patientLocationProvider =
     StateNotifierProvider<PatientLocationNotifier, PatientLocation>(
   (ref) => PatientLocationNotifier(ref.watch(locationGatewayProvider)),

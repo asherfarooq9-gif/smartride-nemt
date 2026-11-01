@@ -1,7 +1,9 @@
+import 'dart:async' as async show AsyncError;
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:patient_app/shared/map_style_cache.dart';
 import 'package:vector_map_tiles/vector_map_tiles.dart';
 import 'package:vector_tile_renderer/vector_tile_renderer.dart' as vtr;
 
@@ -54,23 +56,48 @@ class EnglishMapStyle {
   final SpriteStyle? sprites;
 }
 
-Future<EnglishMapStyle> loadEnglishMapStyle(String uri) async {
-  // The package resolves the tile sources and the icon sprites...
-  final style = await StyleReader(uri: uri).read();
-  // ...but builds its theme from the unpatched style, so build ours from a
-  // patched copy of the same style.
-  final response = await http.get(Uri.parse(uri));
-  if (response.statusCode != 200) {
-    throw StateError('Map style ${response.statusCode}: $uri');
+/// Waits for both futures, which run at the same time. If either fails, the
+/// original error is rethrown with its own stack trace, not the
+/// [ParallelWaitError] wrapper that `.wait` produces. Both futures are always
+/// waited for, so neither is left to fail unobserved.
+Future<(A, B)> awaitBothKeepingFirstError<A, B>(
+  Future<A> first,
+  Future<B> second,
+) async {
+  try {
+    return await (first, second).wait;
+  } on ParallelWaitError<dynamic, dynamic> catch (e) {
+    final errors = e.errors as (async.AsyncError?, async.AsyncError?);
+    final failure = errors.$1 ?? errors.$2;
+    if (failure == null) rethrow;
+    Error.throwWithStackTrace(failure.error, failure.stackTrace);
   }
-  final patched = withEnglishLabels(
-    jsonDecode(response.body) as Map<String, dynamic>,
-  );
-  return EnglishMapStyle(
-    theme: vtr.ThemeReader().read(patched),
-    providers: style.providers,
-    sprites: style.sprites,
-  );
+}
+
+/// Every download here goes through a short disk cache, so a relaunch within
+/// [kMapStyleCacheTtl] does not wait for the network again.
+Future<EnglishMapStyle> loadEnglishMapStyle(String uri) {
+  return withMapStyleCache(() async {
+    // The package resolves the tile sources and the icon sprites, but builds
+    // its theme from the unpatched style, so we also fetch the same style to
+    // patch. Started together: one after the other, the second download only
+    // added its latency.
+    final (style, response) = await awaitBothKeepingFirstError(
+      StyleReader(uri: uri).read(),
+      http.get(Uri.parse(uri)),
+    );
+    if (response.statusCode != 200) {
+      throw StateError('Map style ${response.statusCode}: $uri');
+    }
+    final patched = withEnglishLabels(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
+    return EnglishMapStyle(
+      theme: vtr.ThemeReader().read(patched),
+      providers: style.providers,
+      sprites: style.sprites,
+    );
+  });
 }
 
 /// The style for light or dark mode, fetched once per app run.
