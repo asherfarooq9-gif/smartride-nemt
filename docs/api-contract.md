@@ -434,7 +434,7 @@ models live in `backend/app/schemas/`.
 | `GET /rides/mine` | any user | Rides of the caller |
 | `GET /rides/{id}/detail` | admin, owner patient, assigned driver | Ride with driver, hospital and timeline. The driver sees the patient's phone and mobility needs only while the ride is active |
 | `GET /rides/pending` | verified driver | Unassigned rides near the driver |
-| `POST /rides/{id}/accept` | verified driver | Atomic claim; `409` if taken. When accepting chooses the hospital, the hospital is pre-alerted afterwards |
+| `POST /rides/{id}/accept` | verified driver | Atomic claim; `409` if taken. Afterwards the patient is pushed and the family contact is texted; when accepting chooses the hospital, it is pre-alerted too. A scheduled ride is not open until it is inside the dispatch lead window (`409` before that) |
 | `POST /rides/{id}/rate` | patient | Rate a completed ride (1-5) |
 | `GET /rides` | admin | Paged list with filters |
 | `GET /rides/export.csv` | admin | CSV export |
