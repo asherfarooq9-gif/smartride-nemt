@@ -1,10 +1,10 @@
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from math import atan2, ceil, cos, radians, sin, sqrt
 from typing import Optional
 
 from fastapi import HTTPException
-from sqlalchemy import select, func, and_, exists, update
+from sqlalchemy import select, func, and_, exists, or_, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -511,8 +511,21 @@ async def rate_completed_ride(
     return await get_ride_by_id(ride_id, db)
 
 
+def _dispatch_lead_cutoff() -> datetime:
+    """A scheduled ride is open to drivers once its time is before this moment.
+
+    The same lead the dispatch loop uses to start placing a scheduled ride.
+    """
+    return datetime.now(timezone.utc) + timedelta(
+        minutes=settings.SCHEDULED_DISPATCH_LEAD_MINUTES
+    )
+
+
 async def get_pending_rides(driver: Driver, db: AsyncSession) -> list[Ride]:
     """Unassigned pending rides within DRIVER_SEARCH_RADIUS_KM of the driver, nearest first.
+
+    A ride booked for later stays hidden until it is inside the dispatch lead
+    window, so a driver cannot take a ride days before it is due.
 
     A driver with no known location gets an empty list: showing every pending
     ride in the country would hand out patients' pickup points to drivers who
@@ -523,6 +536,7 @@ async def get_pending_rides(driver: Driver, db: AsyncSession) -> list[Ride]:
     lat, lng = driver.current_lat, driver.current_lng
     dlat = settings.DRIVER_SEARCH_RADIUS_KM / 111.0
     dlng = dlat / max(cos(radians(lat)), 0.01)
+    cutoff = _dispatch_lead_cutoff()
     rows = (
         (
             await db.execute(
@@ -531,6 +545,7 @@ async def get_pending_rides(driver: Driver, db: AsyncSession) -> list[Ride]:
                     and_(
                         Ride.status == RideStatus.pending,
                         Ride.driver_id.is_(None),
+                        or_(Ride.scheduled_for.is_(None), Ride.scheduled_for <= cutoff),
                         Ride.pickup_lat.between(lat - dlat, lat + dlat),
                         Ride.pickup_lng.between(lng - dlng, lng + dlng),
                     )
@@ -572,6 +587,20 @@ async def _ensure_driver_is_near(
     )
     if km > settings.DRIVER_SEARCH_RADIUS_KM:
         raise HTTPException(403, "This ride is too far from you")
+
+
+async def _ensure_ride_is_open(ride_id: str, db: AsyncSession) -> None:
+    """Refuse a scheduled ride that is not yet inside the dispatch lead window.
+
+    Without this a driver could take a ride booked for next week, be stuck as
+    driver_assigned for days, and be dropped when the acknowledgement times out.
+    A missing ride is left for the later 404.
+    """
+    scheduled_for = (
+        await db.execute(select(Ride.scheduled_for).where(Ride.id == ride_id))
+    ).scalar_one_or_none()
+    if scheduled_for is not None and scheduled_for > _dispatch_lead_cutoff():
+        raise HTTPException(409, "This ride is booked for later and is not open yet")
 
 
 async def _hospital_placement(ride_id: str, db: AsyncSession) -> dict:
@@ -623,6 +652,7 @@ async def accept_ride(
         raise HTTPException(403, "You cannot accept your own ride")
 
     await _ensure_driver_is_near(ride_id, driver, db)
+    await _ensure_ride_is_open(ride_id, db)
     placement = await _hospital_placement(ride_id, db)
 
     # Claim the driver first: only an available driver may take a ride, and two
