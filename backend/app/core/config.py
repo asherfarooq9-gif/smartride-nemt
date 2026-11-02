@@ -79,7 +79,7 @@ class Settings(BaseSettings):
     # queries and every open dashboard polls it). 0 turns the cache off.
     SUMMARY_CACHE_SECONDS: int = 15
     # Drivers farther than this from the pickup are not considered for dispatch
-    DRIVER_SEARCH_RADIUS_KM: float = 50.0
+    DRIVER_SEARCH_RADIUS_KM: float = 10.0
     # Fares (flat base + per km) and the platform's share of each fare
     FARE_BASE_PKR: float = 200.0
     FARE_PER_KM_PKR: float = 40.0
