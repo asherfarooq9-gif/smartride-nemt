@@ -11,7 +11,6 @@ import 'package:patient_app/core/patient_location.dart';
 import 'package:patient_app/core/providers.dart';
 import 'package:patient_app/driver/dashboard_notifier.dart';
 import 'package:patient_app/driver/dashboard_screen.dart';
-import 'package:patient_app/driver/driver_home_controls.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 
 /// A 1x1 transparent PNG, so tests never touch the network.
@@ -109,6 +108,8 @@ Future<void> _show(
     ),
     for (final path in [
       '/driver/earnings',
+      '/driver/demand',
+      '/driver/history',
       '/driver/wallet',
       '/driver/settings',
       '/driver/profile',
@@ -123,6 +124,7 @@ Future<void> _show(
     overrides: [
       locationGatewayProvider.overrideWithValue(_NoLocation()),
       rolesProvider.overrideWith((ref) => const ['driver']),
+      activeRoleProvider.overrideWith((ref) => 'driver'),
       notificationsProvider.overrideWith(
         (ref, portal) =>
             NotificationsNotifier(portal, incoming: const Stream.empty()),
@@ -200,44 +202,25 @@ DashboardState _state({
 
 void main() {
   group('an online, verified driver sees the real figures', () {
-    testWidgets('greeting, earnings, rating, wallet and shortcuts',
+    testWidgets('home is minimal: greeting, availability and requests only',
         (tester) async {
       await _show(tester, _state());
 
       expect(find.textContaining('Asher Khan'), findsOneWidget);
       expect(find.text("Stay safe. You're on the road."), findsOneWidget);
-      expect(find.text("Today's Earnings"), findsOneWidget);
-      expect(find.text('PKR 2,340'), findsOneWidget);
-      expect(find.text('4.8'), findsOneWidget);
-      expect(find.text('Wallet Balance'), findsOneWidget);
-      expect(find.text('PKR 1,250'), findsOneWidget);
       expect(find.text("You're Online"), findsOneWidget);
       expect(find.text('Go Offline'), findsOneWidget);
-      for (final title in [
-        'Ride Requests',
-        'Navigation',
-        'Earnings',
-        'Settings',
-      ]) {
-        expect(find.text(title), findsWidgets, reason: title);
-      }
       expect(find.text('Verification pending'), findsNothing);
+      // Moved to the sidebar: none of these crowd the home screen any more.
+      expect(find.text("Today's Earnings"), findsNothing);
+      expect(find.text('Wallet Balance'), findsNothing);
+      expect(find.text('Busiest around'), findsNothing);
     });
 
-    testWidgets('the tab bar has Home, Earnings and Profile', (tester) async {
+    testWidgets('there is no bottom tab bar', (tester) async {
       await _show(tester, _state());
 
-      expect(find.byType(NavigationBar), findsOneWidget);
-      expect(find.text('Home'), findsOneWidget);
-      expect(find.text('Profile'), findsOneWidget);
-    });
-
-    testWidgets('a driver with no rating yet sees a dash, not an invented one',
-        (tester) async {
-      await _show(tester, _state(driver: _driver(rating: null)));
-
-      expect(find.text('—'), findsOneWidget);
-      expect(find.text('4.8'), findsNothing);
+      expect(find.byType(NavigationBar), findsNothing);
     });
 
     testWidgets('the wallet turns red and says so when the balance is low',
@@ -411,27 +394,46 @@ void main() {
     });
   });
 
-  group('shortcuts', () {
-    testWidgets('Earnings and Settings open their screens', (tester) async {
-      await _show(tester, _state());
-
-      await tester.tap(find.text('Settings'));
+  group('the sidebar', () {
+    Future<void> openDrawer(WidgetTester tester) async {
+      tester.state<ScaffoldState>(find.byType(Scaffold).first).openDrawer();
       await tester.pumpAndSettle();
-      expect(find.text('opened /driver/settings'), findsOneWidget);
+    }
+
+    testWidgets('lists the driver sections', (tester) async {
+      await _show(tester, _state());
+      await openDrawer(tester);
+
+      for (final title in [
+        'Earnings',
+        'Demand Forecast',
+        'Wallet',
+        'Ride History',
+        'Profile',
+        'Settings',
+      ]) {
+        expect(find.text(title), findsOneWidget, reason: title);
+      }
     });
 
-    testWidgets('Navigation with no ride in progress explains itself',
+    testWidgets('each entry opens its screen', (tester) async {
+      for (final (title, path) in const [
+        ('Earnings', '/driver/earnings'),
+        ('Demand Forecast', '/driver/demand'),
+        ('Wallet', '/driver/wallet'),
+        ('Settings', '/driver/settings'),
+      ]) {
+        await _show(tester, _state());
+        await openDrawer(tester);
+        await tester.tap(find.text(title));
+        await tester.pumpAndSettle();
+        expect(find.text('opened $path'), findsOneWidget, reason: title);
+      }
+    });
+
+    testWidgets('Top Up on the low-balance card opens the wallet',
         (tester) async {
-      await _show(tester, _state());
-
-      await tester.tap(find.text('Navigation'));
-      await tester.pump();
-
-      expect(find.text('Accept a ride to start navigation'), findsOneWidget);
-    });
-
-    testWidgets('Top Up opens the wallet', (tester) async {
-      await _show(tester, _state());
+      await _show(tester, _state(driver: _driver(wallet: 120)));
 
       await tester.tap(find.text('Top Up'));
       await tester.pumpAndSettle();
@@ -449,7 +451,6 @@ void main() {
       expect(find.text('Loading your account'), findsOneWidget);
       expect(find.text("You're Offline"), findsNothing);
       expect(find.text('PKR 0'), findsNothing, reason: 'nothing is made up');
-      expect(find.text('—'), findsWidgets);
       expect(find.byType(CircularProgressIndicator), findsWidgets);
     });
 
@@ -486,15 +487,15 @@ void main() {
     });
   });
 
-  group('the tab bar and the sheet', () {
+  group('the sheet', () {
     for (final size in const [
       Size(360, 800),
       Size(393, 852),
       Size(430, 932),
     ]) {
       testWidgets(
-          'the sheet ends at the tab bar, not behind it, at '
-          '${size.width.toInt()}x${size.height.toInt()}', (tester) async {
+          'stays on screen at ${size.width.toInt()}x${size.height.toInt()}',
+          (tester) async {
         await _show(
           tester,
           _state(driver: _driver(status: core.DriverStatus.offline)),
@@ -502,17 +503,13 @@ void main() {
           open: false,
         );
 
-        // The sheet ends where the bar begins: nothing in it can be behind the
-        // bar, whatever the content, and long content scrolls instead.
-        final navTop = tester.getRect(find.byType(NavigationBar)).top;
         final sheet =
             tester.getRect(find.byKey(const ValueKey('driver-sheet')));
-        expect(sheet.bottom, lessThanOrEqualTo(navTop));
+        expect(sheet.bottom, lessThanOrEqualTo(size.height));
       });
     }
 
-    testWidgets('Go Online is fully above the tab bar and can be tapped',
-        (tester) async {
+    testWidgets('Go Online is on screen and can be tapped', (tester) async {
       await _show(
         tester,
         _state(driver: _driver(status: core.DriverStatus.offline)),
@@ -520,9 +517,7 @@ void main() {
         open: false,
       );
 
-      final button = tester.getRect(find.text('Go Online'));
-      final navTop = tester.getRect(find.byType(NavigationBar)).top;
-      expect(button.bottom, lessThan(navTop));
+      expect(tester.getRect(find.text('Go Online')).bottom, lessThan(852));
 
       await tester.tap(find.text('Go Online'));
       await tester.pump();
@@ -559,29 +554,11 @@ void main() {
       });
     }
 
-    testWidgets('the four shortcut cards keep a real, tappable height',
-        (tester) async {
-      await _show(tester, _state());
-
-      final cards = find.byType(DriverActionCard);
-      expect(cards, findsNWidgets(4));
-      for (var i = 0; i < 4; i++) {
-        expect(
-          tester.getSize(cards.at(i)).height,
-          greaterThanOrEqualTo(48),
-          reason: 'card $i collapsed',
-        );
-      }
-    });
-
-    testWidgets('the greeting and tab bar are not hidden by each other',
-        (tester) async {
+    testWidgets('the greeting is on screen', (tester) async {
       await _show(tester, _state(), open: false);
 
-      final nav = tester.getRect(find.byType(NavigationBar));
-      expect(nav.bottom, lessThanOrEqualTo(852));
       final greeting = tester.getRect(find.textContaining('Asher Khan'));
-      expect(greeting.bottom, lessThan(nav.top));
+      expect(greeting.bottom, lessThanOrEqualTo(852));
     });
   });
 }

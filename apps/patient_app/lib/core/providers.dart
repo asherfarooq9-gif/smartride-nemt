@@ -189,10 +189,6 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
   }
 }
 
-// ── City (driver portal) ───────────────────────────────────────────────────────
-
-final cityProvider = StateProvider<String>((ref) => 'Islamabad');
-
 // ── Saved Places ──────────────────────────────────────────────────────────────
 
 const _kSavedPlacesKey = 'saved_places_v1';

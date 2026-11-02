@@ -9,6 +9,14 @@ import 'package:patient_app/core/providers.dart';
 class PortalDrawer extends ConsumerWidget {
   const PortalDrawer({super.key});
 
+  /// What the driver reaches from the menu, so the home screen can stay bare.
+  static const _driverSections = [
+    (Icons.payments_outlined, 'Earnings', '/driver/earnings'),
+    (Icons.trending_up_rounded, 'Demand Forecast', '/driver/demand'),
+    (Icons.account_balance_wallet_outlined, 'Wallet', '/driver/wallet'),
+    (Icons.history_rounded, 'Ride History', '/driver/history'),
+  ];
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final roles = ref.watch(rolesProvider);
@@ -76,36 +84,15 @@ class PortalDrawer extends ConsumerWidget {
                     style: TextStyle(fontWeight: FontWeight.w600)),
                 subtitle: Text('Current portal'),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'City',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: core.kTextSecondary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        for (final city in ['Islamabad', 'Rawalpindi'])
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: ChoiceChip(
-                              label: Text(city),
-                              selected: ref.watch(cityProvider) == city,
-                              onSelected: (_) =>
-                                  ref.read(cityProvider.notifier).state = city,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
+              for (final (icon, title, path) in _driverSections)
+                ListTile(
+                  leading: Icon(icon),
+                  title: Text(title),
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.push(path);
+                  },
                 ),
-              ),
             ] else if (hasDriver)
               ListTile(
                 leading: const Icon(Icons.drive_eta_outlined),

@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart';
 import 'package:patient_app/driver/dashboard_notifier.dart';
 import 'package:patient_app/driver/driver_home_sheet.dart';
-import 'package:patient_app/driver/driver_nav_bar.dart';
 import 'package:patient_app/features/rides/home_map.dart';
 import 'package:patient_app/features/rides/home_top_bar.dart';
 import 'package:patient_app/features/rides/map_controls.dart';
@@ -58,23 +57,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return Theme(
       data: AppTheme.patient(dark: isDark),
       child: Scaffold(
-        // The map continues behind the tab bar; the sheet does not (see below).
-        extendBody: true,
         drawer: const PortalDrawer(),
         body: Builder(builder: _body),
-        bottomNavigationBar: const DriverNavBar(),
       ),
     );
   }
 
   Widget _body(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
-    // Everything the tab bar takes: the bar and the system inset under it.
-    final navArea =
-        kDriverNavBarHeight + MediaQuery.viewPaddingOf(context).bottom;
-    // The sheet ends exactly where the bar begins, so no control can ever sit
-    // behind it: content scrolls and is clipped at that edge instead.
-    final sheetBottom = navArea;
+    // The sheet ends at the system inset, so nothing sits behind the gesture bar.
+    final sheetBottom = MediaQuery.viewPaddingOf(context).bottom;
     final sheetRegion = size.height - sheetBottom;
     final isVectorMap = widget.tileLayer == null &&
         ref.watch(isVectorMapShownProvider(

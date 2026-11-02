@@ -22,6 +22,7 @@ import 'package:patient_app/features/support/support_screen.dart';
 // Driver portal
 import 'package:patient_app/driver/dashboard_screen.dart';
 import 'package:patient_app/driver/active_ride_screen.dart';
+import 'package:patient_app/driver/demand_forecast_screen.dart';
 import 'package:patient_app/driver/earnings_screen.dart';
 import 'package:patient_app/driver/profile_screen.dart';
 import 'package:patient_app/driver/wallet_screen.dart';
@@ -117,6 +118,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // ── Driver portal ─────────────────────────────────────────────────────
       GoRoute(path: '/driver', builder: (_, __) => const DashboardScreen()),
       GoRoute(path: '/driver/earnings', builder: (_, __) => const EarningsScreen()),
+      GoRoute(path: '/driver/demand', builder: (_, __) => const DemandForecastScreen()),
       GoRoute(path: '/driver/wallet', builder: (_, __) => const WalletScreen()),
       GoRoute(path: '/driver/top-up', builder: (_, __) => const TopUpScreen()),
       GoRoute(path: '/driver/notifications', builder: (_, __) => const NotificationsScreen(portal: 'driver')),

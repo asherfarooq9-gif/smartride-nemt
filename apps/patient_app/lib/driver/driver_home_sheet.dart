@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 import 'package:patient_app/driver/dashboard_notifier.dart';
-import 'package:patient_app/driver/driver_demand_card.dart';
 import 'package:patient_app/driver/driver_home_cards.dart';
 import 'package:patient_app/driver/driver_home_controls.dart';
 import 'package:patient_app/driver/ride_request_card.dart';
@@ -14,8 +13,7 @@ import 'package:patient_app/shared/glass_surface.dart';
 
 /// Where the sheet starts: every control is in view, the map above it.
 ///
-/// A fraction of the space above the tab bar, not of the whole screen: the sheet
-/// ends where the tab bar begins, so it can never be covered by it.
+/// A fraction of the screen above the system inset.
 const kDriverSheetRestSize = 0.76;
 const _kPeekSize = 0.36;
 const _kFullSize = 0.92;
@@ -23,8 +21,7 @@ const _kSheetOpacity = 0.6;
 const _kSheetBlurSigma = 24.0;
 
 /// The frosted bottom sheet on the driver home screen: greeting, verification
-/// notice, earnings and rating, wallet, availability, shortcuts and the ride
-/// requests. Everything shown comes from [dashboardProvider].
+/// notice, a low-balance wallet warning, availability and the ride requests. Everything shown comes from [dashboardProvider].
 class DriverHomeSheet extends ConsumerStatefulWidget {
   const DriverHomeSheet({
     super.key,
@@ -33,7 +30,7 @@ class DriverHomeSheet extends ConsumerStatefulWidget {
     this.bottomPadding = 0,
   });
 
-  /// Room kept under the last row of the sheet, which ends at the tab bar.
+  /// Room kept under the last row of the sheet.
   final double bottomPadding;
 
   /// Accepts a ride; owned by the screen, which also routes to the ride.
@@ -53,15 +50,6 @@ class _DriverHomeSheetState extends ConsumerState<DriverHomeSheet> {
   void dispose() {
     _sheet.dispose();
     super.dispose();
-  }
-
-  void _openFully() {
-    final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    _sheet.animateTo(
-      _kFullSize,
-      duration: Duration(milliseconds: reduceMotion ? 1 : 320),
-      curve: Curves.easeOutCubic,
-    );
   }
 
   @override
@@ -132,21 +120,16 @@ class _DriverHomeSheetState extends ConsumerState<DriverHomeSheet> {
                 ),
                 const SizedBox(height: 6),
               ],
-              DriverStatsRow(
-                todayEarningsPkr:
-                    dash.driver == null ? null : dash.todayEarningsPkr,
-                rating: dash.driver?.rating,
-              ),
-              const SizedBox(height: 6),
-              WalletCard(
-                balancePkr: dash.driver?.walletBalancePkr,
-                isLowBalance: dash.driver?.isLowBalance ?? false,
-              ),
-              const SizedBox(height: 6),
+              // The wallet only speaks up when it needs a top-up; earnings,
+              // demand and the rest live in the sidebar.
+              if (dash.driver?.isLowBalance ?? false) ...[
+                WalletCard(
+                  balancePkr: dash.driver?.walletBalancePkr,
+                  isLowBalance: true,
+                ),
+                const SizedBox(height: 6),
+              ],
               const AvailabilityCard(),
-              const SizedBox(height: 6),
-              const DriverDemandSection(),
-              DriverActionsGrid(onShowRequests: _openFully),
               const SizedBox(height: core.kSpaceSM),
               const GoOnlineButton(),
               const SizedBox(height: core.kSpaceMD),
