@@ -16,8 +16,20 @@ def _count(reason: str) -> float:
     return metrics.dispatch_failures_total.labels(reason=reason)._value.get()
 
 
-async def _accept(client: AsyncClient, driver_token: str, phone: str):
+async def _accept(
+    client: AsyncClient,
+    driver_token: str,
+    phone: str,
+    contact_phone: str | None = None,
+):
     patient_token = await _register(client, phone, "patient")
+    if contact_phone:
+        saved = await client.patch(
+            "/api/v1/patients/me",
+            json={"emergency_contact_phone": contact_phone},
+            headers={"Authorization": f"Bearer {patient_token}"},
+        )
+        assert saved.status_code == 200, saved.text
     ride_id = await _create_emergency(client, patient_token)
     response = await client.post(
         f"/api/v1/rides/{ride_id}/accept",
@@ -89,3 +101,38 @@ async def test_a_rejected_accept_notifies_nobody(client, verified_driver_token):
     assert first.status_code == 200 and second.status_code == 409
     push.assert_awaited_once()
     sms.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_an_unsent_family_sms_is_counted_when_a_contact_exists(
+    client, verified_driver_token
+):
+    family = _count("family_not_notified")
+    patient = _count("patient_not_notified")
+    with (
+        patch(PUSH, new=AsyncMock(return_value=True)),
+        patch(SMS, new=AsyncMock(return_value=False)) as sms,
+    ):
+        _, r = await _accept(
+            client, verified_driver_token, "+92300730205", "+923007302990"
+        )
+
+    assert r.status_code == 200, r.text
+    sms.assert_awaited_once()
+    assert _count("family_not_notified") == family + 1
+    assert _count("patient_not_notified") == patient  # the push did arrive
+
+
+@pytest.mark.asyncio
+async def test_no_family_contact_is_not_counted_as_a_failure(
+    client, verified_driver_token
+):
+    family = _count("family_not_notified")
+    with (
+        patch(PUSH, new=AsyncMock(return_value=True)),
+        patch(SMS, new=AsyncMock(return_value=False)),
+    ):
+        _, r = await _accept(client, verified_driver_token, "+92300730206")
+
+    assert r.status_code == 200, r.text
+    assert _count("family_not_notified") == family
