@@ -1,14 +1,17 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
+import 'package:url_launcher/url_launcher.dart';
 import 'package:patient_app/shared/english_map_tiles.dart';
 import 'package:patient_app/core/providers.dart';
 import 'package:patient_app/driver/dashboard_notifier.dart';
+import 'package:patient_app/driver/navigation_links.dart';
 import 'package:patient_app/driver/ride_events.dart';
 
 final _rideDetailProvider =
@@ -105,6 +108,43 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
         ref.invalidate(_rideDetailProvider(widget.rideId));
         setState(() => _busy = false);
       }
+    }
+  }
+
+  /// Hands the next stop to a maps app. On iOS the driver picks which one.
+  Future<void> _navigate(NavigationTarget target) async {
+    final options = navigationOptions(
+      target.lat,
+      target.lng,
+      platform: defaultTargetPlatform,
+    );
+    final choice = options.length == 1
+        ? options.single
+        : await showModalBottomSheet<NavigationOption>(
+            context: context,
+            builder: (_) => SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final option in options)
+                    ListTile(
+                      leading: const Icon(Icons.navigation_outlined),
+                      title: Text(option.label),
+                      onTap: () => Navigator.pop(context, option),
+                    ),
+                ],
+              ),
+            ),
+          );
+    if (choice == null) return;
+    final opened = await launchUrl(
+      choice.uri,
+      mode: LaunchMode.externalApplication,
+    );
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No maps app could be opened')),
+      );
     }
   }
 
@@ -216,6 +256,7 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
                 busy: _busy,
                 onAdvance: _advance,
                 onCancel: _cancel,
+                onNavigate: _navigate,
               ),
             ],
           );
@@ -255,6 +296,7 @@ class _ActionPanel extends StatelessWidget {
     required this.busy,
     required this.onAdvance,
     required this.onCancel,
+    required this.onNavigate,
   });
 
   final core.RideDetailResponse ride;
@@ -262,6 +304,7 @@ class _ActionPanel extends StatelessWidget {
   final bool busy;
   final Future<void> Function(core.RideStatus) onAdvance;
   final Future<void> Function() onCancel;
+  final Future<void> Function(NavigationTarget) onNavigate;
 
   core.RideStatus? get _nextStatus {
     switch (ride.status) {
@@ -300,6 +343,7 @@ class _ActionPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final next = _nextStatus;
+    final target = navigationTarget(ride);
     return Container(
       padding: const EdgeInsets.all(core.kSpaceLG),
       decoration: BoxDecoration(
@@ -315,6 +359,19 @@ class _ActionPanel extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (target != null) ...[
+            SizedBox(
+              width: double.infinity,
+              height: core.kMinTapTarget,
+              child: OutlinedButton.icon(
+                key: const ValueKey('navigate-button'),
+                onPressed: () => onNavigate(target),
+                icon: const Icon(Icons.navigation_outlined),
+                label: Text(target.label),
+              ),
+            ),
+            const SizedBox(height: core.kSpaceSM),
+          ],
           if (next != null)
             core.PrimaryButton(
               label: _nextLabel,
