@@ -95,6 +95,8 @@ class RideHospitalInfo(BaseModel):
     name: str
     address: str
     city: str
+    lat: float
+    lng: float
 
 
 class RideTriageInfo(BaseModel):

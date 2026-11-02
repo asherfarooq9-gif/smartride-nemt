@@ -312,7 +312,9 @@ def _hospital_info(ride: Ride) -> Optional[RideHospitalInfo]:
     h = ride.hospital
     if not h:
         return None
-    return RideHospitalInfo(name=h.name, address=h.address, city=h.city)
+    return RideHospitalInfo(
+        name=h.name, address=h.address, city=h.city, lat=h.lat, lng=h.lng
+    )
 
 
 def _triage_info(triage, authorized_as: str) -> Optional[RideTriageInfo]:
