@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart' show Position;
 import 'package:latlong2/latlong.dart';
 import 'package:smartride_core/smartride_core.dart';
 import 'package:patient_app/core/patient_location.dart';
@@ -72,10 +74,8 @@ class _HomeMapState extends ConsumerState<HomeMap> {
   bool _isMapReady = false;
   bool _hasCentered = false;
 
-  /// Where the phone last saw itself. It lets the map open in the right place
-  /// while the accurate fix, which can take seconds, is still on its way.
-  LatLng? _lastKnown;
-  bool _hasMovedToLastKnown = false;
+  /// Live GPS fixes while the map is open, so the dot follows the phone.
+  StreamSubscription<Position>? _liveSub;
 
   @override
   void initState() {
@@ -84,38 +84,23 @@ class _HomeMapState extends ConsumerState<HomeMap> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       ref.read(patientLocationProvider.notifier).refresh();
-      _loadLastKnown();
+      _listenLive();
     });
   }
 
-  Future<void> _loadLastKnown() async {
-    try {
-      final position = await ref.read(lastKnownPositionProvider)();
-      if (!mounted || position == null) return;
-      _lastKnown = LatLng(position.latitude, position.longitude);
-      _centerOnLastKnown();
-    } on Exception catch (e, st) {
-      ErrorReporter.report('Could not read the last known location', e, st);
-    }
+  void _listenLive() {
+    _liveSub = ref.read(livePositionStreamProvider)().listen(
+          ref.read(patientLocationProvider.notifier).applyLiveFix,
+          // Permission off or no GPS: the screen already shows that state.
+          onError: (Object e, StackTrace st) =>
+              ErrorReporter.report('Live location stream failed', e, st),
+        );
   }
 
-  /// Moves to the last known spot, unless the accurate fix already centred the
-  /// map (or this has already happened).
-  void _centerOnLastKnown() {
-    final spot = _lastKnown;
-    if (spot == null || _hasCentered || _hasMovedToLastKnown || !_isMapReady) {
-      return;
-    }
-    _hasMovedToLastKnown = true;
-    widget.controller.move(
-      centerAboveSheet(
-        widget.controller.camera,
-        spot,
-        kLocatedMapZoom,
-        sheetFraction: widget.sheetFraction,
-      ),
-      kLocatedMapZoom,
-    );
+  @override
+  void dispose() {
+    _liveSub?.cancel();
+    super.dispose();
   }
 
   void _centerOnce(PatientLocation location) {
@@ -186,7 +171,6 @@ class _HomeMapState extends ConsumerState<HomeMap> {
         onMapReady: () {
           _isMapReady = true;
           _centerOnce(ref.read(patientLocationProvider));
-          _centerOnLastKnown();
         },
       ),
       children: [

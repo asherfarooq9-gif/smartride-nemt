@@ -58,8 +58,8 @@ class GeolocatorGateway implements LocationGateway {
         ),
       );
     } on TimeoutException {
-      // A recent fix is good enough to centre the map.
-      return Geolocator.getLastKnownPosition();
+      // No live fix in time: report none rather than show an old position.
+      return null;
     }
   }
 
@@ -72,21 +72,17 @@ class GeolocatorGateway implements LocationGateway {
 final locationGatewayProvider =
     Provider<LocationGateway>((ref) => const GeolocatorGateway());
 
-/// The position the phone last saw, read without waiting for a fresh GPS fix
-/// (which can take seconds). Null when there is none or location is not
-/// allowed. Never shows a permission prompt. A function, so tests can fake it.
-final lastKnownPositionProvider = Provider<Future<Position?> Function()>(
-  (ref) => () async {
-    try {
-      return await Geolocator.getLastKnownPosition();
-    } on PermissionDeniedException {
-      return null;
-    } on LocationServiceDisabledException {
-      return null;
-    } on UnsupportedError {
-      return null; // The web has no last known position.
-    }
-  },
+/// A stream of live GPS fixes, never a saved position. It only reports fixes
+/// the phone takes while it is listened to, and it never shows a permission
+/// prompt (the stream errors if location is not allowed). A function, so tests
+/// can fake it.
+final livePositionStreamProvider = Provider<Stream<Position> Function()>(
+  (ref) => () => Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 5,
+        ),
+      ),
 );
 
 final patientLocationProvider =
@@ -152,6 +148,10 @@ class PatientLocationNotifier extends StateNotifier<PatientLocation> {
       _set(const PatientLocation(LocationStatus.noFix));
     }
   }
+
+  /// Applies a live fix from the position stream.
+  void applyLiveFix(Position fix) =>
+      _set(PatientLocation(LocationStatus.granted, fix));
 
   void _set(PatientLocation value) {
     if (mounted) state = value;

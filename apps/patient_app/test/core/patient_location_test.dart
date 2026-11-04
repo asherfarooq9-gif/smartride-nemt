@@ -60,6 +60,19 @@ ProviderContainer _container(_FakeGateway gateway) {
 }
 
 void main() {
+  test('a live fix replaces the earlier position', () {
+    final c = _container(_FakeGateway(fix: _at(33.0, 73.0)));
+    final notifier = c.read(patientLocationProvider.notifier);
+
+    notifier.applyLiveFix(_at(33.1, 73.1));
+    notifier.applyLiveFix(_at(33.2, 73.2));
+
+    final state = c.read(patientLocationProvider);
+    expect(state.status, LocationStatus.granted);
+    expect(state.position?.latitude, 33.2);
+    expect(state.position?.longitude, 73.2);
+  });
+
   test('opening home never prompts for permission', () async {
     final gateway = _FakeGateway(current: LocationPermission.denied);
     final c = _container(gateway);
