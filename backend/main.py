@@ -29,7 +29,7 @@ from app.core.observability import init_error_tracking
 from app.core.ratelimit import make_limiter
 from app.core.security import require_metrics_access
 from app.routers import auth, patients, drivers, hospitals, rides, analytics, ws
-from app.services import dispatch_loop
+from app.services import dispatch_loop, retention
 from app.services.notifications import push_setup_problem
 from app.services.ws_manager import location_manager
 from app.schemas.errors import ErrorResponse
@@ -101,9 +101,16 @@ async def lifespan(app: FastAPI):
         if settings.DISPATCH_LOOP_ENABLED
         else None
     )
+    retention_task = (
+        asyncio.create_task(retention.run_forever())
+        if settings.SYMPTOM_RETENTION_DAYS > 0
+        else None
+    )
     try:
         yield
     finally:
+        if retention_task:
+            await _stop_task(retention_task, "retention purge")
         if dispatch_task:
             await _stop_task(dispatch_task, "dispatch loop")
         # Close pooled connections so a rolling deploy does not leave them dangling.

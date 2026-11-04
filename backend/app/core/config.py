@@ -86,6 +86,8 @@ class Settings(BaseSettings):
     COMMISSION_RATE: float = 0.10
     # Dispatch retry loop (app/services/dispatch_loop.py)
     DISPATCH_LOOP_ENABLED: bool = True
+    # Days after a ride ends before its raw symptom text is blanked. 0 keeps it forever.
+    SYMPTOM_RETENTION_DAYS: int = 0
     DISPATCH_LOOP_INTERVAL_SECONDS: float = 15.0
     DISPATCH_RETRY_AFTER_SECONDS: int = 30
     # Rides dispatched at the same time. Each can wait on triage, FHIR and SMS, so
@@ -99,6 +101,9 @@ class Settings(BaseSettings):
     # (dev/tests); production sets a real value so a ride cannot be "completed"
     # instantly to book a fare and commission without any transport.
     RIDE_MIN_TRANSITION_SECONDS: int = 0
+    # A driver must be within this many metres of the pickup to start a scheduled
+    # ride. 0 disables the check. Emergencies are never held back by it.
+    PICKUP_ARRIVAL_RADIUS_M: float = 150.0
     # "min_lat,min_lng,max_lat,max_lng". Pickups outside this box are rejected.
     # Empty disables the check (emulator GPS defaults to California); production
     # sets it to the area the service operates in.

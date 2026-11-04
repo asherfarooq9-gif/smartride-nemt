@@ -40,6 +40,8 @@ services:
         value: production
       - key: RIDE_MIN_TRANSITION_SECONDS
         value: "15"          # min seconds for the pickup->hospital and hospital->completed legs
+      - key: SYMPTOM_RETENTION_DAYS
+        value: "90"          # blank raw symptom text this many days after a ride ends (PHI retention)
       - key: SERVICE_AREA_BBOX
         value: "23.0,60.5,37.5,78.0"   # min_lat,min_lng,max_lat,max_lng (Pakistan); pickups outside are rejected
       - key: ALLOWED_ORIGINS

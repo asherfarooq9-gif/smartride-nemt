@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import metrics
+from app.core import metrics, phi_audit
 from app.core.database import get_db
 from app.core.ratelimit import make_limiter
 from app.core.security import (
@@ -342,12 +342,28 @@ async def get_ride_detail(
     authorized_as = await _authorize_ride_access(ride, current_user, db)
     triage = await ride_service.get_triage_for_ride(ride_id, db)
 
+    patient_info = _patient_info(ride, authorized_as)
+    triage_info = _triage_info(triage, authorized_as)
+    disclosed = [
+        name
+        for name, value in (
+            ("patient_phone", patient_info and patient_info.phone),
+            ("mobility_needs", patient_info and patient_info.mobility_needs),
+            ("symptom_text", triage_info and triage_info.symptom_text),
+        )
+        if value
+    ]
+    if disclosed:
+        phi_audit.record_phi_access(
+            current_user.id, authorized_as, ride_id, ride.patient_id, disclosed
+        )
+
     return RideDetailResponse(
         **_to_response(ride).model_dump(),
-        patient=_patient_info(ride, authorized_as),
+        patient=patient_info,
         driver=_driver_info(ride),
         hospital=_hospital_info(ride),
-        triage=_triage_info(triage, authorized_as),
+        triage=triage_info,
     )
 
 

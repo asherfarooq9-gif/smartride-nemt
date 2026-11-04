@@ -13,7 +13,10 @@ from app.core import metrics
 from app.core.config import settings
 from app.core.search import contains
 from app.services.driver_service import ACTIVE_RIDE_STATUSES, apply_balance_delta
-from app.services.emergency_dispatch import match_hospital_for_ride
+from app.services.emergency_dispatch import (
+    DRIVER_FRESH_SECONDS,
+    match_hospital_for_ride,
+)
 from app.services.fare import commission_for, fare_for
 from app.services.hospital_matching import haversine_km
 from app.services.notifications import notify_user, tell_hospital_ride_stopped
@@ -96,6 +99,44 @@ def _ensure_leg_took_long_enough(
             400,
             f"Too soon to mark {new_status.value}; try again in "
             f"{ceil(minimum - elapsed)}s",
+        )
+
+
+def _ensure_driver_at_pickup(
+    ride: Ride, new_status: RideStatus, driver: Driver, now: datetime
+) -> None:
+    """Refuse to start a scheduled ride while the driver is far from the patient.
+
+    A guard against a stray tap, not a security check: it trusts the position the
+    driver last reported. Emergencies are never blocked, and a missing or stale
+    position lets the driver through, so a GPS fault cannot strand a patient.
+    """
+    radius_m = settings.PICKUP_ARRIVAL_RADIUS_M
+    if (
+        radius_m <= 0
+        or new_status != RideStatus.patient_picked_up
+        or ride.ride_type != RideType.scheduled
+    ):
+        return
+    seen = driver.last_seen_at
+    if (
+        driver.current_lat is None
+        or driver.current_lng is None
+        or seen is None
+        or (now - seen).total_seconds() > DRIVER_FRESH_SECONDS
+    ):
+        return
+    away_m = (
+        _haversine_km(
+            driver.current_lat, driver.current_lng, ride.pickup_lat, ride.pickup_lng
+        )
+        * 1000
+    )
+    if away_m > radius_m:
+        raise HTTPException(
+            409,
+            f"You are about {round(away_m)} m from the pickup. "
+            f"Get within {round(radius_m)} m to start the ride.",
         )
 
 
@@ -347,6 +388,7 @@ async def _apply_driver_transition(
         )
     now = datetime.now(timezone.utc)
     _ensure_leg_took_long_enough(ride, new_status, now)
+    _ensure_driver_at_pickup(ride, new_status, driver, now)
     ride.status = new_status
     if new_status == RideStatus.patient_picked_up:
         ride.pickup_at = now
