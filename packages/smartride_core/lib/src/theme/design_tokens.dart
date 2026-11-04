@@ -12,10 +12,13 @@ const Color kBlueIos = Color(0xFF007AFF); // graphics only
 
 const Color kPatientPrimary = kPatient600;
 
-// ── Driver portal — Steel Blue ────────────────────────────────────────────────
-const Color kBlue800 = Color(0xFF084A6E);
-const Color kBlue600 = Color(0xFF0B5980); // driver primary
-const Color kBlue100 = Color(0xFFD8ECF5);
+// ── Driver portal — same blue as the patient portal ───────────────────────────
+// The driver screens used a darker steel blue, which did not match the side
+// menu. Both portals now share one blue; the names stay so driver code is
+// unchanged.
+const Color kBlue800 = kPatient800;
+const Color kBlue600 = kPatient600; // driver primary
+const Color kBlue100 = kPatient100;
 const Color kBlueAccentDark = Color(0xFF4AADDB); // driver accent in dark mode
 
 const Color kDriverPrimary = kBlue600;
