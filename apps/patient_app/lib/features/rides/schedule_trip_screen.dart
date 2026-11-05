@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:patient_app/core/date_format.dart';
 import 'package:patient_app/core/location.dart';
+import 'package:patient_app/core/request_id.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 
 const _specialties = [
@@ -18,10 +19,19 @@ const _specialties = [
   'Dental',
 ];
 
-final _hospitalsProvider =
+final scheduleHospitalsProvider =
     FutureProvider.autoDispose<List<core.HospitalResponse>>(
   (_) => core.getHospitals(),
 );
+
+typedef ScheduledRideCreator = Future<core.RideResponse> Function(
+  core.ScheduledRideRequest request, {
+  String? idempotencyKey,
+});
+
+/// Indirection so tests can count bookings without a server.
+final scheduledRideCreatorProvider =
+    Provider<ScheduledRideCreator>((ref) => core.createScheduledRide);
 
 class ScheduleTripScreen extends ConsumerStatefulWidget {
   const ScheduleTripScreen({super.key});
@@ -36,6 +46,7 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
   String? _selectedSpecialty;
   DateTime? _selectedDateTime;
   bool _submitting = false;
+  ({String form, core.ScheduledRideRequest request, String key})? _attempt;
 
   @override
   void dispose() {
@@ -62,6 +73,34 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
     });
   }
 
+  /// The request for the current form, with the key and pickup point of this
+  /// booking attempt. A retry of the same form reuses both, so a timeout
+  /// followed by another tap books one ride, and the server never sees the same
+  /// key with a slightly different pickup point.
+  Future<(core.ScheduledRideRequest, String)> _attemptFor(DateTime dt) async {
+    final address = _addressCtrl.text.trim();
+    final form = '$address|$dt|${_selectedHospital?.id}';
+    final cached = _attempt;
+    if (cached != null && cached.form == form) {
+      return (cached.request, cached.key);
+    }
+    final position = await ref.read(locationReaderProvider)();
+    if (position == null) {
+      throw const core.AppError(
+          'We need your location to book a pickup. Turn on location and try again.');
+    }
+    final request = core.ScheduledRideRequest(
+      pickupLat: position.latitude,
+      pickupLng: position.longitude,
+      pickupAddress: address.isEmpty ? 'Current location' : address,
+      scheduledFor: dt,
+      hospitalId: _selectedHospital?.id,
+    );
+    final attempt = (form: form, request: request, key: newRequestId());
+    _attempt = attempt;
+    return (attempt.request, attempt.key);
+  }
+
   Future<void> _submit() async {
     final dt = _selectedDateTime;
     if (dt == null) {
@@ -72,20 +111,9 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
     }
     setState(() => _submitting = true);
     try {
-      final position = await ref.read(locationReaderProvider)();
-      if (position == null) {
-        throw const core.AppError(
-            'We need your location to book a pickup. Turn on location and try again.');
-      }
-      final ride = await core.createScheduledRide(core.ScheduledRideRequest(
-        pickupLat: position.latitude,
-        pickupLng: position.longitude,
-        pickupAddress: _addressCtrl.text.trim().isEmpty
-            ? 'Current location'
-            : _addressCtrl.text.trim(),
-        scheduledFor: dt,
-        hospitalId: _selectedHospital?.id,
-      ));
+      final (request, key) = await _attemptFor(dt);
+      final ride = await ref.read(scheduledRideCreatorProvider)(request,
+          idempotencyKey: key);
       if (!mounted) return;
       context.go('/booking-confirmed/${ride.id}');
     } on core.AppError catch (e) {
@@ -108,7 +136,7 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final hospitalsAsync = ref.watch(_hospitalsProvider);
+    final hospitalsAsync = ref.watch(scheduleHospitalsProvider);
 
     return Scaffold(
       backgroundColor: core.kBackground,

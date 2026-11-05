@@ -144,8 +144,18 @@ Future<RideResponse> rateRide(String rideId, double rating, {String? comment}) a
   return RideResponse.fromJson(data);
 }
 
-Future<RideResponse> createScheduledRide(ScheduledRideRequest req) async {
-  final data = await _c.post('/api/v1/rides/scheduled', req.toJson());
+/// [idempotencyKey] makes a retry (double tap, timeout) return the first
+/// booking instead of creating a second one.
+Future<RideResponse> createScheduledRide(
+  ScheduledRideRequest req, {
+  String? idempotencyKey,
+}) async {
+  final data = await _c.post(
+    '/api/v1/rides/scheduled',
+    req.toJson(),
+    headers:
+        idempotencyKey == null ? null : {'Idempotency-Key': idempotencyKey},
+  );
   return RideResponse.fromJson(data);
 }
 
