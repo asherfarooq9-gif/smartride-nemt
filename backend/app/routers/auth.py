@@ -30,6 +30,7 @@ from app.core.redis_client import (
     remember_login_ip,
 )
 from app.models.models import User, Patient, Driver, UserRole, UserRoleLink
+from app.services.account_deletion import ActiveRideError, anonymize_account
 from app.schemas.auth import (
     RegisterRequest,
     LoginRequest,
@@ -376,6 +377,38 @@ async def logout_everywhere(
         .execution_options(synchronize_session="fetch")
     )
     await db.commit()
+
+
+class _DeleteAccountRequest(BaseModel):
+    password: str = Field(min_length=1, max_length=128)
+
+
+@router.post("/delete-account", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("5/minute")
+async def delete_account(
+    request: Request,
+    body: _DeleteAccountRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Anonymize the signed-in account and end every session.
+
+    Needs the password again, so a phone left unlocked cannot erase an account.
+    Ride history and money records stay (see services.account_deletion).
+    """
+    if not await verify_password_async(body.password, user.password_hash):
+        # 403, not 401: the token is fine, and a 401 would sign the app out.
+        raise HTTPException(status_code=403, detail="Incorrect password")
+    try:
+        await anonymize_account(db, user)
+    except ActiveRideError:
+        raise HTTPException(
+            status_code=409,
+            detail="Finish or cancel your active ride before deleting your account.",
+        )
+    await db.commit()
+    await _revoke(credentials)  # token_version already ended every session
 
 
 @router.post("/refresh", response_model=RefreshResponse)

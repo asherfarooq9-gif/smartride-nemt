@@ -416,6 +416,9 @@ models live in `backend/app/schemas/`.
 | `POST /auth/logout` | any user | Revoke this token (`204`) |
 | `POST /auth/logout-all` | any user | Bump `token_version`: every token, HTTP and WebSocket, stops working (`204`) |
 | `POST /auth/refresh` | the token itself | New token; the session is capped at `SESSION_MAX_DAYS` |
+| `POST /auth/delete-account` | any user | Body `{password}`. Anonymizes the account (below) and ends every session (`204`). `403` wrong password, `409` while a ride is active. Limited to 5/min |
+
+**Account deletion anonymizes; it does not delete rows.** Rides and the wallet ledger must stay (their foreign keys are `RESTRICT`; the ledger is append-only). So the user, patient and driver rows keep their ids and these change: phone becomes `deleted-<id>` (the number can register again), password becomes an unknown random one, `is_active` is false, `token_version` is bumped, push token cleared; patient name becomes `Deleted user` and date of birth, mobility needs and emergency contact are cleared; driver name, licence and plate become placeholders, verification and live location are cleared and the driver goes offline, while `wallet_balance_pkr` and the ledger are untouched; on the patient's rides the pickup address, symptom text, cancel reason and rating comment are cleared, pickup coordinates are rounded to 2 decimals (about 1 km) and the triage symptom text becomes `[purged]`. A multi-role account is anonymized in every role.
 
 **Patients:** `GET /patients` (admin list).
 
