@@ -241,8 +241,15 @@ async def create_scheduled_ride(
             response.status_code = 200
             return _to_response(replayed)
 
-    ride = await ride_service.create_scheduled_ride(patient, body, db)
-    metrics.rides_created_total.labels(ride_type="scheduled").inc()
+    # Redis above is only a fast path. The database decides, so a retry or a
+    # racing duplicate gets the first ride even when Redis is down.
+    ride, is_new = await ride_service.create_scheduled_ride(
+        patient, body, db, key=key, fingerprint=body_fingerprint if key else None
+    )
+    if is_new:
+        metrics.rides_created_total.labels(ride_type="scheduled").inc()
+    else:
+        response.status_code = 200
     if key:
         await idempotency.remember(
             _SCHEDULED_IDEMPOTENCY_SCOPE, patient_id, key, ride.id, body_fingerprint

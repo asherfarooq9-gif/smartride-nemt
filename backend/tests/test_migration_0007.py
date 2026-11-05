@@ -189,7 +189,8 @@ async def test_search_columns_get_trigram_indexes_and_downgrade_removes_them(
         assert "USING gin" in definitions[name]
         assert f"{column} gin_trgm_ops" in definitions[name]
 
-    down = _alembic("downgrade", "-1")
+    # Name the revision rather than "-1": newer migrations sit on top of 0010.
+    down = _alembic("downgrade", "0009")
     assert down.returncode == 0, down.stderr[-2000:]
     assert not await _scalars(
         "SELECT indexname FROM pg_indexes WHERE indexname LIKE '%trgm'"

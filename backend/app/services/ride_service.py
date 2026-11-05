@@ -1,4 +1,5 @@
 import logging
+import uuid
 from datetime import datetime, timedelta, timezone
 from math import atan2, ceil, cos, radians, sin, sqrt
 from typing import Optional
@@ -31,6 +32,7 @@ from app.models.models import (
     RideStatus,
     DriverStatus,
     Hospital,
+    RideIdempotencyKey,
     WalletEntry,
 )
 from app.schemas.rides import (
@@ -212,9 +214,54 @@ async def create_emergency_ride(
     return ride
 
 
+SCHEDULED_KEY_SCOPE = "scheduled"
+
+
+async def _ride_for_key(
+    db: AsyncSession, patient_id, key: str, fingerprint: str
+) -> Optional[Ride]:
+    """The ride this patient's key already produced, or None if it is new.
+
+    Raises 409 when the key was used with a different body: that is a client bug,
+    not a retry, and must not silently return the other booking.
+    """
+    row = (
+        await db.execute(
+            select(RideIdempotencyKey).where(
+                RideIdempotencyKey.patient_id == patient_id,
+                RideIdempotencyKey.scope == SCHEDULED_KEY_SCOPE,
+                RideIdempotencyKey.key == key,
+            )
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        return None
+    if row.fingerprint != fingerprint:
+        raise HTTPException(
+            409, "Idempotency-Key was already used with a different request body"
+        )
+    return (await db.execute(select(Ride).where(Ride.id == row.ride_id))).scalar_one()
+
+
 async def create_scheduled_ride(
-    patient: Patient, body: ScheduledRideRequest, db: AsyncSession
-) -> Ride:
+    patient: Patient,
+    body: ScheduledRideRequest,
+    db: AsyncSession,
+    *,
+    key: Optional[str] = None,
+    fingerprint: Optional[str] = None,
+) -> tuple[Ride, bool]:
+    """Book a scheduled ride. Returns (ride, is_new).
+
+    With a [key], the ride and the key are saved in one transaction and the
+    database decides: a retry, or a request that lost a race, gets the first
+    request's ride with is_new False and nothing is created twice.
+    """
+    patient_id = patient.id  # read before a rollback expires the instance
+    if key and fingerprint:
+        replayed = await _ride_for_key(db, patient_id, key, fingerprint)
+        if replayed is not None:
+            return replayed, False
     ensure_in_service_area(body.pickup_lat, body.pickup_lng)
     if body.hospital_id is not None:
         hospital = (
@@ -227,7 +274,8 @@ async def create_scheduled_ride(
         if hospital is None:
             raise HTTPException(404, "Hospital not found")
     ride = Ride(
-        patient_id=patient.id,
+        id=uuid.uuid4(),
+        patient_id=patient_id,
         hospital_id=body.hospital_id,
         ride_type=RideType.scheduled,
         status=RideStatus.pending,
@@ -238,9 +286,29 @@ async def create_scheduled_ride(
         queued_at=func.now(),
     )
     db.add(ride)
+    if key and fingerprint:
+        await db.flush()
+        saved = await db.execute(
+            pg_insert(RideIdempotencyKey)
+            .values(
+                patient_id=patient_id,
+                scope=SCHEDULED_KEY_SCOPE,
+                key=key,
+                fingerprint=fingerprint,
+                ride_id=ride.id,
+            )
+            .on_conflict_do_nothing()
+            .returning(RideIdempotencyKey.key)
+        )
+        if saved.first() is None:
+            # A concurrent request with this key committed first: drop our ride
+            # and hand back theirs.
+            await db.rollback()
+            winner = await _ride_for_key(db, patient_id, key, fingerprint)
+            return winner, False
     await db.commit()
     await db.refresh(ride)
-    return ride
+    return ride, True
 
 
 async def get_ride_by_id(ride_id: str, db: AsyncSession) -> Ride:

@@ -422,6 +422,34 @@ class Ride(Base):
     )
 
 
+# ─── RIDE IDEMPOTENCY KEY ─────────────────────────────────────────────────────
+
+
+class RideIdempotencyKey(Base):
+    """Which ride an Idempotency-Key produced, written in the ride's transaction.
+
+    The database is the source of truth, so a retry (or a racing duplicate) gets
+    the same ride even when Redis is down. Rows older than a day are purged.
+    """
+
+    __tablename__ = "ride_idempotency_keys"
+
+    patient_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("patients.id"), primary_key=True
+    )
+    scope: Mapped[str] = mapped_column(Text, primary_key=True)  # scheduled | emergency
+    key: Mapped[str] = mapped_column(Text, primary_key=True)
+    fingerprint: Mapped[str] = mapped_column(Text, nullable=False)
+    ride_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("rides.id", ondelete="CASCADE"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    __table_args__ = (Index("ix_ride_idempotency_keys_created_at", "created_at"),)
+
+
 # ─── TRIAGE EVENT ─────────────────────────────────────────────────────────────
 
 

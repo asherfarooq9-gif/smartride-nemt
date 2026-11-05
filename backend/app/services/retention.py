@@ -8,16 +8,17 @@ import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, select, update
 
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
-from app.models.models import Ride, TriageEvent
+from app.models.models import Ride, RideIdempotencyKey, TriageEvent
 from app.services.ride_service import TERMINAL_STATUSES
 
 log = logging.getLogger("smartride.retention")
 
 PURGED_MARKER = "[purged]"
+IDEMPOTENCY_KEY_RETENTION_HOURS = 24
 PURGE_INTERVAL_SECONDS = 6 * 3600
 
 
@@ -50,11 +51,24 @@ async def purge_old_symptoms(db, now: datetime | None = None) -> int:
     return result.rowcount or 0
 
 
+async def purge_old_idempotency_keys(db, now: datetime | None = None) -> int:
+    """Delete ride idempotency keys older than a day. A retry never comes later."""
+    cutoff = (now or datetime.now(timezone.utc)) - timedelta(
+        hours=IDEMPOTENCY_KEY_RETENTION_HOURS
+    )
+    result = await db.execute(
+        delete(RideIdempotencyKey).where(RideIdempotencyKey.created_at < cutoff)
+    )
+    await db.commit()
+    return result.rowcount or 0
+
+
 async def run_forever() -> None:
     while True:
         try:
             async with AsyncSessionLocal() as db:
                 purged = await purge_old_symptoms(db)
+                await purge_old_idempotency_keys(db)
             if purged:
                 log.info("retention purged symptom text on %d rides", purged)
         except asyncio.CancelledError:
