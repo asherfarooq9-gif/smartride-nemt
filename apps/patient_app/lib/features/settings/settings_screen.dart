@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 import 'package:patient_app/core/providers.dart';
+import 'package:patient_app/features/settings/delete_account_dialog.dart';
 
 /// Shared by the patient and driver apps. [isDriver] picks the profile route,
 /// the sign-out wording and destination, and stops GPS streaming on sign-out.
@@ -67,9 +68,28 @@ class SettingsScreen extends ConsumerWidget {
             ),
             onTap: () => _confirmSignOut(context, ref),
           ),
+          ListTile(
+            leading:
+                const Icon(Icons.delete_forever_outlined, color: core.kError),
+            title: const Text(
+              'Delete Account',
+              style: TextStyle(color: core.kError),
+            ),
+            onTap: () => _deleteAccount(context, ref),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
+    final isDeleted = await showDeleteAccountDialog(context);
+    if (isDeleted != true || !context.mounted) return;
+    if (isDriver) {
+      await ref.read(gpsStreamProvider.notifier).stopStreaming();
+      if (!context.mounted) return;
+    }
+    context.go(isDriver ? '/welcome' : '/login');
   }
 
   Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {

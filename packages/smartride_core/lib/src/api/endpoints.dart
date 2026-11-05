@@ -48,6 +48,13 @@ Future<void> logout({String? token}) async {
   );
 }
 
+/// POST /auth/delete-account — anonymizes the signed-in account and ends every
+/// session. Throws [AppError]: 403 for a wrong password, 409 while a ride is
+/// still active.
+Future<void> deleteAccount(String password) async {
+  await _c.post('/api/v1/auth/delete-account', {'password': password});
+}
+
 Future<PatientResponse> getPatientMe() async {
   final data = await _c.get('/api/v1/patients/me');
   return PatientResponse.fromJson(data);

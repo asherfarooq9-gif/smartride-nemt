@@ -146,6 +146,17 @@ class AuthNotifier extends StateNotifier<AsyncValue<String?>> {
     if (token != null) unawaited(_logoutOnServer(token));
   }
 
+  /// Anonymizes the account on the server, then clears this device. Throws
+  /// [core.AppError] (wrong password, active ride) without touching local
+  /// state, so the user stays signed in and can try again.
+  Future<void> deleteAccount(String password) async {
+    await core.deleteAccount(password);
+    // The server already ended every session, so there is no logout to send.
+    await core.SecureStorage.instance.clear();
+    unawaited(forgetPushToken());
+    _resetSession();
+  }
+
   Future<void> _logoutOnServer(String token) async {
     try {
       await core.logout(token: token);
