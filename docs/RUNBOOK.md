@@ -151,3 +151,18 @@ Things code cannot do for you:
 - [ ] A payment provider if drivers should top up themselves (today an admin credits
       wallets by hand; fares and commission are recorded in the ledger).
 - [ ] Test on real phones: GPS in the background, push notifications, calling and SMS.
+
+## Push notification go-live check (after the Firebase files are in place)
+
+1. Backend: set `FIREBASE_PROJECT_ID` and mount the service-account file at
+   `FIREBASE_CREDENTIALS_PATH`. Start the app; it must not log
+   `push cannot be delivered` (that line comes from `push_setup_problem`).
+2. App: build with `google-services.json` in `apps/patient_app/android/app/`.
+3. Sign in as a driver on a real phone, go online, and confirm the phone's token is
+   saved: `select fcm_token is not null from users where phone = '<phone>'`.
+4. As a patient on a second phone, book an emergency. The driver phone must show a
+   notification within seconds, with the app open, in the background and closed.
+5. Book a scheduled ride and have the driver reserve it: the patient gets "A driver is
+   lined up". When the pickup window opens, the driver gets "Your booked ride is starting".
+6. If nothing arrives, search the backend log for `FCM push failed` (it names the cause)
+   and `patient NOT told` / `driver NOT told` (no token on file).
