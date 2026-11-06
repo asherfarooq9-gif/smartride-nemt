@@ -137,54 +137,64 @@ class RideRequestCardState extends State<RideRequestCard> {
                     ),
                   ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 56, 16),
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      if (_isEmergency)
-                        const Padding(
-                          padding: EdgeInsets.only(bottom: 6),
-                          child: Text(
-                            'EMERGENCY',
-                            style: TextStyle(
-                              color: kEmergencyRed,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                        ),
-                      Text(
-                        widget.ride.pickupAddress,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF152626),
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(Icons.arrow_forward,
-                              size: 14, color: _kMuted),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              widget.ride.hospitalName ??
-                                  (widget.ride.hospitalId != null
-                                      ? 'Assigned hospital'
-                                      : 'Destination'),
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: _kMuted,
+                      // Keep the text clear of the countdown ring; the chips
+                      // and buttons below use the full width.
+                      Padding(
+                        padding: const EdgeInsets.only(right: 44),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (_isEmergency)
+                              const Padding(
+                                padding: EdgeInsets.only(bottom: 6),
+                                child: Text(
+                                  'EMERGENCY',
+                                  style: TextStyle(
+                                    color: kEmergencyRed,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
                               ),
-                              maxLines: 1,
+                            Text(
+                              widget.ride.pickupAddress,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF152626),
+                              ),
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(Icons.arrow_forward,
+                                    size: 14, color: _kMuted),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    widget.ride.hospitalName ??
+                                        (widget.ride.hospitalId != null
+                                            ? 'Assigned hospital'
+                                            : 'Destination'),
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: _kMuted,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 10),
                       Wrap(

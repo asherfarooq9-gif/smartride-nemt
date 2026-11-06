@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:patient_app/core/location.dart';
 import 'package:patient_app/driver/dashboard_notifier.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 
@@ -77,7 +79,10 @@ Future<(ProviderContainer, DashboardNotifier)> _load(DashboardApi api) async {
   final provider = StateNotifierProvider<DashboardNotifier, DashboardState>(
     (ref) => DashboardNotifier(ref, api: api),
   );
-  final container = ProviderContainer();
+  final container = ProviderContainer(overrides: [
+    // No position, so an online driver's heartbeat never reaches the network.
+    locationReaderProvider.overrideWithValue(() async => null),
+  ]);
   addTearDown(container.dispose);
   final notifier = container.read(provider.notifier);
   // The constructor starts the first load; wait until it settles.
@@ -91,6 +96,10 @@ DashboardState _state((ProviderContainer, DashboardNotifier) loaded) =>
     loaded.$2.state;
 
 void main() {
+  // An online driver starts a heartbeat, which asks the platform for a position.
+  TestWidgetsFlutterBinding.ensureInitialized();
+  FlutterSecureStorage.setMockInitialValues({});
+
   group('loading the dashboard', () {
     test(
         'an unverified driver still gets their account: the server refuses '
@@ -231,6 +240,50 @@ void main() {
       expect(state.driver!.status, core.DriverStatus.offline);
       expect(state.isUpdatingStatus, isFalse);
       expect(state.error, 'Driver not verified');
+    });
+  });
+
+  group('being taken offline', () {
+    test(
+        'the server dropping an online driver is flagged, then cleared when '
+        'they go online again', () async {
+      var status = core.DriverStatus.available;
+      final loaded = await _load(_api(
+        _Calls(),
+        driver: () async => _driver(status: status),
+      ));
+      final notifier = loaded.$2;
+      expect(notifier.state.wasTakenOffline, isFalse);
+
+      // The server puts the driver offline (an unanswered request).
+      status = core.DriverStatus.offline;
+      await notifier.refresh();
+      expect(notifier.state.wasTakenOffline, isTrue);
+
+      // Still offline on the next refresh: the note stays.
+      await notifier.refresh();
+      expect(notifier.state.wasTakenOffline, isTrue);
+
+      // The driver asks to go online: the note goes away.
+      status = core.DriverStatus.available;
+      await notifier.toggleOnline();
+      expect(notifier.state.wasTakenOffline, isFalse);
+    });
+
+    test('a driver who chose to go offline is not told they were dropped',
+        () async {
+      var status = core.DriverStatus.available;
+      final loaded = await _load(_api(
+        _Calls(),
+        driver: () async => _driver(status: status),
+        status: (s) async => status = s,
+      ));
+      final notifier = loaded.$2;
+
+      await notifier.toggleOnline();
+
+      expect(notifier.state.isOnline, isFalse);
+      expect(notifier.state.wasTakenOffline, isFalse);
     });
   });
 }

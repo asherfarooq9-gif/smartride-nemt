@@ -129,6 +129,16 @@ class _DriverHomeSheetState extends ConsumerState<DriverHomeSheet> {
                 ),
                 const SizedBox(height: 6),
               ],
+              if (dash.wasTakenOffline && !dash.isOnline) ...[
+                const _MessageCard(
+                  key: ValueKey('taken-offline'),
+                  icon: Icons.info_outline_rounded,
+                  title: 'You were taken offline',
+                  message: 'A ride request was not answered in time. '
+                      'Go online when you are ready for requests again.',
+                ),
+                const SizedBox(height: 6),
+              ],
               const AvailabilityCard(),
               const SizedBox(height: core.kSpaceSM),
               const GoOnlineButton(),

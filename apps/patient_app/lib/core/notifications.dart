@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/foundation.dart' show ValueNotifier, visibleForTesting;
 import 'package:flutter/widgets.dart' show WidgetsBinding;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:go_router/go_router.dart';
@@ -21,6 +21,11 @@ const _androidChannel = AndroidNotificationChannel(
 
 // Top-level handler required by firebase_messaging for background messages
 @pragma('vm:entry-point')
+
+/// Counts pushes received while the app is open, so a screen can refresh now
+/// instead of waiting for its next poll.
+final ValueNotifier<int> foregroundPushCount = ValueNotifier<int>(0);
+
 Future<void> firebaseBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
   _showLocal(message);
@@ -104,7 +109,11 @@ Future<void> initNotifications({required GoRouter router}) async {
       ?.createNotificationChannel(_androidChannel);
 
   // Foreground messages
-  FirebaseMessaging.onMessage.listen((msg) => _showLocal(msg));
+  FirebaseMessaging.onMessage.listen((msg) {
+    _showLocal(msg);
+    // Screens that poll (the driver home) refresh the moment a push arrives.
+    foregroundPushCount.value++;
+  });
 
   // Background tap
   FirebaseMessaging.onMessageOpenedApp.listen(

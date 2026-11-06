@@ -153,7 +153,8 @@ class _BalanceCard extends StatelessWidget {
                 fontSize: kFontCaption,
                 fontWeight: FontWeight.w600,
                 color: lowBalance
-                    ? const Color(0xFFFF7043)
+                    ? const Color(
+                        0xFFFFD180) // light amber: readable on the blue card
                     : const Color(0xFF69F0AE),
               ),
             ),

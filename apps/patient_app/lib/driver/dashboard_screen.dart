@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:patient_app/core/notifications.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,7 +15,9 @@ import 'package:patient_app/features/rides/map_controls.dart';
 import 'package:patient_app/shared/role_switcher.dart';
 
 /// How often the dashboard asks the server for fresh requests and status.
-const _kRefreshEvery = Duration(seconds: 15);
+// Short enough that an auto-assigned emergency shows up within seconds even
+// when no push arrives (push needs Firebase keys the owner supplies).
+const _kRefreshEvery = Duration(seconds: 8);
 
 /// The driver home screen: the same full-screen map, glass controls and frosted
 /// sheet as the patient's, carrying the driver's dashboard.
@@ -40,11 +43,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       _kRefreshEvery,
       (_) => ref.read(dashboardProvider.notifier).refresh(),
     );
+    foregroundPushCount.addListener(_onPush);
   }
+
+  void _onPush() => ref.read(dashboardProvider.notifier).refresh();
 
   @override
   void dispose() {
     _refreshTimer?.cancel();
+    foregroundPushCount.removeListener(_onPush);
     _map.dispose();
     _sheetExtent.dispose();
     super.dispose();

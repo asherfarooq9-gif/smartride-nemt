@@ -115,6 +115,7 @@ class DashboardState {
     this.isLoading = false,
     this.isUpdatingStatus = false,
     this.error,
+    this.wasTakenOffline = false,
   });
 
   final core.DriverResponse? driver;
@@ -132,6 +133,10 @@ class DashboardState {
   final bool isUpdatingStatus;
   final String? error;
 
+  /// The server put the driver offline (for example a request went unanswered)
+  /// without the driver asking. The home screen explains it.
+  final bool wasTakenOffline;
+
   bool get isOnline => driver?.isOnline ?? false;
 
   DashboardState copyWith({
@@ -142,6 +147,7 @@ class DashboardState {
     bool? isLoading,
     bool? isUpdatingStatus,
     String? error,
+    bool? wasTakenOffline,
   }) =>
       DashboardState(
         driver: driver ?? this.driver,
@@ -151,6 +157,7 @@ class DashboardState {
         isLoading: isLoading ?? this.isLoading,
         isUpdatingStatus: isUpdatingStatus ?? this.isUpdatingStatus,
         error: error,
+        wasTakenOffline: wasTakenOffline ?? this.wasTakenOffline,
       );
 }
 
@@ -262,7 +269,11 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
     ).wait;
     if (!mounted) return;
 
+    // Online a moment ago, offline now, and the driver did not ask for it.
+    final wasTakenOffline = !driver.isOnline &&
+        ((state.isOnline && !state.isUpdatingStatus) || state.wasTakenOffline);
     state = DashboardState(
+      wasTakenOffline: wasTakenOffline,
       driver: driver,
       activeRide: active,
       pendingRides: rides.value == null
@@ -305,7 +316,8 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
     final next = current == core.DriverStatus.offline
         ? core.DriverStatus.available
         : core.DriverStatus.offline;
-    state = state.copyWith(isUpdatingStatus: true, error: null);
+    state = state.copyWith(
+        isUpdatingStatus: true, error: null, wasTakenOffline: false);
     try {
       await _api.updateStatus(next);
       await refresh();
