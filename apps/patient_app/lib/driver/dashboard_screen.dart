@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -134,6 +135,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Future<void> _accept(String rideId) async {
+    HapticFeedback.mediumImpact();
     final outcome =
         await ref.read(dashboardProvider.notifier).acceptRide(rideId);
     if (!mounted) return;

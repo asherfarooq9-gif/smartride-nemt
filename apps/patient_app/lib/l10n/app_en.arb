@@ -16,6 +16,7 @@
   "signOutEverywhere": "Sign out of all devices",
   "signOutEverywhereBody": "This signs you out on every phone where you are logged in.",
   "signOutEverywhereFailed": "Could not sign out of all devices. Check your connection and try again.",
+  "offlineBanner": "No connection. Trying again…",
   "deleteAccount": "Delete Account",
   "cancel": "Cancel",
   "scheduled": "Scheduled",

@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart'
-    show kReleaseMode, kIsWeb, visibleForTesting;
+    show kReleaseMode, kIsWeb, visibleForTesting, ValueNotifier;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../diagnostics/error_reporter.dart';
 import '../storage/secure_storage.dart';
@@ -44,6 +44,11 @@ class ApiClient {
   /// signed in and every later request silently fails.
   static void Function()? onUnauthorized;
 
+  /// False while the last request could not reach the server at all (no
+  /// network, timeout); true once any reply arrives, even an error reply. The
+  /// app shows an offline banner from this.
+  static final ValueNotifier<bool> isReachable = ValueNotifier<bool>(true);
+
   late final Dio _dio;
 
   String get wsBaseUrl {
@@ -83,8 +88,12 @@ class ApiClient {
     Future<Response<dynamic>> Function() request,
   ) async {
     try {
-      return _asObject(path, await request());
+      final response = await request();
+      isReachable.value = true;
+      return _asObject(path, response);
     } on DioException catch (e) {
+      // Any reply, even an error, proves the server is reachable.
+      isReachable.value = e.response != null;
       throw _mapError(e);
     }
   }
@@ -145,7 +154,8 @@ class ApiClient {
           'No internet connection. Please check your connection and try again.',
         );
       case DioExceptionType.badCertificate:
-        return const AppError('Secure connection failed. Please contact support.');
+        return const AppError(
+            'Secure connection failed. Please contact support.');
       default:
         return const AppError('Something went wrong. Please try again.');
     }
@@ -155,7 +165,8 @@ class ApiClient {
         403 => 'You do not have permission to do this.',
         404 => 'We could not find what you asked for.',
         408 => 'The request timed out. Please try again.',
-        409 => 'This action could not be completed. Please refresh and try again.',
+        409 =>
+          'This action could not be completed. Please refresh and try again.',
         429 => 'Too many attempts. Please wait a moment and try again.',
         _ => 'Please check the details you entered and try again.',
       };
@@ -180,9 +191,12 @@ class ApiClient {
     final text = msg.replaceFirst(RegExp(r'^Value error, '), '');
     final loc = item['loc'];
     final lastLoc = loc is List && loc.isNotEmpty ? loc.last : null;
-    final field =
-        lastLoc is String && lastLoc.isNotEmpty ? lastLoc.replaceAll('_', ' ') : null;
-    return field == null ? text : '${field[0].toUpperCase()}${field.substring(1)}: $text';
+    final field = lastLoc is String && lastLoc.isNotEmpty
+        ? lastLoc.replaceAll('_', ' ')
+        : null;
+    return field == null
+        ? text
+        : '${field[0].toUpperCase()}${field.substring(1)}: $text';
   }
 }
 

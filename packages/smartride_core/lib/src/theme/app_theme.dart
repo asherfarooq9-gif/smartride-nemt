@@ -137,6 +137,7 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: primary,
+          minimumSize: const Size(kMinTapTarget, kMinTapTarget),
           textStyle: GoogleFonts.dmSans(
             fontSize: kFontSmall,
             fontWeight: FontWeight.w600,
@@ -221,6 +222,14 @@ class AppTheme {
           borderRadius: BorderRadius.circular(kRadiusXXL),
         ),
       ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(kRadiusLG),
+        ),
+      ),
+      materialTapTargetSize: MaterialTapTargetSize.padded,
+      listTileTheme: const ListTileThemeData(minVerticalPadding: 12),
       chipTheme: ChipThemeData(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(kRadiusLG),

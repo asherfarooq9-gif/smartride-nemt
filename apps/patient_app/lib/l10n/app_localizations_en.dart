@@ -59,6 +59,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not sign out of all devices. Check your connection and try again.';
 
   @override
+  String get offlineBanner => 'No connection. Trying again…';
+
+  @override
   String get deleteAccount => 'Delete Account';
 
   @override

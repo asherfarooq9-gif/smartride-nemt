@@ -185,7 +185,7 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
             children: [
               Expanded(child: Text(l.numberOfTrips)),
               IconButton(
-                tooltip: '-',
+                tooltip: 'Fewer rides',
                 onPressed: _occurrences > 2
                     ? () => setState(() => _occurrences--)
                     : null,
@@ -194,7 +194,7 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
               Text('$_occurrences',
                   style: Theme.of(context).textTheme.titleMedium),
               IconButton(
-                tooltip: '+',
+                tooltip: 'More rides',
                 onPressed: _occurrences < 12
                     ? () => setState(() => _occurrences++)
                     : null,

@@ -59,6 +59,9 @@ class AppLocalizationsUr extends AppLocalizations {
       'تمام آلات سے سائن آؤٹ نہیں ہو سکا۔ اپنا کنکشن چیک کریں اور دوبارہ کوشش کریں۔';
 
   @override
+  String get offlineBanner => 'کنکشن نہیں ہے۔ دوبارہ کوشش جاری ہے…';
+
+  @override
   String get deleteAccount => 'اکاؤنٹ ڈیلیٹ کریں';
 
   @override

@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, FlutterError;
 import 'package:flutter/material.dart';
+import 'package:patient_app/shared/offline_banner.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:patient_app/core/locale_provider.dart';
@@ -162,6 +163,26 @@ class _SmartRideAppState extends ConsumerState<SmartRideApp> {
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       debugShowCheckedModeBanner: false,
+      // Native-feeling rubber-band scrolling on every platform.
+      scrollBehavior: const _BouncyScrollBehavior(),
+      // Follow the user's text size, but cap it so layouts do not break.
+      builder: (context, child) => MediaQuery.withClampedTextScaling(
+        maxScaleFactor: 1.4,
+        child: OfflineBanner(child: child ?? const SizedBox.shrink()),
+      ),
     );
   }
+}
+
+class _BouncyScrollBehavior extends MaterialScrollBehavior {
+  const _BouncyScrollBehavior();
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) =>
+      const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics());
+
+  @override
+  Widget buildOverscrollIndicator(
+          BuildContext context, Widget child, ScrollableDetails details) =>
+      child;
 }

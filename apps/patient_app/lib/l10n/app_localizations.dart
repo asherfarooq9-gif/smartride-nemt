@@ -194,6 +194,12 @@ abstract class AppLocalizations {
   /// **'Could not sign out of all devices. Check your connection and try again.'**
   String get signOutEverywhereFailed;
 
+  /// No description provided for @offlineBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'No connection. Trying again…'**
+  String get offlineBanner;
+
   /// No description provided for @deleteAccount.
   ///
   /// In en, this message translates to:

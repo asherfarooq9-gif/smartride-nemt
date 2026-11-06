@@ -136,6 +136,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   hint: 'Min. 8 characters',
                   obscureText: _obscure,
                   suffixIcon: IconButton(
+                    tooltip: _obscure ? 'Show password' : 'Hide password',
                     icon: Icon(
                       _obscure
                           ? Icons.visibility_outlined
