@@ -213,3 +213,36 @@ async def test_deleting_a_driver_keeps_the_wallet_and_frees_the_licence(client, 
     user = (await db.execute(select(User).where(User.id == user_id))).scalar_one()
     assert user.is_active is False
     assert user.phone.startswith("deleted-")
+
+
+async def test_deleting_a_driver_gives_their_claimed_rides_back(client, db):
+    token = await _register(client, _phone(), "driver", **_driver_extra())
+    user_id = await _user_id(client, token)
+    driver = (
+        await db.execute(select(Driver).where(Driver.user_id == user_id))
+    ).scalar_one()
+    patient_token = await _register(client, _phone(), "patient")
+    patient = (
+        await db.execute(
+            select(Patient).where(
+                Patient.user_id == await _user_id(client, patient_token)
+            )
+        )
+    ).scalar_one()
+    ride = Ride(
+        patient_id=patient.id,
+        ride_type=RideType.scheduled,
+        status=RideStatus.pending,
+        pickup_lat=33.72,
+        pickup_lng=73.04,
+        claimed_driver_id=driver.id,
+    )
+    db.add(ride)
+    await db.commit()
+    ride_id = ride.id
+
+    out = await _delete(client, token)
+
+    assert out.status_code == 204, out.text
+    await db.refresh(ride)
+    assert ride.id == ride_id and ride.claimed_driver_id is None

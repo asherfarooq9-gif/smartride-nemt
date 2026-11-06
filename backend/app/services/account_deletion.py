@@ -84,7 +84,17 @@ async def _anonymize_patient(db: AsyncSession, patient: Patient) -> None:
     )
 
 
+async def _release_claims(db: AsyncSession, driver: Driver) -> None:
+    """A deleted driver keeps no booked rides hidden from everyone else."""
+    await db.execute(
+        update(Ride)
+        .where(Ride.claimed_driver_id == driver.id, Ride.driver_id.is_(None))
+        .values(claimed_driver_id=None, claimed_at=None)
+    )
+
+
 def _anonymize_driver(driver: Driver, suffix: str) -> None:
+    driver.payment_methods = []
     driver.full_name = DELETED_DRIVER_NAME
     # Both are unique and required, so they get a unique placeholder.
     driver.license_no = f"deleted-{suffix}"
@@ -121,6 +131,7 @@ async def anonymize_account(db: AsyncSession, user: User) -> None:
     if patient is not None:
         await _anonymize_patient(db, patient)
     if driver is not None:
+        await _release_claims(db, driver)
         _anonymize_driver(driver, suffix)
 
     # Phone is unique and required: a placeholder that cannot be dialled and

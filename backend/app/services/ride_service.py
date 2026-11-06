@@ -272,6 +272,32 @@ async def _series_rides(db: AsyncSession, series_id) -> list[Ride]:
     return list(rows.scalars().all())
 
 
+async def _ensure_room_to_book(db: AsyncSession, patient_id, adding: int) -> None:
+    """409 when a patient would hold more upcoming scheduled rides than allowed.
+
+    A soft cap: two requests at the same instant can overshoot it by one run.
+    """
+    open_rides = (
+        await db.execute(
+            select(func.count())
+            .select_from(Ride)
+            .where(
+                Ride.patient_id == patient_id,
+                Ride.ride_type == RideType.scheduled,
+                Ride.status.in_([RideStatus.pending, RideStatus.driver_assigned]),
+                Ride.scheduled_for > func.now(),
+            )
+        )
+    ).scalar_one()
+    limit = settings.MAX_UPCOMING_SCHEDULED_RIDES
+    if open_rides + adding > limit:
+        raise HTTPException(
+            409,
+            f"You can have {limit} upcoming booked rides at once. "
+            "Cancel one you no longer need first.",
+        )
+
+
 async def create_scheduled_series(
     patient: Patient,
     body: ScheduledSeriesRequest,
@@ -293,6 +319,7 @@ async def create_scheduled_series(
             return await _series_rides(db, first.series_id), False
     ensure_in_service_area(body.pickup_lat, body.pickup_lng)
     await _ensure_hospital_is_open(db, body.hospital_id)
+    await _ensure_room_to_book(db, patient_id, body.occurrences)
     series_id = uuid.uuid4()
     step = _SERIES_STEP[body.repeat]
     rides = [
@@ -357,6 +384,7 @@ async def create_scheduled_ride(
             return replayed, False
     ensure_in_service_area(body.pickup_lat, body.pickup_lng)
     await _ensure_hospital_is_open(db, body.hospital_id)
+    await _ensure_room_to_book(db, patient_id, 1)
     ride = Ride(
         id=uuid.uuid4(),
         patient_id=patient_id,

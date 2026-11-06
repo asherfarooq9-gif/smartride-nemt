@@ -1,12 +1,14 @@
 from typing import List, Literal, Optional
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timedelta
 from pydantic import BaseModel, Field, field_validator, model_serializer
 from app.models.models import RideType, RideStatus
 
 # Free text from clients is bounded so one request cannot store megabytes.
 MAX_ADDRESS_LENGTH = 500
 MAX_REASON_LENGTH = 500
+# Booking further ahead than this is almost certainly a mistake or abuse.
+MAX_DAYS_AHEAD = 90
 
 
 class EmergencyRideRequest(BaseModel):
@@ -35,6 +37,8 @@ class ScheduledRideRequest(BaseModel):
 
         if v <= dt.now(timezone.utc):
             raise ValueError("scheduled_for must be a future date")
+        if v > dt.now(timezone.utc) + timedelta(days=MAX_DAYS_AHEAD):
+            raise ValueError(f"scheduled_for must be within {MAX_DAYS_AHEAD} days")
         return v
 
 

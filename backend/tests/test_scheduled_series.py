@@ -179,3 +179,41 @@ async def test_a_pickup_outside_the_service_area_books_nothing(client, db, monke
 
     assert out.status_code in (400, 422)
     assert await _count(db, user_id) == 0
+
+
+async def test_a_patient_cannot_hold_more_upcoming_rides_than_the_cap(
+    client, db, monkeypatch
+):
+    monkeypatch.setattr(settings, "MAX_UPCOMING_SCHEDULED_RIDES", 5)
+    token, user_id = await _patient(client)
+    body = _body()
+    assert (
+        await client.post(URL, json=body, headers=_headers(token))
+    ).status_code == 201  # 4 of 5
+
+    over = await client.post(URL, json=body, headers=_headers(token))
+
+    assert over.status_code == 409
+    assert await _count(db, user_id) == 4
+
+
+async def test_a_single_booking_counts_toward_the_same_cap(client, db, monkeypatch):
+    monkeypatch.setattr(settings, "MAX_UPCOMING_SCHEDULED_RIDES", 4)
+    token, user_id = await _patient(client)
+    await client.post(URL, json=_body(), headers=_headers(token))
+
+    single = {k: v for k, v in _body().items() if k not in ("repeat", "occurrences")}
+    out = await client.post(
+        "/api/v1/rides/scheduled", json=single, headers=_headers(token)
+    )
+
+    assert out.status_code == 409
+
+
+async def test_a_ride_cannot_be_booked_more_than_ninety_days_ahead(client):
+    token, _ = await _patient(client)
+    far = (datetime.now(timezone.utc) + timedelta(days=91)).isoformat()
+
+    out = await client.post(URL, json=_body(scheduled_for=far), headers=_headers(token))
+
+    assert out.status_code == 422

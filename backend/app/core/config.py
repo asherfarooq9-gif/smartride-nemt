@@ -98,6 +98,9 @@ class Settings(BaseSettings):
     # A driver may claim a booked ride before its pickup window opens.
     # Most rides one driver can hold at once.
     MAX_SCHEDULED_CLAIMS: int = 5
+    # Upcoming scheduled rides one patient may have open at once. Without a cap
+    # a free account could flood every driver's Scheduled tab with fake trips.
+    MAX_UPCOMING_SCHEDULED_RIDES: int = 30
     # A claim can be given back until this long before pickup; after that the
     # patient is counting on the driver.
     SCHEDULED_RELEASE_CUTOFF_MINUTES: int = 60
