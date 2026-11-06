@@ -159,6 +159,49 @@ Future<RideResponse> createScheduledRide(
   return RideResponse.fromJson(data);
 }
 
+/// Booked rides near the driver that nobody has reserved yet, soonest first.
+Future<List<RideResponse>> getOpenScheduledRides() async {
+  final data = await _c.get('/api/v1/rides/scheduled/open');
+  return RideListResponse.fromJson(data).items;
+}
+
+/// The booked rides this driver reserved, soonest first.
+Future<List<RideResponse>> getClaimedRides() async {
+  final data = await _c.get('/api/v1/rides/scheduled/claimed');
+  return RideListResponse.fromJson(data).items;
+}
+
+/// Reserves a booked ride. Throws [AppError] (409) if another driver got it
+/// first or the driver is at the limit; the message says which.
+Future<RideResponse> claimRide(String rideId) async {
+  final data = await _c.post('/api/v1/rides/$rideId/claim', {});
+  return RideResponse.fromJson(data);
+}
+
+/// Gives a reserved ride back. Throws [AppError] (409) when pickup is too close.
+Future<RideResponse> releaseRide(String rideId) async {
+  final data = await _c.post('/api/v1/rides/$rideId/release', {});
+  return RideResponse.fromJson(data);
+}
+
+/// Books the same trip every day ("daily") or week ("weekly"), [occurrences]
+/// times (2-12), in one request. [idempotencyKey] makes a retry return the same
+/// run instead of booking it twice. Returns the rides, soonest first.
+Future<List<RideResponse>> createScheduledSeries(
+  ScheduledRideRequest req, {
+  required String repeat,
+  required int occurrences,
+  String? idempotencyKey,
+}) async {
+  final data = await _c.post(
+    '/api/v1/rides/scheduled/series',
+    {...req.toJson(), 'repeat': repeat, 'occurrences': occurrences},
+    headers:
+        idempotencyKey == null ? null : {'Idempotency-Key': idempotencyKey},
+  );
+  return RideListResponse.fromJson(data).items;
+}
+
 Future<List<HospitalResponse>> getHospitals() async {
   final data = await _c.get('/api/v1/hospitals');
   final items = data['items'] as List<dynamic>? ?? [];
