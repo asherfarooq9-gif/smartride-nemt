@@ -80,6 +80,14 @@ class SettingsScreen extends ConsumerWidget {
             onTap: () => _confirmSignOut(context, ref),
           ),
           ListTile(
+            leading: const Icon(Icons.devices_other, color: core.kError),
+            title: Text(
+              context.l10n.signOutEverywhere,
+              style: const TextStyle(color: core.kError),
+            ),
+            onTap: () => _signOutEverywhere(context, ref),
+          ),
+          ListTile(
             leading:
                 const Icon(Icons.delete_forever_outlined, color: core.kError),
             title: Text(
@@ -143,6 +151,43 @@ class SettingsScreen extends ConsumerWidget {
       if (!context.mounted) return;
     }
     context.go(isDriver ? '/welcome' : '/login');
+  }
+
+  Future<void> _signOutEverywhere(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(l10n.signOutEverywhere),
+        content: Text(l10n.signOutEverywhereBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: core.kError),
+            child: Text(l10n.signOut),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    if (isDriver) {
+      await ref.read(gpsStreamProvider.notifier).stopStreaming();
+      if (!context.mounted) return;
+    }
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(authProvider.notifier).signOutEverywhere();
+    } on core.AppError {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.signOutEverywhereFailed)),
+      );
+      return;
+    }
+    if (context.mounted) context.go(isDriver ? '/welcome' : '/login');
   }
 
   Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {

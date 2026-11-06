@@ -1,4 +1,4 @@
-﻿import '../models/user.dart';
+import '../models/user.dart';
 import '../models/patient.dart';
 import '../models/demand.dart';
 import '../models/driver.dart';
@@ -8,7 +8,8 @@ import 'api_client.dart';
 
 final _c = ApiClient.instance;
 
-Future<TokenResponse> login(String phone, String password, {String? activeRole}) async {
+Future<TokenResponse> login(String phone, String password,
+    {String? activeRole}) async {
   final data = await _c.post(
     '/api/v1/auth/login',
     {
@@ -27,7 +28,8 @@ Future<TokenResponse> register(RegisterRequest req) async {
 
 /// POST /auth/switch-role — flip the active portal; returns a fresh token.
 Future<TokenResponse> switchRole(String activeRole) async {
-  final data = await _c.post('/api/v1/auth/switch-role', {'active_role': activeRole});
+  final data =
+      await _c.post('/api/v1/auth/switch-role', {'active_role': activeRole});
   return TokenResponse.fromJson(data);
 }
 
@@ -46,6 +48,12 @@ Future<void> logout({String? token}) async {
     {},
     headers: token == null ? null : {'Authorization': 'Bearer $token'},
   );
+}
+
+/// POST /auth/logout-all — ends every session of this account on every device.
+/// Throws [AppError].
+Future<void> logoutAll() async {
+  await _c.post('/api/v1/auth/logout-all', {});
 }
 
 /// POST /auth/delete-account — anonymizes the signed-in account and ends every
@@ -136,7 +144,8 @@ Future<void> acceptRide(String rideId) async {
   await _c.post('/api/v1/rides/$rideId/accept', {});
 }
 
-Future<RideResponse> rateRide(String rideId, double rating, {String? comment}) async {
+Future<RideResponse> rateRide(String rideId, double rating,
+    {String? comment}) async {
   final data = await _c.post('/api/v1/rides/$rideId/rate', {
     'rating': rating,
     if (comment != null && comment.isNotEmpty) 'comment': comment,
@@ -205,7 +214,9 @@ Future<List<RideResponse>> createScheduledSeries(
 Future<List<HospitalResponse>> getHospitals() async {
   final data = await _c.get('/api/v1/hospitals');
   final items = data['items'] as List<dynamic>? ?? [];
-  return items.map((e) => HospitalResponse.fromJson(e as Map<String, dynamic>)).toList();
+  return items
+      .map((e) => HospitalResponse.fromJson(e as Map<String, dynamic>))
+      .toList();
 }
 
 Future<Map<String, dynamic>> getDriverEarnings() async {
@@ -229,4 +240,3 @@ Future<DemandForecast> getDemandForecast({int hoursAhead = 6}) async {
   );
   return DemandForecast.fromJson(data);
 }
-

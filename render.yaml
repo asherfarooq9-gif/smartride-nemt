@@ -43,7 +43,7 @@ services:
       - key: SYMPTOM_RETENTION_DAYS
         value: "90"          # blank raw symptom text this many days after a ride ends (PHI retention)
       - key: SERVICE_AREA_BBOX
-        value: "23.0,60.5,37.5,78.0"   # min_lat,min_lng,max_lat,max_lng (Pakistan); pickups outside are rejected
+        value: "33.4,72.7,33.9,73.4"   # min_lat,min_lng,max_lat,max_lng (Islamabad/Rawalpindi pilot); pickups outside are rejected
       - key: ALLOWED_ORIGINS
         sync: false          # JSON list, e.g. ["https://admin.example.com"]; the app refuses to boot with "*" when DEBUG=false
       - key: METRICS_TOKEN

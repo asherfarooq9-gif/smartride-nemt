@@ -224,7 +224,7 @@ async def assign_due_claims(db, now: datetime) -> None:
                 )
             )
             if placed.rowcount == 1:
-                assigned.append(ride_id)
+                assigned.append((ride_id, driver_id))
             else:  # the ride moved on meanwhile: give the driver back
                 await db.execute(
                     update(Driver)
@@ -239,8 +239,25 @@ async def assign_due_claims(db, now: datetime) -> None:
             )
             log.warning("claim dropped, driver unavailable ride_id=%s", ride_id)
     await db.commit()
-    for ride_id in assigned:
+    for ride_id, driver_id in assigned:
         await notify_patient_and_family_of_accepted_ride(str(ride_id))
+        await _tell_driver_claim_is_starting(db, ride_id, driver_id)
+
+
+async def _tell_driver_claim_is_starting(db, ride_id, driver_id) -> None:
+    """Push to the claiming driver: their booked ride is now theirs to start."""
+    user_id = (
+        await db.execute(select(Driver.user_id).where(Driver.id == driver_id))
+    ).scalar_one_or_none()
+    told = await notify_user(
+        db,
+        user_id=user_id,
+        title="Your booked ride is starting",
+        body="Head to the pickup now. Open the app for details.",
+        data={"ride_id": str(ride_id)},
+    )
+    if not told:
+        log.warning("driver NOT told their claim is starting ride_id=%s", ride_id)
 
 
 async def _pending_rides(db, now: datetime) -> list:

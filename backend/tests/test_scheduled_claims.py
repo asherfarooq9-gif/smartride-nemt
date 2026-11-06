@@ -9,6 +9,7 @@ to normal dispatch.
 import asyncio
 import uuid
 from datetime import datetime, timedelta, timezone
+from unittest.mock import AsyncMock, patch
 
 from sqlalchemy import select, update
 
@@ -221,6 +222,28 @@ async def test_a_claimed_ride_goes_to_its_driver_when_the_window_opens(client, d
     ride = await _ride(db, ride_id)
     assert ride.status == RideStatus.driver_assigned
     assert ride.driver_id == driver_id
+
+
+async def test_the_driver_is_pushed_when_their_claimed_ride_starts(client, db):
+    me, driver_id = await _driver(client, db)
+    user_id = (
+        await db.execute(select(Driver.user_id).where(Driver.id == driver_id))
+    ).scalar_one()
+    ride_id = await _book(client, minutes_ahead=60 * 48)
+    await client.post(f"/api/v1/rides/{ride_id}/claim", headers=_auth(me))
+    await db.execute(
+        update(Ride)
+        .where(Ride.id == ride_id)
+        .values(scheduled_for=datetime.now(timezone.utc) + timedelta(minutes=20))
+    )
+    await db.commit()
+
+    with patch.object(
+        dispatch_loop, "notify_user", AsyncMock(return_value=True)
+    ) as push:
+        await dispatch_loop.assign_due_claims(db, datetime.now(timezone.utc))
+
+    assert any(call.kwargs.get("user_id") == user_id for call in push.await_args_list)
 
 
 async def test_a_claim_the_driver_cannot_keep_returns_to_the_pool(client, db):

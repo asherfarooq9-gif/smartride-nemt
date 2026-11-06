@@ -48,6 +48,17 @@ class AppLocalizationsUr extends AppLocalizations {
   String get signOut => 'سائن آؤٹ';
 
   @override
+  String get signOutEverywhere => 'تمام آلات سے سائن آؤٹ کریں';
+
+  @override
+  String get signOutEverywhereBody =>
+      'اس سے آپ ہر اس فون پر سائن آؤٹ ہو جائیں گے جہاں آپ لاگ ان ہیں۔';
+
+  @override
+  String get signOutEverywhereFailed =>
+      'تمام آلات سے سائن آؤٹ نہیں ہو سکا۔ اپنا کنکشن چیک کریں اور دوبارہ کوشش کریں۔';
+
+  @override
   String get deleteAccount => 'اکاؤنٹ ڈیلیٹ کریں';
 
   @override

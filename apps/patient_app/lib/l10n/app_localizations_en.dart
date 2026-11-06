@@ -48,6 +48,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signOut => 'Sign Out';
 
   @override
+  String get signOutEverywhere => 'Sign out of all devices';
+
+  @override
+  String get signOutEverywhereBody =>
+      'This signs you out on every phone where you are logged in.';
+
+  @override
+  String get signOutEverywhereFailed =>
+      'Could not sign out of all devices. Check your connection and try again.';
+
+  @override
   String get deleteAccount => 'Delete Account';
 
   @override

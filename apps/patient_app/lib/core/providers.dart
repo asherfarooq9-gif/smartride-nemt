@@ -146,6 +146,16 @@ class AuthNotifier extends StateNotifier<AsyncValue<String?>> {
     if (token != null) unawaited(_logoutOnServer(token));
   }
 
+  /// Ends every session on every device. The server is told first: if that
+  /// fails this throws [core.AppError] and the user stays signed in, because
+  /// claiming "signed out everywhere" when it did not happen would be unsafe.
+  Future<void> signOutEverywhere() async {
+    await core.logoutAll();
+    await core.SecureStorage.instance.clear();
+    unawaited(forgetPushToken());
+    _resetSession();
+  }
+
   /// Anonymizes the account on the server, then clears this device. Throws
   /// [core.AppError] (wrong password, active ride) without touching local
   /// state, so the user stays signed in and can try again.

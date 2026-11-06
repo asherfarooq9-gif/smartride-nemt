@@ -176,6 +176,24 @@ abstract class AppLocalizations {
   /// **'Sign Out'**
   String get signOut;
 
+  /// No description provided for @signOutEverywhere.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out of all devices'**
+  String get signOutEverywhere;
+
+  /// No description provided for @signOutEverywhereBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This signs you out on every phone where you are logged in.'**
+  String get signOutEverywhereBody;
+
+  /// No description provided for @signOutEverywhereFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not sign out of all devices. Check your connection and try again.'**
+  String get signOutEverywhereFailed;
+
   /// No description provided for @deleteAccount.
   ///
   /// In en, this message translates to:
