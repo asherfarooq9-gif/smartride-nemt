@@ -13,7 +13,11 @@ from sqlalchemy.orm import selectinload
 from app.core import metrics
 from app.core.config import settings
 from app.core.search import contains
-from app.services.driver_service import ACTIVE_RIDE_STATUSES, apply_balance_delta
+from app.services.driver_service import (
+    ACTIVE_RIDE_STATUSES,
+    apply_balance_delta,
+    ensure_within_debt_limit,
+)
 from app.services.emergency_dispatch import (
     DRIVER_FRESH_SECONDS,
     match_hospital_for_ride,
@@ -897,6 +901,7 @@ async def claim_scheduled_ride(ride_id: str, driver: Driver, db: AsyncSession) -
     this driver when its pickup window opens. 409 if it is taken, already in its
     window (accept it from the live list), or the driver is at the claim limit.
     """
+    ensure_within_debt_limit(driver)
     await _ensure_not_own_ride(ride_id, driver, db)
     await _ensure_driver_is_near(ride_id, driver, db)  # also 404s a missing ride
     driver_id = driver.id
@@ -1061,6 +1066,7 @@ async def accept_ride(
     pre-alerts the hospital for rides it places itself, so only a True here means
     nobody has told the hospital yet.
     """
+    ensure_within_debt_limit(driver)
     requester_user_id = (
         await db.execute(
             select(Patient.user_id)

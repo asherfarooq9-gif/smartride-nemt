@@ -460,6 +460,8 @@ models live in `backend/app/schemas/`.
 | `GET /drivers/wallet` | driver | Balance, plan, ledger entries (read only) |
 | `POST /drivers/{driver_id}/wallet/topup` | admin | Credit a wallet. `Idempotency-Key` header is **required**; reusing a key with a different amount or driver returns `409`. Body: `amount_pkr`, `payment_method` (free text label: no payment provider is integrated), optional `plan_id` |
 
+**Debt limit.** Fares are paid in cash, so commission comes out of the prepaid wallet. A driver whose balance is below `-DRIVER_DEBT_LIMIT_PKR` (default 200) gets `402` with a message to top up on `PATCH /drivers/status` (going available), `POST /rides/{id}/accept` and `POST /rides/{id}/claim`, and is skipped by emergency dispatch and by the claim hand-over. A ride already in progress is never stopped. A top-up that brings the balance back above the limit lifts the block.
+
 **Rides**
 
 | Endpoint | Auth | Purpose |

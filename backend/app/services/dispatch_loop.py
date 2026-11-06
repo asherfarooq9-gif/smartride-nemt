@@ -206,6 +206,7 @@ async def assign_due_claims(db, now: datetime) -> None:
                 Driver.id == driver_id,
                 Driver.status == DriverStatus.available,
                 Driver.is_verified.is_(True),
+                Driver.wallet_balance_pkr >= -settings.DRIVER_DEBT_LIMIT_PKR,
             )
             .values(status=DriverStatus.busy)
         )

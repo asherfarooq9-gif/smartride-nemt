@@ -327,6 +327,7 @@ async def find_available_drivers_by_distance(
         .where(
             Driver.status == DriverStatus.available,
             Driver.is_verified == True,  # noqa: E712 — SQLAlchemy column comparison, not a bool test
+            Driver.wallet_balance_pkr >= -settings.DRIVER_DEBT_LIMIT_PKR,
             Driver.last_seen_at >= fresh_since,  # NULL (never reported) is excluded too
             Driver.current_lat.between(patient_lat - dlat, patient_lat + dlat),
             Driver.current_lng.between(patient_lng - dlng, patient_lng + dlng),
