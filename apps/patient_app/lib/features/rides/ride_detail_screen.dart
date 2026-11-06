@@ -1,3 +1,4 @@
+import 'package:patient_app/core/ride_status_label.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -225,7 +226,7 @@ class _StatusBadge extends StatelessWidget {
           const Icon(Icons.info_outline, size: 20),
           const SizedBox(width: core.kSpaceSM),
           Text(
-            status.displayLabel,
+            rideStatusLabel(context.l10n, status),
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
         ],

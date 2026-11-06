@@ -250,5 +250,12 @@
   "nextStep": "Next",
   "gpsSharing": "Sharing your location with the patient",
   "gpsReconnecting": "Location sharing interrupted, reconnecting",
-  "gpsOff": "Location sharing is off. The patient cannot see you."
+  "gpsOff": "Location sharing is off. The patient cannot see you.",
+  "statusFinding": "Finding Driver",
+  "statusAssigned": "Driver Assigned",
+  "statusEnRoute": "Driver En Route",
+  "statusPickedUp": "Patient Picked Up",
+  "statusArrived": "Arrived at Hospital",
+  "statusCompleted": "Completed",
+  "statusCancelled": "Cancelled"
 }

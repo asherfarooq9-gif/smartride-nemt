@@ -737,4 +737,25 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get gpsOff => 'لوکیشن شیئرنگ بند ہے۔ مریض آپ کو نہیں دیکھ سکتا۔';
+
+  @override
+  String get statusFinding => 'ڈرائیور تلاش کیا جا رہا ہے';
+
+  @override
+  String get statusAssigned => 'ڈرائیور مقرر ہو گیا';
+
+  @override
+  String get statusEnRoute => 'ڈرائیور راستے میں ہے';
+
+  @override
+  String get statusPickedUp => 'مریض سوار ہو گیا';
+
+  @override
+  String get statusArrived => 'ہسپتال پہنچ گئے';
+
+  @override
+  String get statusCompleted => 'مکمل';
+
+  @override
+  String get statusCancelled => 'منسوخ';
 }

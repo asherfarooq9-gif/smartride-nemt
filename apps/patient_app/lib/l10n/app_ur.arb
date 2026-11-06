@@ -250,5 +250,12 @@
   "nextStep": "اگلا",
   "gpsSharing": "آپ کی لوکیشن مریض کے ساتھ شیئر ہو رہی ہے",
   "gpsReconnecting": "لوکیشن شیئرنگ رک گئی، دوبارہ جڑ رہی ہے",
-  "gpsOff": "لوکیشن شیئرنگ بند ہے۔ مریض آپ کو نہیں دیکھ سکتا۔"
+  "gpsOff": "لوکیشن شیئرنگ بند ہے۔ مریض آپ کو نہیں دیکھ سکتا۔",
+  "statusFinding": "ڈرائیور تلاش کیا جا رہا ہے",
+  "statusAssigned": "ڈرائیور مقرر ہو گیا",
+  "statusEnRoute": "ڈرائیور راستے میں ہے",
+  "statusPickedUp": "مریض سوار ہو گیا",
+  "statusArrived": "ہسپتال پہنچ گئے",
+  "statusCompleted": "مکمل",
+  "statusCancelled": "منسوخ"
 }

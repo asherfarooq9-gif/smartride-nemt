@@ -1,3 +1,4 @@
+import 'package:patient_app/core/ride_status_label.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -251,7 +252,9 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
           ),
           SafeArea(
             child: _StatusPanel(
-              statusLabel: _ride?.status.displayLabel ?? 'En Route',
+              statusLabel: _ride == null
+                  ? context.l10n.statusEnRoute
+                  : rideStatusLabel(context.l10n, _ride!.status),
               etaLabel: _etaLabel,
               hospitalName: _ride?.hospital?['name'] as String?,
               isConnected: _connected,

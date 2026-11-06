@@ -1,3 +1,4 @@
+import 'package:patient_app/core/ride_status_label.dart';
 import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -99,7 +100,8 @@ class ActiveRideBanner extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Semantics(
       button: true,
-      label: 'Active ride, ${ride.status.displayLabel}. View details',
+      label:
+          'Active ride, ${rideStatusLabel(context.l10n, ride.status)}. View details',
       excludeSemantics: true,
       child: PressScale(
         child: Material(
@@ -131,7 +133,7 @@ class ActiveRideBanner extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            ride.status.displayLabel,
+                            rideStatusLabel(context.l10n, ride.status),
                             style: TextStyle(
                               fontSize: kFontSmall,
                               color: scheme.onPrimaryContainer,
@@ -476,7 +478,7 @@ class _RideRow extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    ride.status.displayLabel,
+                    rideStatusLabel(context.l10n, ride.status),
                     style: TextStyle(
                       fontSize: kFontSmall,
                       color: scheme.onSurfaceVariant,

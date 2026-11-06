@@ -1,3 +1,4 @@
+import 'package:patient_app/core/ride_status_label.dart';
 import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -84,7 +85,7 @@ class ScheduledRidesScreen extends ConsumerWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    subtitle: Text(ride.status.displayLabel),
+                    subtitle: Text(rideStatusLabel(context.l10n, ride.status)),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                     onTap: () => context.push('/ride/${ride.id}'),
                   ),

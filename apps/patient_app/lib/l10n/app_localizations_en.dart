@@ -736,4 +736,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get gpsOff => 'Location sharing is off. The patient cannot see you.';
+
+  @override
+  String get statusFinding => 'Finding Driver';
+
+  @override
+  String get statusAssigned => 'Driver Assigned';
+
+  @override
+  String get statusEnRoute => 'Driver En Route';
+
+  @override
+  String get statusPickedUp => 'Patient Picked Up';
+
+  @override
+  String get statusArrived => 'Arrived at Hospital';
+
+  @override
+  String get statusCompleted => 'Completed';
+
+  @override
+  String get statusCancelled => 'Cancelled';
 }

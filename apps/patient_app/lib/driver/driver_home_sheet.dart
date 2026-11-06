@@ -1,3 +1,4 @@
+import 'package:patient_app/core/ride_status_label.dart';
 import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -115,7 +116,8 @@ class _DriverHomeSheetState extends ConsumerState<DriverHomeSheet> {
               ],
               if (dash.activeRide != null) ...[
                 ResumeRideBanner(
-                  statusLabel: dash.activeRide!.status.displayLabel,
+                  statusLabel:
+                      rideStatusLabel(context.l10n, dash.activeRide!.status),
                   onResume: () =>
                       context.push('/driver/ride/${dash.activeRide!.id}'),
                 ),

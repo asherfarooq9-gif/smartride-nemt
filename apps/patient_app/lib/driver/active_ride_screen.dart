@@ -1,3 +1,4 @@
+import 'package:patient_app/core/ride_status_label.dart';
 import 'package:patient_app/l10n/l10n.dart';
 import 'dart:async';
 
@@ -220,7 +221,7 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
     return Scaffold(
       appBar: AppBar(
         title: rideAsync.whenOrNull(
-              data: (r) => Text(r.status.displayLabel),
+              data: (r) => Text(rideStatusLabel(context.l10n, r.status)),
             ) ??
             Text(context.l10n.activeRide),
         actions: [
@@ -325,7 +326,7 @@ class _StatusBanner extends StatelessWidget {
       ),
       color: Theme.of(context).colorScheme.primaryContainer,
       child: Text(
-        status.displayLabel,
+        rideStatusLabel(context.l10n, status),
         textAlign: TextAlign.center,
         style: const TextStyle(fontWeight: FontWeight.w600),
       ),

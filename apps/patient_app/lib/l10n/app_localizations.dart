@@ -1519,6 +1519,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Location sharing is off. The patient cannot see you.'**
   String get gpsOff;
+
+  /// No description provided for @statusFinding.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding Driver'**
+  String get statusFinding;
+
+  /// No description provided for @statusAssigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver Assigned'**
+  String get statusAssigned;
+
+  /// No description provided for @statusEnRoute.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver En Route'**
+  String get statusEnRoute;
+
+  /// No description provided for @statusPickedUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Patient Picked Up'**
+  String get statusPickedUp;
+
+  /// No description provided for @statusArrived.
+  ///
+  /// In en, this message translates to:
+  /// **'Arrived at Hospital'**
+  String get statusArrived;
+
+  /// No description provided for @statusCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get statusCompleted;
+
+  /// No description provided for @statusCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get statusCancelled;
 }
 
 class _AppLocalizationsDelegate
