@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -149,11 +150,11 @@ class RideRequestCardState extends State<RideRequestCard> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             if (_isEmergency)
-                              const Padding(
-                                padding: EdgeInsets.only(bottom: 6),
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 6),
                                 child: Text(
-                                  'EMERGENCY',
-                                  style: TextStyle(
+                                  context.l10n.emergencyCaps,
+                                  style: const TextStyle(
                                     color: kEmergencyRed,
                                     fontSize: 11,
                                     fontWeight: FontWeight.w700,
@@ -181,8 +182,8 @@ class RideRequestCardState extends State<RideRequestCard> {
                                   child: Text(
                                     widget.ride.hospitalName ??
                                         (widget.ride.hospitalId != null
-                                            ? 'Assigned hospital'
-                                            : 'Destination'),
+                                            ? context.l10n.assignedHospital
+                                            : context.l10n.destinationLabel),
                                     style: const TextStyle(
                                       fontSize: 14,
                                       color: _kMuted,
@@ -242,9 +243,9 @@ class RideRequestCardState extends State<RideRequestCard> {
                             ),
                             elevation: 0,
                           ),
-                          child: const Text(
-                            'Accept',
-                            style: TextStyle(
+                          child: Text(
+                            context.l10n.accept,
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
@@ -262,9 +263,9 @@ class RideRequestCardState extends State<RideRequestCard> {
                             padding: EdgeInsets.zero,
                             minimumSize: const Size(0, 32),
                           ),
-                          child: const Text(
-                            'Decline',
-                            style: TextStyle(
+                          child: Text(
+                            context.l10n.decline,
+                            style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
                             ),

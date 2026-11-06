@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -37,7 +38,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (auth.hasError) {
       final err = auth.error;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(err is AppError ? err.message : 'Login failed'),
+        content: Text(err is AppError ? err.message : context.l10n.loginFailed),
         backgroundColor: kError,
       ));
     }
@@ -66,14 +67,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     color: kAuthAccent,
                   ),
                   label: Text(
-                    'Back',
+                    context.l10n.back,
                     style: GoogleFonts.dmSans(color: kAuthAccent),
                   ),
                   style: TextButton.styleFrom(alignment: Alignment.centerLeft),
                 ),
                 const SizedBox(height: kSpaceXL),
                 Text(
-                  'Welcome back',
+                  context.l10n.welcomeBack,
                   style: GoogleFonts.dmSans(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
@@ -82,7 +83,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 const SizedBox(height: kSpaceXS),
                 Text(
-                  'Log in to your SmartRide account',
+                  context.l10n.loginSubtitle,
                   style: GoogleFonts.dmSans(
                     fontSize: kFontSmall,
                     color: kAuthMuted,
@@ -91,7 +92,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: kSpaceXXL),
                 AuthField(
                   controller: _phoneCtrl,
-                  label: 'PHONE NUMBER',
+                  label: context.l10n.phoneNumberLabel,
                   hint: '+92 3XX XXX XXXX',
                   keyboardType: TextInputType.phone,
                   validator: Validators.phone,
@@ -99,11 +100,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: kSpaceLG),
                 AuthField(
                   controller: _passCtrl,
-                  label: 'PASSWORD',
-                  hint: 'Your password',
+                  label: context.l10n.passwordLabel,
+                  hint: context.l10n.passwordHint,
                   obscureText: _obscure,
                   suffixIcon: IconButton(
-                    tooltip: _obscure ? 'Show password' : 'Hide password',
+                    tooltip: _obscure
+                        ? context.l10n.showPassword
+                        : context.l10n.hidePassword,
                     icon: Icon(
                       _obscure
                           ? Icons.visibility_outlined
@@ -124,22 +127,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     onPressed: () => showDialog<void>(
                       context: context,
                       builder: (ctx) => AlertDialog(
-                        title: const Text('Reset password'),
-                        content: const Text(
-                          'Password reset is handled by our support team. '
-                          'Please reach us through Help & Support, or call '
-                          '1122 for ride emergencies.',
-                        ),
+                        title: Text(context.l10n.resetPasswordTitle),
+                        content: Text(context.l10n.resetPasswordBody),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.of(ctx).pop(),
-                            child: const Text('OK'),
+                            child: Text(context.l10n.ok),
                           ),
                         ],
                       ),
                     ),
                     child: Text(
-                      'Forgot password?',
+                      context.l10n.forgotPassword,
                       style: GoogleFonts.dmSans(
                         color: kAuthAccent,
                         fontSize: kFontSmall,
@@ -169,7 +168,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                           )
                         : Text(
-                            'Log In',
+                            context.l10n.logIn,
                             style: GoogleFonts.dmSans(
                               fontSize: kFontBody,
                               fontWeight: FontWeight.bold,
@@ -183,7 +182,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
-                      "Don't have an account? ",
+                      context.l10n.noAccountPrefix,
                       style: GoogleFonts.dmSans(
                         color: kAuthMuted,
                         fontSize: kFontSmall,
@@ -195,7 +194,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         minimumSize: const Size(kMinTapTarget, kMinTapTarget),
                       ),
                       child: Text(
-                        'Sign up',
+                        context.l10n.signUp,
                         style: GoogleFonts.dmSans(
                           color: kAuthAccent,
                           fontSize: kFontSmall,

@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -40,7 +41,7 @@ class HomeTopBar extends ConsumerWidget {
           child: Row(
             children: [
               GlassCircleButton(
-                tooltip: 'Open menu',
+                tooltip: context.l10n.openMenu,
                 icon: Icons.menu_rounded,
                 onPressed: onMenu,
               ),
@@ -60,7 +61,7 @@ class HomeTopBar extends ConsumerWidget {
               GlassCircleButton(
                 tooltip: hasUnread
                     ? 'Notifications, you have unread'
-                    : 'Notifications',
+                    : context.l10n.notificationsTitle,
                 icon: Icons.notifications_none_rounded,
                 hasBadge: hasUnread,
                 onPressed: () => context.push(

@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/cupertino.dart' show CupertinoSwitch;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,14 +14,14 @@ const Color _kOnline = Color(0xFF22A55A);
 /// The server decides who may go online (`isVerified`) and who is online
 /// (`driver.status`); nothing here is a guess. A driver who is already online
 /// can always go offline.
-String? onlineLockReason(DashboardState dash) {
+String? onlineLockReason(DashboardState dash, [AppLocalizations? l]) {
   if (dash.driver == null) {
     return dash.isLoading
-        ? 'Loading your account'
-        : 'Your account could not be loaded';
+        ? (l?.drvAccountLoading ?? 'Loading your account')
+        : (l?.drvAccountFailed ?? 'Your account could not be loaded');
   }
   if (!dash.driver!.isVerified && !dash.isOnline) {
-    return 'Available once your account is verified';
+    return l?.drvLockUnverified ?? 'Available once your account is verified';
   }
   return null;
 }
@@ -30,7 +31,7 @@ String? onlineLockReason(DashboardState dash) {
 void requestOnlineChange(BuildContext context, WidgetRef ref) {
   final dash = ref.read(dashboardProvider);
   if (dash.isUpdatingStatus) return;
-  final reason = onlineLockReason(dash);
+  final reason = onlineLockReason(dash, context.l10n);
   if (reason != null) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -50,19 +51,21 @@ class AvailabilityCard extends ConsumerWidget {
     final dash = ref.watch(dashboardProvider);
     final palette = HomePalette.of(context);
     final isOnline = dash.isOnline;
-    final lock = onlineLockReason(dash);
+    final lock = onlineLockReason(dash, context.l10n);
     // Until the account is known the card claims neither Online nor Offline.
     final isUnknown = dash.driver == null;
     final title = isUnknown
-        ? (dash.isLoading ? 'Checking your status' : 'Status unavailable')
+        ? (dash.isLoading
+            ? context.l10n.drvCheckingStatus
+            : context.l10n.drvStatusUnavailable)
         : isOnline
-            ? "You're Online"
-            : "You're Offline";
+            ? context.l10n.drvOnline
+            : context.l10n.drvOffline;
     final subtitle = lock != null && !isOnline
         ? lock
         : isOnline
-            ? 'Ready to receive ride requests'
-            : 'Go online to receive ride requests';
+            ? context.l10n.drvReadyForRequests
+            : context.l10n.drvGoOnlineHint;
 
     return Semantics(
       container: true,
@@ -170,7 +173,7 @@ class _AvailabilitySwitch extends StatelessWidget {
               )
             : Semantics(
                 toggled: isOnline,
-                label: 'Online',
+                label: context.l10n.onlineLabel,
                 excludeSemantics: true,
                 child: GestureDetector(
                   // A locked switch still answers a tap, with the reason.
@@ -201,7 +204,7 @@ class GoOnlineButton extends ConsumerWidget {
     final isBusy = dash.isUpdatingStatus;
     final background =
         scheme.brightness == Brightness.dark ? scheme.primary : _kNavy;
-    final label = isOnline ? 'Go Offline' : 'Go Online';
+    final label = isOnline ? context.l10n.goOffline : context.l10n.goOnline;
 
     return Semantics(
       button: true,
@@ -291,7 +294,7 @@ class ResumeRideBanner extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'You have a ride in progress',
+                          context.l10n.rideInProgress,
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
                             color: scheme.onPrimaryContainer,
@@ -305,7 +308,7 @@ class ResumeRideBanner extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'Resume',
+                    context.l10n.resume,
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
                       color: scheme.onPrimaryContainer,

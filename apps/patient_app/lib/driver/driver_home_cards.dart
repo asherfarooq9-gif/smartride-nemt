@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
@@ -29,7 +30,7 @@ class DriverGreeting extends StatelessWidget {
               child: Semantics(
                 header: true,
                 child: Text(
-                  '${SheetGreeting.greetingFor(DateTime.now())}, $who',
+                  '${SheetGreeting.greetingFor(context.l10n, DateTime.now())}, $who',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -50,7 +51,7 @@ class DriverGreeting extends StatelessWidget {
         ),
         const SizedBox(height: 2),
         Text(
-          "Stay safe. You're on the road.",
+          context.l10n.driverStaySafe,
           style: TextStyle(fontSize: core.kFontSmall, color: palette.muted),
         ),
       ],
@@ -89,7 +90,7 @@ class VerificationCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Verification pending',
+                      context.l10n.verificationPending,
                       style: TextStyle(
                         fontSize: core.kFontSmall + 1,
                         fontWeight: FontWeight.w700,
@@ -98,7 +99,7 @@ class VerificationCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'You cannot go online until your account is verified.',
+                      context.l10n.verificationBody,
                       style: TextStyle(
                         fontSize: 12.5,
                         color: isDark ? Colors.white70 : _kAmberText,
@@ -248,21 +249,22 @@ class _TopUpButton extends StatelessWidget {
                   side: BorderSide(color: Colors.white.withValues(alpha: 0.45)),
                 ),
               ),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'Top Up',
-                      style: TextStyle(
+                      context.l10n.topUp,
+                      style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
                       ),
                     ),
-                    SizedBox(width: 4),
-                    Icon(Icons.arrow_forward_rounded,
+                    const SizedBox(width: 4),
+                    const Icon(Icons.arrow_forward_rounded,
                         size: 14, color: Colors.white),
                   ],
                 ),

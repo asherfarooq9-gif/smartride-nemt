@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -155,7 +156,7 @@ class CompactEmergency extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: 'Request emergency ride',
+      label: context.l10n.requestEmergencyRide,
       excludeSemantics: true,
       child: Material(
         color: kEmergencyRed,
@@ -163,16 +164,16 @@ class CompactEmergency extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(kRadiusPill),
           onTap: () => showEmergencyConfirm(context),
-          child: const SizedBox(
+          child: SizedBox(
             height: 56,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.warning_rounded, color: Colors.white),
-                SizedBox(width: kSpaceSM),
+                const Icon(Icons.warning_rounded, color: Colors.white),
+                const SizedBox(width: kSpaceSM),
                 Text(
-                  'EMERGENCY',
-                  style: TextStyle(
+                  context.l10n.emergencyCaps,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.2,

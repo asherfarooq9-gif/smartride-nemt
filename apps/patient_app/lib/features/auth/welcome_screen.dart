@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -70,7 +71,7 @@ class WelcomeScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: kSpaceSM),
                         Text(
-                          'Medical transport, always nearby.',
+                          context.l10n.brandTagline,
                           textAlign: TextAlign.center,
                           style: GoogleFonts.dmSans(
                             fontSize: kFontBody,
@@ -90,7 +91,7 @@ class WelcomeScreen extends StatelessWidget {
                             border: Border.all(color: kPatient600),
                           ),
                           child: Text(
-                            'Islamabad · Rawalpindi',
+                            context.l10n.cityBadge,
                             style: GoogleFonts.dmSans(
                               fontSize: kFontSmall,
                               color: kPatient600,
@@ -124,7 +125,7 @@ class WelcomeScreen extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Get started',
+                        context.l10n.getStarted,
                         style: GoogleFonts.dmSans(
                           fontSize: kFontHeading,
                           fontWeight: FontWeight.bold,
@@ -133,7 +134,7 @@ class WelcomeScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: kSpaceSM),
                       Text(
-                        'Trusted medical transport for you and your family.',
+                        context.l10n.getStartedSub,
                         style: GoogleFonts.dmSans(
                           fontSize: kFontSmall,
                           color: kText600,
@@ -159,7 +160,7 @@ class WelcomeScreen extends StatelessWidget {
                             elevation: WidgetStateProperty.all(8),
                           ),
                           child: Text(
-                            "Sign Up — It's Free",
+                            context.l10n.signUpFree,
                             style: GoogleFonts.dmSans(
                               fontSize: kFontBody,
                               fontWeight: FontWeight.bold,
@@ -181,7 +182,7 @@ class WelcomeScreen extends StatelessWidget {
                             ),
                           ),
                           child: Text(
-                            'Log In',
+                            context.l10n.logIn,
                             style: GoogleFonts.dmSans(
                               fontSize: kFontBody,
                               fontWeight: FontWeight.w600,
@@ -195,7 +196,7 @@ class WelcomeScreen extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            'In an emergency, call ',
+                            context.l10n.emergencyCallPrefix,
                             style: GoogleFonts.dmSans(
                               fontSize: 12,
                               color: kText400,

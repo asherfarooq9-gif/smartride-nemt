@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -101,9 +102,9 @@ class _DriverHomeSheetState extends ConsumerState<DriverHomeSheet> {
                 _MessageCard(
                   key: const ValueKey('account-error'),
                   icon: Icons.cloud_off_rounded,
-                  title: 'Could not load your account',
-                  message: dash.error ?? 'Failed to load',
-                  actionLabel: 'Try again',
+                  title: context.l10n.couldNotLoadAccount,
+                  message: dash.error ?? context.l10n.failedToLoad,
+                  actionLabel: context.l10n.tryAgain,
                   onAction: ref.read(dashboardProvider.notifier).refresh,
                 ),
                 const SizedBox(height: 6),
@@ -130,12 +131,11 @@ class _DriverHomeSheetState extends ConsumerState<DriverHomeSheet> {
                 const SizedBox(height: 6),
               ],
               if (dash.wasTakenOffline && !dash.isOnline) ...[
-                const _MessageCard(
-                  key: ValueKey('taken-offline'),
+                _MessageCard(
+                  key: const ValueKey('taken-offline'),
                   icon: Icons.info_outline_rounded,
-                  title: 'You were taken offline',
-                  message: 'A ride request was not answered in time. '
-                      'Go online when you are ready for requests again.',
+                  title: context.l10n.takenOfflineTitle,
+                  message: context.l10n.takenOfflineBody,
                 ),
                 const SizedBox(height: 6),
               ],
@@ -174,26 +174,26 @@ class RequestsSection extends ConsumerWidget {
           _MessageCard(
             key: const ValueKey('requests-error'),
             icon: Icons.error_outline_rounded,
-            title: 'Could not load',
+            title: context.l10n.couldNotLoad,
             message: dash.error!,
-            actionLabel: 'Try again',
+            actionLabel: context.l10n.tryAgain,
             onAction: notifier.refresh,
           ),
           const SizedBox(height: 6),
         ],
         if (isFirstLoad)
-          const _MessageCard(
-            key: ValueKey('requests-loading'),
+          _MessageCard(
+            key: const ValueKey('requests-loading'),
             icon: Icons.hourglass_top_rounded,
-            title: 'Loading',
-            message: 'Getting your ride requests',
+            title: context.l10n.loadingTitle,
+            message: context.l10n.gettingRequests,
             isLoading: true,
           )
         else if (dash.isOnline) ...[
           Semantics(
             header: true,
             child: Text(
-              'Ride requests',
+              context.l10n.rideRequestsTitle,
               style: TextStyle(
                 fontSize: core.kFontSubhead,
                 fontWeight: FontWeight.w700,
@@ -203,11 +203,11 @@ class RequestsSection extends ConsumerWidget {
           ),
           const SizedBox(height: 6),
           if (dash.pendingRides.isEmpty)
-            const _MessageCard(
-              key: ValueKey('requests-empty'),
+            _MessageCard(
+              key: const ValueKey('requests-empty'),
               icon: Icons.wifi_tethering_rounded,
-              title: 'No ride requests right now',
-              message: 'New requests will appear here.',
+              title: context.l10n.noRequests,
+              message: context.l10n.newRequestsHere,
             )
           else
             for (final ride in dash.pendingRides)

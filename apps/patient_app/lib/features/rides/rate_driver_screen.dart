@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
@@ -40,7 +41,7 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
       _failed(e.message);
     } on Exception catch (e, st) {
       core.ErrorReporter.report('Submitting a rating failed', e, st);
-      _failed('Could not submit your rating. Please try again.');
+      _failed(context.l10n.couldNotSubmitRating);
     }
   }
 
@@ -57,7 +58,7 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Rate Your Driver'),
+        title: Text(context.l10n.rateYourDriverTitle),
         automaticallyImplyLeading: false,
       ),
       body: _submitted
@@ -106,7 +107,7 @@ class _RatingForm extends StatelessWidget {
               size: 72, color: core.kPatientPrimary),
           const SizedBox(height: core.kSpaceLG),
           Text(
-            'How was your ride?',
+            context.l10n.howWasRide,
             textAlign: TextAlign.center,
             style: Theme.of(context)
                 .textTheme
@@ -149,15 +150,15 @@ class _RatingForm extends StatelessWidget {
             controller: commentCtrl,
             maxLines: 3,
             maxLength: 500,
-            decoration: const InputDecoration(
-              hintText: 'Any comments? (optional)',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              hintText: context.l10n.anyComments,
+              border: const OutlineInputBorder(),
               alignLabelWithHint: true,
             ),
           ),
           const SizedBox(height: core.kSpaceXL),
           core.PrimaryButton(
-            label: 'Submit Rating',
+            label: context.l10n.submitRating,
             onPressed: submitting ? null : onSubmit,
             isLoading: submitting,
             color: core.kPatientPrimary,
@@ -166,7 +167,7 @@ class _RatingForm extends StatelessWidget {
           const SizedBox(height: core.kSpaceMD),
           TextButton(
             onPressed: submitting ? null : onSkip,
-            child: const Text('Skip'),
+            child: Text(context.l10n.skip),
           ),
         ],
       ),
@@ -190,21 +191,21 @@ class _SuccessView extends StatelessWidget {
                 size: 80, color: core.kPatientPrimary),
             const SizedBox(height: core.kSpaceLG),
             Text(
-              'Thank you!',
+              context.l10n.thankYou,
               style: Theme.of(context)
                   .textTheme
                   .headlineMedium
                   ?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: core.kSpaceSM),
-            const Text(
-              'Your feedback helps us improve the service.',
+            Text(
+              context.l10n.feedbackHelps,
               textAlign: TextAlign.center,
-              style: TextStyle(color: core.kTextSecondary),
+              style: const TextStyle(color: core.kTextSecondary),
             ),
             const SizedBox(height: core.kSpaceXXL),
             core.PrimaryButton(
-              label: 'Back to Home',
+              label: context.l10n.backToHome,
               onPressed: onDone,
               color: core.kPatientPrimary,
               height: core.kButtonHeight,

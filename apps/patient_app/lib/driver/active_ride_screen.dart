@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart' show defaultTargetPlatform;
@@ -94,6 +95,7 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
 
   Future<void> _advance(core.RideStatus next) async {
     if (_busy) return;
+    final reassignedMessage = context.l10n.rideReassigned;
     setState(() => _busy = true);
     try {
       await core.updateRideStatus(widget.rideId, next);
@@ -113,11 +115,12 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
       if (e is core.AppError && _isNoLongerYours(e)) {
         // The server gave the ride to someone else (for example the driver did
         // not set off in time). Say so and go home instead of a bare "Forbidden".
-        await _leave('This ride is no longer yours. It has been reassigned.');
+        await _leave(reassignedMessage);
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e is core.AppError ? e.message : 'Update failed'),
+            content: Text(
+                e is core.AppError ? e.message : context.l10n.updateFailed),
             backgroundColor: core.kError,
           ),
         );
@@ -164,7 +167,7 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
     );
     if (!opened && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No maps app could be opened')),
+        SnackBar(content: Text(context.l10n.noMapsApp)),
       );
     }
   }
@@ -173,17 +176,17 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Cancel Ride'),
-        content: const Text('Are you sure you want to cancel this ride?'),
+        title: Text(context.l10n.cancelRide),
+        content: Text(context.l10n.cancelRideConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('No'),
+            child: Text(context.l10n.no),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: core.kError),
-            child: const Text('Yes, Cancel'),
+            child: Text(context.l10n.yesCancel),
           ),
         ],
       ),
@@ -203,14 +206,14 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
     ref.listen<String?>(rideEndedByServerProvider, (_, endedId) {
       if (endedId != widget.rideId) return;
       ref.read(rideEndedByServerProvider.notifier).state = null;
-      _leave('This ride has ended.');
+      _leave(context.l10n.rideEnded);
     });
     ref.listen(_rideDetailProvider(widget.rideId), (_, next) {
       final ride = next.valueOrNull;
       if (ride != null && rideLeftThisDriver(ride.status)) {
         _leave(rideHasEnded(ride.status)
-            ? 'This ride has ended.'
-            : 'This ride is no longer assigned to you.');
+            ? context.l10n.rideEnded
+            : context.l10n.rideNoLongerAssigned);
       }
     });
 
@@ -219,7 +222,7 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
         title: rideAsync.whenOrNull(
               data: (r) => Text(r.status.displayLabel),
             ) ??
-            const Text('Active Ride'),
+            Text(context.l10n.activeRide),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: core.kSpaceLG),
@@ -231,10 +234,8 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
         loading: () => const core.LoadingState(),
         error: (e, _) => core.ErrorState(
           message: e is core.AppError
-              ? (_isNoLongerYours(e)
-                  ? 'This ride is no longer yours. It has been reassigned.'
-                  : e.message)
-              : 'Failed to load ride',
+              ? (_isNoLongerYours(e) ? context.l10n.rideReassigned : e.message)
+              : context.l10n.failedLoadRide,
           onRetry: () => ref.invalidate(_rideDetailProvider(widget.rideId)),
         ),
         data: (ride) {
@@ -261,9 +262,9 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
                             point: pickupPos,
                             width: 40,
                             height: 40,
-                            child: const Tooltip(
-                              message: 'Patient pickup',
-                              child: Icon(
+                            child: Tooltip(
+                              message: context.l10n.patientPickup,
+                              child: const Icon(
                                 Icons.location_on,
                                 color: core.kEmergencyRed,
                                 size: 40,
@@ -275,9 +276,9 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
                             point: _myPos!,
                             width: 24,
                             height: 24,
-                            child: const Tooltip(
-                              message: 'You are here',
-                              child: DecoratedBox(
+                            child: Tooltip(
+                              message: context.l10n.youAreHere,
+                              child: const DecoratedBox(
                                 decoration: BoxDecoration(
                                   color: core.kPatientPrimary,
                                   shape: BoxShape.circle,
@@ -364,18 +365,18 @@ class _ActionPanel extends StatelessWidget {
     }
   }
 
-  String get _nextLabel {
+  String _nextLabel(AppLocalizations l) {
     switch (ride.status) {
       case core.RideStatus.driverAssigned:
-        return 'Start Driving';
+        return l.startDriving;
       case core.RideStatus.driverEnRoute:
-        return 'Patient Picked Up';
+        return l.patientPickedUp;
       case core.RideStatus.patientPickedUp:
-        return 'Arrived at Hospital';
+        return l.arrivedAtHospital;
       case core.RideStatus.arrivedAtHospital:
-        return 'Complete Ride';
+        return l.completeRide;
       default:
-        return 'Next';
+        return l.nextStep;
     }
   }
 
@@ -417,7 +418,7 @@ class _ActionPanel extends StatelessWidget {
           ],
           if (next != null)
             core.PrimaryButton(
-              label: _nextLabel,
+              label: _nextLabel(context.l10n),
               isLoading: busy,
               onPressed: () => onAdvance(next),
               height: core.kMinTapTarget,
@@ -442,7 +443,7 @@ class _ActionPanel extends StatelessWidget {
                           color: core.kError,
                         ),
                       )
-                    : const Text('Cancel Ride'),
+                    : Text(context.l10n.cancelRide),
               ),
             ),
           ],
@@ -464,17 +465,17 @@ class _GpsStatusIcon extends StatelessWidget {
           Icons.gps_fixed,
           // This icon sits on the blue app bar, where green was hard to see.
           Colors.white,
-          'Sharing your location with the patient',
+          context.l10n.gpsSharing,
         ),
       GpsStreamStatus.starting || GpsStreamStatus.degraded => (
           Icons.gps_not_fixed,
           core.kAmberWarning,
-          'Location sharing interrupted, reconnecting',
+          context.l10n.gpsReconnecting,
         ),
       GpsStreamStatus.idle => (
           Icons.gps_off,
           const Color(0xFFFFB4AB),
-          'Location sharing is off. The patient cannot see you.',
+          context.l10n.gpsOff,
         ),
     };
     return Tooltip(

@@ -34,7 +34,7 @@ class RideDetailScreen extends ConsumerWidget {
       ref.invalidate(rideDetailProvider(rideId));
       ref.invalidate(ridesProvider);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ride cancelled')),
+        SnackBar(content: Text(context.l10n.rideCancelled)),
       );
     } on core.AppError catch (e) {
       if (!context.mounted) return;
@@ -44,8 +44,7 @@ class RideDetailScreen extends ConsumerWidget {
       core.ErrorReporter.report('Cancelling a ride failed', e, st);
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Could not cancel the ride. Please try again.')),
+        SnackBar(content: Text(context.l10n.couldNotCancel)),
       );
     }
   }
@@ -55,11 +54,11 @@ class RideDetailScreen extends ConsumerWidget {
     final rideAsync = ref.watch(rideDetailProvider(rideId));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Ride Details')),
+      appBar: AppBar(title: Text(context.l10n.rideDetails)),
       body: rideAsync.when(
         loading: () => const core.LoadingState(),
         error: (e, _) => core.ErrorState(
-          message: e is core.AppError ? e.message : 'Failed to load ride',
+          message: e is core.AppError ? e.message : context.l10n.failedLoadRide,
           onRetry: () => ref.invalidate(rideDetailProvider(rideId)),
         ),
         data: (ride) => SingleChildScrollView(
@@ -70,19 +69,19 @@ class RideDetailScreen extends ConsumerWidget {
               _StatusBadge(ride.status),
               const SizedBox(height: core.kSpaceLG),
               _InfoCard(
-                title: 'Pickup',
+                title: context.l10n.pickupTitle,
                 value: ride.pickupAddress,
                 icon: Icons.location_on,
               ),
               if (ride.symptomText != null)
                 _InfoCard(
-                  title: 'Symptoms',
+                  title: context.l10n.symptomsTitle,
                   value: ride.symptomText!,
                   icon: Icons.medical_information,
                 ),
               if (ride.createdAt != null)
                 _InfoCard(
-                  title: 'Requested',
+                  title: context.l10n.requestedTitle,
                   value: formatIsoDateTime(ride.createdAt!),
                   icon: Icons.access_time,
                 ),
@@ -98,7 +97,7 @@ class RideDetailScreen extends ConsumerWidget {
               if (ride.driver != null) ...[
                 const SizedBox(height: core.kSpaceSM),
                 Text(
-                  'Driver',
+                  context.l10n.roleDriver,
                   style: Theme.of(context)
                       .textTheme
                       .titleMedium
@@ -108,7 +107,8 @@ class RideDetailScreen extends ConsumerWidget {
                   child: ListTile(
                     leading: const CircleAvatar(child: Icon(Icons.person)),
                     title: Text(
-                      (ride.driver!['full_name'] as String?) ?? 'Driver',
+                      (ride.driver!['full_name'] as String?) ??
+                          context.l10n.roleDriver,
                     ),
                     subtitle: Text(_driverSubtitle(context, ride.driver!)),
                   ),
@@ -124,7 +124,7 @@ class RideDetailScreen extends ConsumerWidget {
                 ),
               if (ride.isTrackable)
                 core.PrimaryButton(
-                  label: 'Track Live',
+                  label: context.l10n.trackLive,
                   onPressed: () => context.push('/tracking/$rideId'),
                   color: core.kPatientPrimary,
                 ),
@@ -133,7 +133,7 @@ class RideDetailScreen extends ConsumerWidget {
                 const SizedBox(height: core.kSpaceMD),
                 OutlinedButton.icon(
                   icon: const Icon(Icons.cancel_outlined),
-                  label: const Text('Cancel Ride'),
+                  label: Text(context.l10n.cancelRide),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Theme.of(context).colorScheme.error,
                     side: BorderSide(
@@ -183,20 +183,20 @@ class _CancelReasonDialogState extends State<_CancelReasonDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Cancel Ride'),
+      title: Text(context.l10n.cancelRide),
       content: TextField(
         controller: _controller,
-        decoration: const InputDecoration(hintText: 'Reason (optional)'),
+        decoration: InputDecoration(hintText: context.l10n.reasonOptional),
         autofocus: true,
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Keep Ride'),
+          child: Text(context.l10n.keepRide),
         ),
         TextButton(
           onPressed: () => Navigator.pop(context, _controller.text.trim()),
-          child: const Text('Cancel Ride'),
+          child: Text(context.l10n.cancelRide),
         ),
       ],
     );

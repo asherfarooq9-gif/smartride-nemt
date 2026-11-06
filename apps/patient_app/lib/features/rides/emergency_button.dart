@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:smartride_core/smartride_core.dart';
@@ -71,8 +72,8 @@ class _EmergencyButtonState extends State<EmergencyButton>
     final outer = diameter * 1.28;
 
     return Semantics(
-      label: 'Request emergency ride',
-      hint: 'Double tap to get immediate help',
+      label: context.l10n.requestEmergencyRide,
+      hint: context.l10n.doubleTapHelp,
       button: true,
       excludeSemantics: true,
       child: SizedBox(
@@ -179,9 +180,9 @@ class _EmergencyLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Padding(
-        padding: EdgeInsets.all(kSpaceMD),
+        padding: const EdgeInsets.all(kSpaceMD),
         child: FittedBox(
           fit: BoxFit.scaleDown,
           child: SizedBox(
@@ -189,23 +190,24 @@ class _EmergencyLabel extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.warning_rounded, color: Colors.white, size: 34),
-                SizedBox(height: 2),
+                const Icon(Icons.warning_rounded,
+                    color: Colors.white, size: 34),
+                const SizedBox(height: 2),
                 Text(
-                  'EMERGENCY',
+                  context.l10n.emergencyCaps,
                   maxLines: 1,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
                     color: Colors.white,
                     letterSpacing: 0.8,
                   ),
                 ),
-                SizedBox(height: 1),
+                const SizedBox(height: 1),
                 Text(
-                  'Tap for immediate help',
+                  context.l10n.tapForHelp,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 13, color: Colors.white),
+                  style: const TextStyle(fontSize: 13, color: Colors.white),
                 ),
               ],
             ),

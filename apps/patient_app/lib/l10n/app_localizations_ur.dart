@@ -238,4 +238,503 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get paymentBank => 'بینک ٹرانسفر';
+
+  @override
+  String get brandTagline => 'طبی ٹرانسپورٹ، ہمیشہ آپ کے قریب۔';
+
+  @override
+  String get cityBadge => 'اسلام آباد · راولپنڈی';
+
+  @override
+  String get getStarted => 'شروع کریں';
+
+  @override
+  String get getStartedSub =>
+      'آپ اور آپ کے خاندان کے لیے قابلِ اعتماد طبی ٹرانسپورٹ۔';
+
+  @override
+  String get signUpFree => 'سائن اپ — مفت ہے';
+
+  @override
+  String get logIn => 'لاگ اِن';
+
+  @override
+  String get emergencyCallPrefix => 'ہنگامی صورت میں کال کریں ';
+
+  @override
+  String get back => 'واپس';
+
+  @override
+  String get welcomeBack => 'خوش آمدید';
+
+  @override
+  String get loginSubtitle => 'اپنے سمارٹ رائیڈ اکاؤنٹ میں لاگ اِن کریں';
+
+  @override
+  String get phoneNumberLabel => 'فون نمبر';
+
+  @override
+  String get passwordLabel => 'پاس ورڈ';
+
+  @override
+  String get passwordHint => 'آپ کا پاس ورڈ';
+
+  @override
+  String get forgotPassword => 'پاس ورڈ بھول گئے؟';
+
+  @override
+  String get resetPasswordTitle => 'پاس ورڈ ری سیٹ کریں';
+
+  @override
+  String get resetPasswordBody =>
+      'پاس ورڈ ری سیٹ ہماری سپورٹ ٹیم کرتی ہے۔ براہِ کرم مدد اور سپورٹ کے ذریعے ہم سے رابطہ کریں، یا سواری کی ہنگامی صورت میں 1122 پر کال کریں۔';
+
+  @override
+  String get ok => 'ٹھیک ہے';
+
+  @override
+  String get noAccountPrefix => 'اکاؤنٹ نہیں ہے؟ ';
+
+  @override
+  String get signUp => 'سائن اپ';
+
+  @override
+  String get loginFailed => 'لاگ اِن نہیں ہو سکا';
+
+  @override
+  String get signupFailed => 'سائن اپ نہیں ہو سکا';
+
+  @override
+  String get createAccount => 'اکاؤنٹ بنائیں';
+
+  @override
+  String get fullNameLabel => 'پورا نام';
+
+  @override
+  String get fullNameHint => 'آپ کا پورا نام';
+
+  @override
+  String get passwordMinHint => 'کم از کم 8 حروف';
+
+  @override
+  String get confirmPasswordLabel => 'پاس ورڈ کی تصدیق';
+
+  @override
+  String get repeatPasswordHint => 'پاس ورڈ دوبارہ لکھیں';
+
+  @override
+  String get passwordsMismatch => 'پاس ورڈ آپس میں نہیں ملتے';
+
+  @override
+  String get iAmA => 'میں ہوں...';
+
+  @override
+  String get driverDetails => 'ڈرائیور کی تفصیل';
+
+  @override
+  String get licenseLabel => 'لائسنس نمبر';
+
+  @override
+  String get plateLabel => 'گاڑی کی پلیٹ';
+
+  @override
+  String get vehicleTypeLabel => 'گاڑی کی قسم';
+
+  @override
+  String get haveAccountPrefix => 'پہلے سے اکاؤنٹ ہے؟ ';
+
+  @override
+  String get logInLink => 'لاگ اِن کریں';
+
+  @override
+  String get rolePatient => 'مریض';
+
+  @override
+  String get rolePatientSub => 'طبی سواری بُک کریں اور حاصل کریں';
+
+  @override
+  String get roleDriver => 'ڈرائیور';
+
+  @override
+  String get roleDriverSub => 'مریضوں کو ان کی اپائنٹمنٹ تک پہنچائیں';
+
+  @override
+  String get roleBoth => 'دونوں';
+
+  @override
+  String get roleBothSub => 'مریض اور ڈرائیور دونوں پورٹل استعمال کریں';
+
+  @override
+  String get navHome => 'ہوم';
+
+  @override
+  String get navMyRides => 'میری سواریاں';
+
+  @override
+  String get navProfile => 'پروفائل';
+
+  @override
+  String get requestEmergencyRide => 'ہنگامی سواری کی درخواست';
+
+  @override
+  String get emergencyCaps => 'ایمرجنسی';
+
+  @override
+  String get dragToResize => 'سائز بدلنے کے لیے کھینچیں';
+
+  @override
+  String get goodMorning => 'صبح بخیر';
+
+  @override
+  String get goodAfternoon => 'سلام، دوپہر بخیر';
+
+  @override
+  String get goodEvening => 'شام بخیر';
+
+  @override
+  String get staySafe => 'محفوظ رہیں۔ ہم آپ کے ساتھ ہیں۔';
+
+  @override
+  String get activeRide => 'جاری سواری';
+
+  @override
+  String get bookRideSub => 'غیر ہنگامی سفر کا وقت طے کریں';
+
+  @override
+  String get recentRides => 'حالیہ سواریاں';
+
+  @override
+  String get viewTrips => 'اپنے سفر دیکھیں';
+
+  @override
+  String get favorites => 'پسندیدہ';
+
+  @override
+  String get savedLocations => 'محفوظ مقامات';
+
+  @override
+  String get safetyTips => 'حفاظتی مشورے';
+
+  @override
+  String get stayInformed => 'باخبر رہیں';
+
+  @override
+  String get couldntLoadRides => 'آپ کی سواریاں لوڈ نہیں ہو سکیں';
+
+  @override
+  String get tryAgain => 'دوبارہ کوشش کریں';
+
+  @override
+  String get noRidesYet => 'ابھی کوئی سواری نہیں';
+
+  @override
+  String get yourRecentRides => 'آپ کی حالیہ سواریاں';
+
+  @override
+  String get openMenu => 'مینو کھولیں';
+
+  @override
+  String get notificationsTitle => 'اطلاعات';
+
+  @override
+  String get tapForHelp => 'فوری مدد کے لیے دبائیں';
+
+  @override
+  String get doubleTapHelp => 'فوری مدد کے لیے دو بار دبائیں';
+
+  @override
+  String get myProfile => 'میری پروفائل';
+
+  @override
+  String get edit => 'ترمیم';
+
+  @override
+  String get profileUpdated => 'پروفائل اپ ڈیٹ ہو گئی';
+
+  @override
+  String get updateFailed => 'اپ ڈیٹ نہیں ہو سکی';
+
+  @override
+  String get failedLoadProfile => 'پروفائل لوڈ نہیں ہو سکی';
+
+  @override
+  String get personalInfo => 'ذاتی معلومات';
+
+  @override
+  String get fullNameTitle => 'پورا نام';
+
+  @override
+  String get phoneTitle => 'فون';
+
+  @override
+  String get dateOfBirth => 'تاریخِ پیدائش';
+
+  @override
+  String get mobilityNeeds => 'نقل و حرکت کی ضروریات';
+
+  @override
+  String get mobilityNeedsOptional => 'نقل و حرکت کی ضروریات (اختیاری)';
+
+  @override
+  String get emergencyContact => 'ہنگامی رابطہ';
+
+  @override
+  String get nameTitle => 'نام';
+
+  @override
+  String get quickLinks => 'فوری لنکس';
+
+  @override
+  String get savedPlaces => 'محفوظ مقامات';
+
+  @override
+  String get settingsTitle => 'ترتیبات';
+
+  @override
+  String get saveChanges => 'تبدیلیاں محفوظ کریں';
+
+  @override
+  String get rideDetails => 'سواری کی تفصیل';
+
+  @override
+  String get pickupTitle => 'پک اپ';
+
+  @override
+  String get symptomsTitle => 'علامات';
+
+  @override
+  String get requestedTitle => 'درخواست کا وقت';
+
+  @override
+  String get trackLive => 'لائیو ٹریک کریں';
+
+  @override
+  String get cancelRide => 'سواری منسوخ کریں';
+
+  @override
+  String get keepRide => 'سواری رکھیں';
+
+  @override
+  String get reasonOptional => 'وجہ (اختیاری)';
+
+  @override
+  String get rideCancelled => 'سواری منسوخ ہو گئی';
+
+  @override
+  String get couldNotCancel =>
+      'سواری منسوخ نہیں ہو سکی۔ براہِ کرم دوبارہ کوشش کریں۔';
+
+  @override
+  String get failedLoadRide => 'سواری لوڈ نہیں ہو سکی';
+
+  @override
+  String get rateYourDriverTitle => 'اپنے ڈرائیور کو ریٹ کریں';
+
+  @override
+  String get howWasRide => 'آپ کی سواری کیسی رہی؟';
+
+  @override
+  String get anyComments => 'کوئی تبصرہ؟ (اختیاری)';
+
+  @override
+  String get submitRating => 'ریٹنگ جمع کرائیں';
+
+  @override
+  String get skip => 'چھوڑیں';
+
+  @override
+  String get thankYou => 'شکریہ!';
+
+  @override
+  String get feedbackHelps =>
+      'آپ کی رائے سے ہمیں سروس بہتر بنانے میں مدد ملتی ہے۔';
+
+  @override
+  String get backToHome => 'ہوم پر واپس جائیں';
+
+  @override
+  String get ratingTerrible => 'بہت خراب';
+
+  @override
+  String get ratingPoor => 'خراب';
+
+  @override
+  String get ratingOkay => 'ٹھیک ٹھاک';
+
+  @override
+  String get ratingGood => 'اچھی';
+
+  @override
+  String get ratingExcellent => 'بہترین';
+
+  @override
+  String get couldNotSubmitRating =>
+      'آپ کی ریٹنگ جمع نہیں ہو سکی۔ براہِ کرم دوبارہ کوشش کریں۔';
+
+  @override
+  String get markAllRead => 'سب پڑھا ہوا کریں';
+
+  @override
+  String get noNotificationsYet => 'ابھی کوئی اطلاع نہیں';
+
+  @override
+  String get loadingRides => 'سواریاں لوڈ ہو رہی ہیں...';
+
+  @override
+  String get failedToLoad => 'لوڈ نہیں ہو سکا';
+
+  @override
+  String get noRidesYetDot => 'ابھی کوئی سواری نہیں۔';
+
+  @override
+  String get drvAccountLoading => 'آپ کا اکاؤنٹ لوڈ ہو رہا ہے';
+
+  @override
+  String get drvAccountFailed => 'آپ کا اکاؤنٹ لوڈ نہیں ہو سکا';
+
+  @override
+  String get drvLockUnverified => 'اکاؤنٹ کی تصدیق کے بعد دستیاب ہوگا';
+
+  @override
+  String get drvCheckingStatus => 'آپ کی حیثیت دیکھی جا رہی ہے';
+
+  @override
+  String get drvStatusUnavailable => 'حیثیت دستیاب نہیں';
+
+  @override
+  String get drvOnline => 'آپ آن لائن ہیں';
+
+  @override
+  String get drvOffline => 'آپ آف لائن ہیں';
+
+  @override
+  String get drvReadyForRequests => 'سواری کی درخواستیں لینے کے لیے تیار';
+
+  @override
+  String get drvGoOnlineHint => 'درخواستیں لینے کے لیے آن لائن ہوں';
+
+  @override
+  String get goOnline => 'آن لائن ہوں';
+
+  @override
+  String get goOffline => 'آف لائن ہوں';
+
+  @override
+  String get onlineLabel => 'آن لائن';
+
+  @override
+  String get rideInProgress => 'آپ کی ایک سواری جاری ہے';
+
+  @override
+  String get resume => 'جاری رکھیں';
+
+  @override
+  String get driverStaySafe => 'محفوظ رہیں۔ آپ سڑک پر ہیں۔';
+
+  @override
+  String get verificationPending => 'تصدیق باقی ہے';
+
+  @override
+  String get verificationBody => 'اکاؤنٹ کی تصدیق تک آپ آن لائن نہیں ہو سکتے۔';
+
+  @override
+  String get lowBalance => 'کم بیلنس';
+
+  @override
+  String get walletBalance => 'والٹ بیلنس';
+
+  @override
+  String get topUp => 'ٹاپ اپ';
+
+  @override
+  String get topUpWalletLabel => 'والٹ ٹاپ اپ کریں';
+
+  @override
+  String get couldNotLoadAccount => 'آپ کا اکاؤنٹ لوڈ نہیں ہو سکا';
+
+  @override
+  String get couldNotLoad => 'لوڈ نہیں ہو سکا';
+
+  @override
+  String get loadingTitle => 'لوڈ ہو رہا ہے';
+
+  @override
+  String get gettingRequests => 'آپ کی سواری کی درخواستیں آ رہی ہیں';
+
+  @override
+  String get rideRequestsTitle => 'سواری کی درخواستیں';
+
+  @override
+  String get noRequests => 'ابھی کوئی درخواست نہیں';
+
+  @override
+  String get newRequestsHere => 'نئی درخواستیں یہاں نظر آئیں گی۔';
+
+  @override
+  String get takenOfflineTitle => 'آپ کو آف لائن کر دیا گیا';
+
+  @override
+  String get takenOfflineBody =>
+      'ایک سواری کی درخواست کا بروقت جواب نہیں دیا گیا۔ دوبارہ درخواستیں لینے کے لیے تیار ہوں تو آن لائن ہو جائیں۔';
+
+  @override
+  String get accept => 'قبول کریں';
+
+  @override
+  String get decline => 'مسترد کریں';
+
+  @override
+  String get assignedHospital => 'مقررہ ہسپتال';
+
+  @override
+  String get cancelRideConfirm => 'کیا آپ واقعی یہ سواری منسوخ کرنا چاہتے ہیں؟';
+
+  @override
+  String get no => 'نہیں';
+
+  @override
+  String get yesCancel => 'ہاں، منسوخ کریں';
+
+  @override
+  String get noMapsApp => 'کوئی میپس ایپ نہیں کھل سکی';
+
+  @override
+  String get rideReassigned =>
+      'یہ سواری اب آپ کی نہیں رہی۔ یہ کسی اور کو دے دی گئی ہے۔';
+
+  @override
+  String get rideEnded => 'یہ سواری ختم ہو چکی ہے۔';
+
+  @override
+  String get rideNoLongerAssigned => 'یہ سواری اب آپ کو تفویض نہیں ہے۔';
+
+  @override
+  String get patientPickup => 'مریض کا پک اپ';
+
+  @override
+  String get youAreHere => 'آپ یہاں ہیں';
+
+  @override
+  String get startDriving => 'ڈرائیونگ شروع کریں';
+
+  @override
+  String get patientPickedUp => 'مریض سوار ہو گیا';
+
+  @override
+  String get arrivedAtHospital => 'ہسپتال پہنچ گئے';
+
+  @override
+  String get completeRide => 'سواری مکمل کریں';
+
+  @override
+  String get nextStep => 'اگلا';
+
+  @override
+  String get gpsSharing => 'آپ کی لوکیشن مریض کے ساتھ شیئر ہو رہی ہے';
+
+  @override
+  String get gpsReconnecting => 'لوکیشن شیئرنگ رک گئی، دوبارہ جڑ رہی ہے';
+
+  @override
+  String get gpsOff => 'لوکیشن شیئرنگ بند ہے۔ مریض آپ کو نہیں دیکھ سکتا۔';
 }

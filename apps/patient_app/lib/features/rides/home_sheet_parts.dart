@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,7 +15,7 @@ class SheetGrabber extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Semantics(
-      label: 'Drag to resize',
+      label: context.l10n.dragToResize,
       child: SizedBox(
         key: const ValueKey('sheet-grabber'),
         height: 28,
@@ -37,11 +38,11 @@ class SheetGrabber extends StatelessWidget {
 class SheetGreeting extends StatelessWidget {
   const SheetGreeting({super.key});
 
-  static String greetingFor(DateTime now) {
+  static String greetingFor(AppLocalizations l, DateTime now) {
     final h = now.hour;
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
+    if (h < 12) return l.goodMorning;
+    if (h < 17) return l.goodAfternoon;
+    return l.goodEvening;
   }
 
   @override
@@ -57,7 +58,7 @@ class SheetGreeting extends StatelessWidget {
               child: Semantics(
                 header: true,
                 child: Text(
-                  greetingFor(DateTime.now()),
+                  greetingFor(context.l10n, DateTime.now()),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -78,7 +79,7 @@ class SheetGreeting extends StatelessWidget {
         ),
         const SizedBox(height: 2),
         Text(
-          "Stay safe. We're here for you.",
+          context.l10n.staySafe,
           style: TextStyle(fontSize: kFontBody, color: palette.muted),
         ),
       ],
@@ -123,7 +124,7 @@ class ActiveRideBanner extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Active Ride',
+                            context.l10n.activeRide,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: scheme.onPrimaryContainer,
@@ -154,7 +155,7 @@ class ActiveRideBanner extends StatelessWidget {
   }
 }
 
-/// The "Book a Ride" card: a car in an accent circle, a title, a subtitle and
+/// The context.l10n.bookARide card: a car in an accent circle, a title, a subtitle and
 /// a chevron.
 class BookRideCard extends StatelessWidget {
   const BookRideCard({super.key, required this.onTap});
@@ -187,7 +188,7 @@ class BookRideCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Book a Ride',
+                        context.l10n.bookARide,
                         style: TextStyle(
                           fontSize: kFontBody,
                           fontWeight: FontWeight.w700,
@@ -195,7 +196,7 @@ class BookRideCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        'Schedule a non-emergency trip',
+                        context.l10n.bookRideSub,
                         style: TextStyle(
                             fontSize: kFontSmall, color: palette.muted),
                       ),
@@ -227,22 +228,22 @@ class QuickCardsRow extends StatelessWidget {
     final cards = [
       QuickCard(
         icon: Icons.history_rounded,
-        title: 'Recent Rides',
-        subtitle: 'View your trips',
+        title: context.l10n.recentRides,
+        subtitle: context.l10n.viewTrips,
         isCompact: !isStacked,
         onTap: () => context.go('/rides'),
       ),
       QuickCard(
         icon: Icons.star_rounded,
-        title: 'Favorites',
-        subtitle: 'Saved locations',
+        title: context.l10n.favorites,
+        subtitle: context.l10n.savedLocations,
         isCompact: !isStacked,
         onTap: () => context.push('/saved-places'),
       ),
       QuickCard(
         icon: Icons.shield_outlined,
-        title: 'Safety Tips',
-        subtitle: 'Stay informed',
+        title: context.l10n.safetyTips,
+        subtitle: context.l10n.stayInformed,
         isCompact: !isStacked,
         onTap: () => context.push('/help'),
       ),
@@ -403,13 +404,13 @@ class RecentRidesSection extends ConsumerWidget {
     final Widget body = rides.when(
       loading: () => const _RidesSkeleton(),
       error: (_, __) => _RidesMessage(
-        title: "Couldn't load your rides",
-        actionLabel: 'Try again',
+        title: context.l10n.couldntLoadRides,
+        actionLabel: context.l10n.tryAgain,
         onAction: () => ref.read(ridesProvider.notifier).refresh(),
       ),
       data: (list) {
         if (list.items.isEmpty) {
-          return const _RidesMessage(title: 'No rides yet');
+          return _RidesMessage(title: context.l10n.noRidesYet);
         }
         return Column(
           children: [
@@ -425,7 +426,7 @@ class RecentRidesSection extends ConsumerWidget {
         Semantics(
           header: true,
           child: Text(
-            'Your recent rides',
+            context.l10n.yourRecentRides,
             style: TextStyle(
               fontSize: kFontSubhead,
               fontWeight: FontWeight.w700,

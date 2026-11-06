@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smartride_core/smartride_core.dart';
@@ -18,7 +19,7 @@ class NotificationsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notifications'),
+        title: Text(context.l10n.notificationsTitle),
         leading: const BackButton(),
         actions: [
           if (hasUnread)
@@ -27,14 +28,14 @@ class NotificationsScreen extends ConsumerWidget {
                   .read(notificationsProvider(portal).notifier)
                   .markAllRead(),
               child: Text(
-                'Mark all read',
+                context.l10n.markAllRead,
                 style: TextStyle(color: primary, fontWeight: FontWeight.w600),
               ),
             ),
         ],
       ),
       body: notifications.isEmpty
-          ? const EmptyState(message: 'No notifications yet')
+          ? EmptyState(message: context.l10n.noNotificationsYet)
           : ListView.builder(
               itemCount: notifications.length,
               itemBuilder: (context, i) {
