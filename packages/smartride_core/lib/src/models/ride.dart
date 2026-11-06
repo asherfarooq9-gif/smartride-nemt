@@ -94,6 +94,7 @@ class RideResponse {
     this.cancelReason,
     this.symptomText,
     this.estimatedFarePkr,
+    this.finalFarePkr,
     this.patientRating,
     this.hospitalName,
   });
@@ -112,6 +113,9 @@ class RideResponse {
   final String? cancelReason;
   final String? symptomText;
   final double? estimatedFarePkr;
+
+  /// What the ride actually cost, set when it is completed.
+  final double? finalFarePkr;
   final double? patientRating;
   final String? hospitalName;
 
@@ -138,6 +142,7 @@ class RideResponse {
         cancelReason: json['cancel_reason'] as String?,
         symptomText: json['symptom_text'] as String?,
         estimatedFarePkr: (json['estimated_fare_pkr'] as num?)?.toDouble(),
+        finalFarePkr: (json['final_fare_pkr'] as num?)?.toDouble(),
         patientRating: (json['patient_rating'] as num?)?.toDouble(),
         hospitalName: json['hospital_name'] as String?,
       );
@@ -159,6 +164,7 @@ class RideDetailResponse extends RideResponse {
     super.cancelReason,
     super.symptomText,
     super.estimatedFarePkr,
+    super.finalFarePkr,
     super.patientRating,
     this.patient,
     this.driver,
@@ -188,6 +194,7 @@ class RideDetailResponse extends RideResponse {
       cancelReason: base.cancelReason,
       symptomText: base.symptomText,
       estimatedFarePkr: base.estimatedFarePkr,
+      finalFarePkr: base.finalFarePkr,
       patientRating: base.patientRating,
       patient: json['patient'] as Map<String, dynamic>?,
       driver: json['driver'] as Map<String, dynamic>?,

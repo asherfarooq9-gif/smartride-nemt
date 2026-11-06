@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 import 'package:patient_app/core/date_format.dart';
+import 'package:patient_app/core/payment_methods.dart';
+import 'package:patient_app/driver/money_format.dart';
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:patient_app/features/rides/rides_notifier.dart';
 
-final _rideDetailProvider =
+final rideDetailProvider =
     FutureProvider.autoDispose.family<core.RideDetailResponse, String>(
   (ref, id) => core.getRideDetail(id),
 );
@@ -28,7 +31,7 @@ class RideDetailScreen extends ConsumerWidget {
         cancelReason: reason.isEmpty ? 'Cancelled by patient' : reason,
       );
       if (!context.mounted) return;
-      ref.invalidate(_rideDetailProvider(rideId));
+      ref.invalidate(rideDetailProvider(rideId));
       ref.invalidate(ridesProvider);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Ride cancelled')),
@@ -49,7 +52,7 @@ class RideDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final rideAsync = ref.watch(_rideDetailProvider(rideId));
+    final rideAsync = ref.watch(rideDetailProvider(rideId));
 
     return Scaffold(
       appBar: AppBar(title: const Text('Ride Details')),
@@ -57,7 +60,7 @@ class RideDetailScreen extends ConsumerWidget {
         loading: () => const core.LoadingState(),
         error: (e, _) => core.ErrorState(
           message: e is core.AppError ? e.message : 'Failed to load ride',
-          onRetry: () => ref.invalidate(_rideDetailProvider(rideId)),
+          onRetry: () => ref.invalidate(rideDetailProvider(rideId)),
         ),
         data: (ride) => SingleChildScrollView(
           padding: const EdgeInsets.all(core.kSpaceLG),
@@ -83,6 +86,15 @@ class RideDetailScreen extends ConsumerWidget {
                   value: formatIsoDateTime(ride.createdAt!),
                   icon: Icons.access_time,
                 ),
+              if (ride.status == core.RideStatus.completed &&
+                  (ride.finalFarePkr ?? ride.estimatedFarePkr) != null)
+                _InfoCard(
+                  title: context.l10n.fareLabel,
+                  value:
+                      '${formatPkr((ride.finalFarePkr ?? ride.estimatedFarePkr)!)}\n'
+                      '${context.l10n.fareHint}',
+                  icon: Icons.payments_outlined,
+                ),
               if (ride.driver != null) ...[
                 const SizedBox(height: core.kSpaceSM),
                 Text(
@@ -98,13 +110,18 @@ class RideDetailScreen extends ConsumerWidget {
                     title: Text(
                       (ride.driver!['full_name'] as String?) ?? 'Driver',
                     ),
-                    subtitle: Text(
-                      (ride.driver!['vehicle_plate'] as String?) ?? '',
-                    ),
+                    subtitle: Text(_driverSubtitle(context, ride.driver!)),
                   ),
                 ),
               ],
               const SizedBox(height: core.kSpaceXL),
+              if (ride.status == core.RideStatus.completed &&
+                  ride.patientRating == null)
+                core.PrimaryButton(
+                  label: context.l10n.rateDriverAction,
+                  onPressed: () => context.push('/rate-driver/$rideId'),
+                  color: core.kPatientPrimary,
+                ),
               if (ride.isTrackable)
                 core.PrimaryButton(
                   label: 'Track Live',
@@ -135,6 +152,18 @@ class RideDetailScreen extends ConsumerWidget {
 }
 
 /// Owns its text controller so it is disposed with the dialog.
+/// Plate number, then the ways this driver takes payment, when they listed any.
+String _driverSubtitle(BuildContext context, Map<String, dynamic> driver) {
+  final plate = (driver['vehicle_plate'] as String?) ?? '';
+  final methods = [
+    for (final m in (driver['payment_methods'] as List<dynamic>? ?? const []))
+      m.toString(),
+  ];
+  if (methods.isEmpty) return plate;
+  final l = context.l10n;
+  return '$plate\n${l.payByLabel}: ${paymentMethodsSummary(l, methods)}';
+}
+
 class _CancelReasonDialog extends StatefulWidget {
   const _CancelReasonDialog();
 

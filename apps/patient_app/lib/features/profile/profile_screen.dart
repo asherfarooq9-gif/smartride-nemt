@@ -127,11 +127,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 if (p != null) _populate(p);
                 setState(() => _editing = true);
               },
+              // White: the default blue text vanished on the blue app bar.
+              style: TextButton.styleFrom(foregroundColor: Colors.white),
               child: const Text('Edit'),
             )
           else
             TextButton(
               onPressed: () => setState(() => _editing = false),
+              style: TextButton.styleFrom(foregroundColor: Colors.white),
               child: const Text('Cancel'),
             ),
         ],

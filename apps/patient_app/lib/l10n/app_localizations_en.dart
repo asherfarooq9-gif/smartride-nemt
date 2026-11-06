@@ -208,6 +208,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get payByLabel => 'Pays by';
 
   @override
+  String get fareLabel => 'Fare';
+
+  @override
+  String get fareHint =>
+      'Pay your driver directly. SmartRide does not take payment in the app.';
+
+  @override
+  String get rateDriverAction => 'Rate your driver';
+
+  @override
   String get paymentSectionTitle => 'How you take payment';
 
   @override

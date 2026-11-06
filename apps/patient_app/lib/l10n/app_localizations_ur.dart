@@ -208,6 +208,16 @@ class AppLocalizationsUr extends AppLocalizations {
   String get payByLabel => 'ادائیگی';
 
   @override
+  String get fareLabel => 'کرایہ';
+
+  @override
+  String get fareHint =>
+      'کرایہ براہِ راست ڈرائیور کو ادا کریں۔ سمارٹ رائیڈ ایپ میں ادائیگی نہیں لیتی۔';
+
+  @override
+  String get rateDriverAction => 'اپنے ڈرائیور کو ریٹ کریں';
+
+  @override
   String get paymentSectionTitle => 'آپ ادائیگی کیسے لیتے ہیں';
 
   @override

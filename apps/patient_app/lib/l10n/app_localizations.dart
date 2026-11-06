@@ -476,6 +476,24 @@ abstract class AppLocalizations {
   /// **'Pays by'**
   String get payByLabel;
 
+  /// No description provided for @fareLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Fare'**
+  String get fareLabel;
+
+  /// No description provided for @fareHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay your driver directly. SmartRide does not take payment in the app.'**
+  String get fareHint;
+
+  /// No description provided for @rateDriverAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate your driver'**
+  String get rateDriverAction;
+
   /// No description provided for @paymentSectionTitle.
   ///
   /// In en, this message translates to:
