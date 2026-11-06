@@ -360,18 +360,20 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                           const Icon(Icons.calendar_today,
                               color: core.kPatientPrimary, size: 20),
                           const SizedBox(width: core.kSpaceMD),
-                          Text(
-                            _selectedDateTime == null
-                                ? context.l10n.selectDateTime
-                                : formatDateTime(_selectedDateTime!),
-                            style: TextStyle(
-                              color: _selectedDateTime == null
-                                  ? core.kTextSecondary
-                                  : core.kOnSurface,
-                              fontSize: core.kFontMD,
+                          Expanded(
+                            child: Text(
+                              _selectedDateTime == null
+                                  ? context.l10n.selectDateTime
+                                  : formatDateTime(_selectedDateTime!),
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: _selectedDateTime == null
+                                    ? core.kTextSecondary
+                                    : core.kOnSurface,
+                                fontSize: core.kFontMD,
+                              ),
                             ),
                           ),
-                          const Spacer(),
                           const Icon(Icons.arrow_forward_ios,
                               size: 14, color: core.kTextSecondary),
                         ],
@@ -509,7 +511,17 @@ class _HospitalPicker extends StatelessWidget {
   Widget build(BuildContext context) {
     return DropdownButtonFormField<core.HospitalResponse>(
       initialValue: selected,
-      hint: Text(context.l10n.selectHospital),
+      // Fill the row so a long hospital name ellipsizes instead of overflowing.
+      isExpanded: true,
+      hint: Text(
+        context.l10n.selectHospital,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          fontSize: core.kFontBody,
+          fontWeight: FontWeight.w400,
+          color: core.kTextSecondary,
+        ),
+      ),
       decoration: const InputDecoration(
         prefixIcon: Icon(Icons.local_hospital_outlined),
         border: OutlineInputBorder(),
