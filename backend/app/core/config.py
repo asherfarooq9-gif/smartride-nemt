@@ -95,6 +95,15 @@ class Settings(BaseSettings):
     DISPATCH_CONCURRENCY: int = 4
     DISPATCH_MAX_AGE_SECONDS: int = 900
     SCHEDULED_DISPATCH_LEAD_MINUTES: int = 30
+    # A driver may claim a booked ride before its pickup window opens.
+    # Most rides one driver can hold at once.
+    MAX_SCHEDULED_CLAIMS: int = 5
+    # A claim can be given back until this long before pickup; after that the
+    # patient is counting on the driver.
+    SCHEDULED_RELEASE_CUTOFF_MINUTES: int = 60
+    # Once the window is open, a claimed ride whose driver is still busy or
+    # offline this close to pickup goes back to normal dispatch.
+    SCHEDULED_CLAIM_FALLBACK_MINUTES: int = 15
     LOG_LEVEL: str = "INFO"
     # Minimum seconds a driver must spend on the pickup->hospital and
     # hospital->completed legs before the next status is accepted. 0 disables it

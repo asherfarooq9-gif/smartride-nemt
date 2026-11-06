@@ -50,6 +50,7 @@ def _to_response(driver: Driver, user: User) -> DriverResponse:
         current_lat=driver.current_lat,
         current_lng=driver.current_lng,
         last_seen_at=driver.last_seen_at,
+        payment_methods=list(driver.payment_methods or []),
         created_at=driver.created_at,
     )
 

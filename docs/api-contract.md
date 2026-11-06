@@ -130,6 +130,7 @@ All authenticated endpoints require: `Authorization: Bearer <jwt_token>`
   "current_lat": 33.7005,
   "current_lng": 73.0679,
   "last_seen_at": "2026-01-01T12:00:00Z",
+  "payment_methods": ["cash", "easypaisa"],
   "created_at": "2026-01-01T00:00:00Z"
 }
 ```
@@ -139,7 +140,13 @@ All authenticated endpoints require: `Authorization: Bearer <jwt_token>`
 ### `PATCH /drivers/me`
 **Auth:** driver
 
-**Request body (all optional):** `full_name`, `vehicle_type`
+**Request body (all optional):** `full_name`, `vehicle_type`, `payment_methods`
+
+`payment_methods` is how the driver says they take payment: any of `cash`,
+`easypaisa`, `jazzcash`, `bank_transfer`. Repeats are dropped (order kept); an
+unknown value returns `422`. The app only shows it to the patient once the driver
+is assigned (`driver.payment_methods` in `GET /rides/{id}/detail`); it never
+handles or records the payment.
 
 **Response `200`:** updated driver object
 
@@ -332,6 +339,29 @@ chose; an unknown or inactive hospital returns `404`.
 **Response `201`:** the ride (`id`, `status: "pending"`, `ride_type: "scheduled"`,
 `scheduled_for`, `hospital_id`, ...). `200` on an `Idempotency-Key` replay. Rate limit 10/min.
 
+The `Idempotency-Key` is stored in the database in the ride's own transaction
+(`ride_idempotency_keys`, purged after 24 h), so a retry or two simultaneous
+requests always get the first ride back, even when Redis is down.
+
+---
+
+### `POST /rides/scheduled/series`
+**Auth:** patient
+
+A repeat booking: the same trip every day or every week.
+
+**Request body:** as `POST /rides/scheduled`, plus
+```json
+{ "repeat": "daily | weekly", "occurrences": 4 }
+```
+`occurrences` is 2 to 12. The first ride is at `scheduled_for`; each next one is a
+day or a week later. All rides are booked in one transaction (all or nothing) and
+share a `series_id`.
+
+**Response `201`:** `{ "items": [ride, ...], "total": 4 }`, soonest first. With an
+`Idempotency-Key`, a replay returns `200` and the same rides; the same key with a
+different run returns `409`. Rate limit 5/min.
+
 ---
 
 ### `GET /rides/{id}`
@@ -438,12 +468,24 @@ models live in `backend/app/schemas/`.
 | `GET /rides/{id}/detail` | admin, owner patient, assigned driver | Ride with driver, hospital and timeline. The driver sees the patient's phone and mobility needs only while the ride is active |
 | `GET /rides/pending` | verified driver | Unassigned rides near the driver |
 | `POST /rides/{id}/accept` | verified driver | Atomic claim; `409` if taken. Afterwards the patient is pushed and the family contact is texted; when accepting chooses the hospital, it is pre-alerted too. A scheduled ride is not open until it is inside the dispatch lead window (`409` before that) |
+| `GET /rides/scheduled/open` | verified driver | Booked rides near the driver that nobody has claimed and whose pickup window is not open yet, soonest first |
+| `GET /rides/scheduled/claimed` | verified driver | The booked rides this driver claimed and still has to do |
+| `POST /rides/{id}/claim` | verified driver | Reserve a booked ride. Exactly one driver wins a race (`409` for the rest). `409` also when the ride is already in its pickup window (accept it instead) or the driver holds `MAX_SCHEDULED_CLAIMS` (5). The patient is pushed. Rate limit 30/min |
+| `POST /rides/{id}/release` | verified driver, the claimer | Give a claim back. `403` if not yours, `409` once pickup is closer than `SCHEDULED_RELEASE_CUTOFF_MINUTES` (60) or the ride is already assigned. The patient is pushed. Rate limit 30/min |
 | `POST /rides/{id}/rate` | patient | Rate a completed ride (1-5) |
 | `GET /rides` | admin | Paged list with filters |
 | `GET /rides/export.csv` | admin | CSV export |
 
-`POST /rides/emergency` and `POST /rides/scheduled` accept an optional
-`Idempotency-Key` header. A replay returns the original ride; the same key with a
+**Claims.** A claim keeps the ride `pending` and records `claimed_driver_id`; other
+drivers no longer see it or can accept it, and normal dispatch skips it. When the
+ride enters its pickup window (`SCHEDULED_DISPATCH_LEAD_MINUTES`, 30) the dispatch
+loop assigns it to the claiming driver if they are `available`. A driver who is
+busy or offline keeps the claim until `SCHEDULED_CLAIM_FALLBACK_MINUTES` (15)
+before pickup, then the claim is dropped and the ride returns to normal dispatch.
+A driver who never acknowledges, or cancels, an assigned claim loses it too.
+
+`POST /rides/emergency`, `POST /rides/scheduled` and `POST /rides/scheduled/series`
+accept an optional `Idempotency-Key` header. A replay returns the original ride; the same key with a
 different body returns `409`.
 
 `GET /hospitals` and `GET /hospitals/{id}` are readable without a token; fields

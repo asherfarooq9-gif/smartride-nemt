@@ -21,6 +21,11 @@ rides_accepted_total = Counter(
     "Rides successfully accepted by a driver.",
 )
 
+rides_claimed_total = Counter(
+    "smartride_rides_claimed_total",
+    "Booked rides a driver reserved ahead of time.",
+)
+
 ride_accept_conflicts_total = Counter(
     "smartride_ride_accept_conflicts_total",
     "Accept attempts that lost the race (HTTP 409).",

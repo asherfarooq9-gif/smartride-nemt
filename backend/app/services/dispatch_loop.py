@@ -29,7 +29,10 @@ from app.models.models import (
     RideType,
     TriageEvent,
 )
-from app.services.emergency_dispatch import dispatch_emergency
+from app.services.emergency_dispatch import (
+    dispatch_emergency,
+    notify_patient_and_family_of_accepted_ride,
+)
 from app.services.health_metrics import record_health_metrics
 from app.services.notifications import (
     notify_user,
@@ -140,6 +143,10 @@ async def _requeue_unacknowledged(db, now: datetime) -> None:
                 driver_id=None,
                 driver_assigned_at=None,
                 hospital_id=None,
+                # A driver who never set off loses any claim, or this would hand
+                # the ride straight back to them.
+                claimed_driver_id=None,
+                claimed_at=None,
             )
         )
         if result.rowcount == 1:
@@ -167,6 +174,75 @@ async def _requeue_unacknowledged(db, now: datetime) -> None:
             )
 
 
+async def assign_due_claims(db, now: datetime) -> None:
+    """Hand each claimed ride to its driver once the pickup window opens.
+
+    A driver who cannot take it (busy, offline) keeps the claim until the
+    fallback time before pickup, then it returns to normal dispatch. Guarded
+    UPDATEs make this safe to run on several instances at once.
+    """
+    lead = now + timedelta(minutes=settings.SCHEDULED_DISPATCH_LEAD_MINUTES)
+    fallback = now + timedelta(minutes=settings.SCHEDULED_CLAIM_FALLBACK_MINUTES)
+    due = (
+        await db.execute(
+            select(Ride.id, Ride.claimed_driver_id, Ride.scheduled_for)
+            .where(
+                Ride.status == RideStatus.pending,
+                Ride.ride_type == RideType.scheduled,
+                Ride.driver_id.is_(None),
+                Ride.claimed_driver_id.is_not(None),
+                Ride.scheduled_for <= lead,
+            )
+            .order_by(Ride.scheduled_for)
+            .limit(BATCH)
+            .with_for_update(skip_locked=True, of=Ride)
+        )
+    ).all()
+    assigned = []
+    for ride_id, driver_id, scheduled_for in due:
+        took_driver = await db.execute(
+            update(Driver)
+            .where(
+                Driver.id == driver_id,
+                Driver.status == DriverStatus.available,
+                Driver.is_verified.is_(True),
+            )
+            .values(status=DriverStatus.busy)
+        )
+        if took_driver.rowcount == 1:
+            placed = await db.execute(
+                update(Ride)
+                .where(
+                    Ride.id == ride_id,
+                    Ride.status == RideStatus.pending,
+                    Ride.driver_id.is_(None),
+                )
+                .values(
+                    driver_id=driver_id,
+                    status=RideStatus.driver_assigned,
+                    driver_assigned_at=now,
+                )
+            )
+            if placed.rowcount == 1:
+                assigned.append(ride_id)
+            else:  # the ride moved on meanwhile: give the driver back
+                await db.execute(
+                    update(Driver)
+                    .where(Driver.id == driver_id)
+                    .values(status=DriverStatus.available)
+                )
+        elif scheduled_for <= fallback:
+            await db.execute(
+                update(Ride)
+                .where(Ride.id == ride_id, Ride.driver_id.is_(None))
+                .values(claimed_driver_id=None, claimed_at=None)
+            )
+            log.warning("claim dropped, driver unavailable ride_id=%s", ride_id)
+    await db.commit()
+    for ride_id in assigned:
+        await notify_patient_and_family_of_accepted_ride(str(ride_id))
+
+
 async def _pending_rides(db, now: datetime) -> list:
     """(id, severity) of rides to retry: most severe first, then longest waiting.
 
@@ -185,7 +261,12 @@ async def _pending_rides(db, now: datetime) -> list:
             or_(
                 # A requeued ride keeps its old requested_at, so it retries at once.
                 and_(Ride.ride_type == RideType.emergency, Ride.requested_at < stale),
-                and_(Ride.ride_type == RideType.scheduled, Ride.scheduled_for <= lead),
+                and_(
+                    Ride.ride_type == RideType.scheduled,
+                    Ride.scheduled_for <= lead,
+                    # A claimed ride is reserved: assign_due_claims hands it over.
+                    Ride.claimed_driver_id.is_(None),
+                ),
             ),
         )
         .order_by(TriageEvent.severity_level.desc().nulls_first(), Ride.queued_at)
@@ -219,6 +300,7 @@ async def retry_pending_dispatches() -> None:
     async with AsyncSessionLocal() as db:
         await _expire(db, now)
         await _requeue_unacknowledged(db, now)
+        await assign_due_claims(db, now)
         pending = await _pending_rides(db, now)
     slots = asyncio.Semaphore(max(1, settings.DISPATCH_CONCURRENCY))
 

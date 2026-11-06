@@ -30,6 +30,8 @@ def hash_password(plain: str) -> str:
 
 
 def verify_password(plain: str, hashed: str) -> bool:
+    if "\x00" in plain:  # bcrypt raises on NUL bytes; no stored password has one
+        return False
     return pwd_context.verify(plain, hashed)
 
 

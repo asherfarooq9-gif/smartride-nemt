@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import List, Literal, Optional
 from uuid import UUID
 from datetime import datetime
 from pydantic import BaseModel, Field, field_validator, model_serializer
@@ -36,6 +36,15 @@ class ScheduledRideRequest(BaseModel):
         if v <= dt.now(timezone.utc):
             raise ValueError("scheduled_for must be a future date")
         return v
+
+
+class ScheduledSeriesRequest(ScheduledRideRequest):
+    """A repeat booking: the same trip every day or every week."""
+
+    repeat: Literal["daily", "weekly"]
+    # At least two (one is an ordinary booking); twelve covers a quarter of
+    # weekly dialysis without letting one request flood the dispatch queue.
+    occurrences: int = Field(ge=2, le=12)
 
 
 class RideStatusUpdate(BaseModel):
@@ -89,6 +98,8 @@ class RideDriverInfo(BaseModel):
     phone: str
     vehicle_plate: str
     vehicle_type: str
+    # How the driver says they take payment, so the patient can have it ready.
+    payment_methods: list[str] = []
 
 
 class RideHospitalInfo(BaseModel):

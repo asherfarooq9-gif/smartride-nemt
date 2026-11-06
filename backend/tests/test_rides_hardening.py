@@ -312,6 +312,7 @@ async def test_detail_payload_keeps_its_field_names(client, db):
         "phone",
         "vehicle_plate",
         "vehicle_type",
+        "payment_methods",
     }
     assert set(body["triage"]) == {
         "predicted_specialty",

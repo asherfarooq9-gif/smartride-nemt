@@ -38,6 +38,7 @@ from app.models.models import (
 from app.schemas.rides import (
     EmergencyRideRequest,
     ScheduledRideRequest,
+    ScheduledSeriesRequest,
     RideStatusUpdate,
 )
 
@@ -215,10 +216,16 @@ async def create_emergency_ride(
 
 
 SCHEDULED_KEY_SCOPE = "scheduled"
+SERIES_KEY_SCOPE = "scheduled_series"
+_SERIES_STEP = {"daily": timedelta(days=1), "weekly": timedelta(days=7)}
 
 
 async def _ride_for_key(
-    db: AsyncSession, patient_id, key: str, fingerprint: str
+    db: AsyncSession,
+    patient_id,
+    key: str,
+    fingerprint: str,
+    scope: str = SCHEDULED_KEY_SCOPE,
 ) -> Optional[Ride]:
     """The ride this patient's key already produced, or None if it is new.
 
@@ -229,7 +236,7 @@ async def _ride_for_key(
         await db.execute(
             select(RideIdempotencyKey).where(
                 RideIdempotencyKey.patient_id == patient_id,
-                RideIdempotencyKey.scope == SCHEDULED_KEY_SCOPE,
+                RideIdempotencyKey.scope == scope,
                 RideIdempotencyKey.key == key,
             )
         )
@@ -241,6 +248,92 @@ async def _ride_for_key(
             409, "Idempotency-Key was already used with a different request body"
         )
     return (await db.execute(select(Ride).where(Ride.id == row.ride_id))).scalar_one()
+
+
+async def _ensure_hospital_is_open(db: AsyncSession, hospital_id) -> None:
+    """404 unless the chosen destination exists and is active (none is fine)."""
+    if hospital_id is None:
+        return
+    hospital = (
+        await db.execute(
+            select(Hospital).where(
+                Hospital.id == hospital_id, Hospital.is_active.is_(True)
+            )
+        )
+    ).scalar_one_or_none()
+    if hospital is None:
+        raise HTTPException(404, "Hospital not found")
+
+
+async def _series_rides(db: AsyncSession, series_id) -> list[Ride]:
+    rows = await db.execute(
+        select(Ride).where(Ride.series_id == series_id).order_by(Ride.scheduled_for)
+    )
+    return list(rows.scalars().all())
+
+
+async def create_scheduled_series(
+    patient: Patient,
+    body: ScheduledSeriesRequest,
+    db: AsyncSession,
+    *,
+    key: Optional[str] = None,
+    fingerprint: Optional[str] = None,
+) -> tuple[list[Ride], bool]:
+    """Book a run of scheduled rides at once. Returns (rides, is_new).
+
+    All or nothing: one transaction. With a [key], a retry or a request that
+    lost a race gets the first run back (is_new False) and nothing is booked
+    twice. The key row points at the run's first ride.
+    """
+    patient_id = patient.id
+    if key and fingerprint:
+        first = await _ride_for_key(db, patient_id, key, fingerprint, SERIES_KEY_SCOPE)
+        if first is not None:
+            return await _series_rides(db, first.series_id), False
+    ensure_in_service_area(body.pickup_lat, body.pickup_lng)
+    await _ensure_hospital_is_open(db, body.hospital_id)
+    series_id = uuid.uuid4()
+    step = _SERIES_STEP[body.repeat]
+    rides = [
+        Ride(
+            id=uuid.uuid4(),
+            series_id=series_id,
+            patient_id=patient_id,
+            hospital_id=body.hospital_id,
+            ride_type=RideType.scheduled,
+            status=RideStatus.pending,
+            pickup_lat=body.pickup_lat,
+            pickup_lng=body.pickup_lng,
+            pickup_address=body.pickup_address,
+            scheduled_for=body.scheduled_for + step * i,
+            queued_at=func.now(),
+        )
+        for i in range(body.occurrences)
+    ]
+    db.add_all(rides)
+    if key and fingerprint:
+        await db.flush()
+        saved = await db.execute(
+            pg_insert(RideIdempotencyKey)
+            .values(
+                patient_id=patient_id,
+                scope=SERIES_KEY_SCOPE,
+                key=key,
+                fingerprint=fingerprint,
+                ride_id=rides[0].id,
+            )
+            .on_conflict_do_nothing()
+            .returning(RideIdempotencyKey.key)
+        )
+        if saved.first() is None:
+            await db.rollback()
+            first = await _ride_for_key(
+                db, patient_id, key, fingerprint, SERIES_KEY_SCOPE
+            )
+            return await _series_rides(db, first.series_id), False
+    await db.commit()
+    return await _series_rides(db, series_id), True
 
 
 async def create_scheduled_ride(
@@ -263,16 +356,7 @@ async def create_scheduled_ride(
         if replayed is not None:
             return replayed, False
     ensure_in_service_area(body.pickup_lat, body.pickup_lng)
-    if body.hospital_id is not None:
-        hospital = (
-            await db.execute(
-                select(Hospital).where(
-                    Hospital.id == body.hospital_id, Hospital.is_active.is_(True)
-                )
-            )
-        ).scalar_one_or_none()
-        if hospital is None:
-            raise HTTPException(404, "Hospital not found")
+    await _ensure_hospital_is_open(db, body.hospital_id)
     ride = Ride(
         id=uuid.uuid4(),
         patient_id=patient_id,
@@ -435,6 +519,10 @@ async def _apply_driver_transition(
             ride.driver_id = None
             ride.driver_assigned_at = None
             ride.hospital_id = None
+            # A driver who gives the ride up also gives up any claim on it, or
+            # dispatch would keep handing it straight back.
+            ride.claimed_driver_id = None
+            ride.claimed_at = None
             driver.status = DriverStatus.offline
         elif ride.status in (
             RideStatus.patient_picked_up,
@@ -655,6 +743,11 @@ async def get_pending_rides(driver: Driver, db: AsyncSession) -> list[Ride]:
                     and_(
                         Ride.status == RideStatus.pending,
                         Ride.driver_id.is_(None),
+                        # Another driver's claim is theirs; their own stays visible.
+                        or_(
+                            Ride.claimed_driver_id.is_(None),
+                            Ride.claimed_driver_id == driver.id,
+                        ),
                         or_(Ride.scheduled_for.is_(None), Ride.scheduled_for <= cutoff),
                         Ride.pickup_lat.between(lat - dlat, lat + dlat),
                         Ride.pickup_lng.between(lng - dlng, lng + dlng),
@@ -672,6 +765,195 @@ async def get_pending_rides(driver: Driver, db: AsyncSession) -> list[Ride]:
     nearby = [(r, km) for r, km in with_km if km <= settings.DRIVER_SEARCH_RADIUS_KM]
     nearby.sort(key=lambda pair: pair[1])
     return [r for r, _ in nearby]
+
+
+def _within_radius(rows: list[Ride], lat: float, lng: float) -> list[Ride]:
+    """The rides inside DRIVER_SEARCH_RADIUS_KM, ordered by pickup time."""
+    nearby = [
+        r
+        for r in rows
+        if _haversine_km(lat, lng, r.pickup_lat, r.pickup_lng)
+        <= settings.DRIVER_SEARCH_RADIUS_KM
+    ]
+    return sorted(nearby, key=lambda r: r.scheduled_for)
+
+
+async def list_open_scheduled(driver: Driver, db: AsyncSession) -> list[Ride]:
+    """Booked rides a driver can reserve now: nearby, still unclaimed, and not yet
+    inside their pickup window (those are accepted from the live list instead)."""
+    if driver.current_lat is None or driver.current_lng is None:
+        return []
+    lat, lng = driver.current_lat, driver.current_lng
+    dlat = settings.DRIVER_SEARCH_RADIUS_KM / 111.0
+    dlng = dlat / max(cos(radians(lat)), 0.01)
+    rows = (
+        (
+            await db.execute(
+                select(Ride)
+                .where(
+                    Ride.ride_type == RideType.scheduled,
+                    Ride.status == RideStatus.pending,
+                    Ride.driver_id.is_(None),
+                    Ride.claimed_driver_id.is_(None),
+                    Ride.scheduled_for > _dispatch_lead_cutoff(),
+                    Ride.pickup_lat.between(lat - dlat, lat + dlat),
+                    Ride.pickup_lng.between(lng - dlng, lng + dlng),
+                )
+                .options(selectinload(Ride.hospital))
+                .order_by(Ride.scheduled_for.asc())
+                .limit(PENDING_RIDES_LIMIT)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return _within_radius(list(rows), lat, lng)
+
+
+async def list_my_claims(driver: Driver, db: AsyncSession) -> list[Ride]:
+    """The rides this driver reserved and still has to do, soonest first."""
+    rows = (
+        (
+            await db.execute(
+                select(Ride)
+                .where(
+                    Ride.claimed_driver_id == driver.id,
+                    Ride.status.in_(
+                        (
+                            RideStatus.pending,
+                            RideStatus.driver_assigned,
+                            RideStatus.driver_en_route,
+                        )
+                    ),
+                )
+                .options(selectinload(Ride.hospital))
+                .order_by(Ride.scheduled_for.asc())
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return list(rows)
+
+
+async def _tell_patient(db: AsyncSession, ride_id, title: str, body: str) -> None:
+    patient_id = (
+        await db.execute(select(Ride.patient_id).where(Ride.id == ride_id))
+    ).scalar_one_or_none()
+    if patient_id is not None:
+        await notify_user(
+            db,
+            patient_id=patient_id,
+            title=title,
+            body=body,
+            data={"ride_id": str(ride_id)},
+        )
+
+
+async def _ensure_not_own_ride(ride_id: str, driver: Driver, db: AsyncSession) -> None:
+    requester_user_id = (
+        await db.execute(
+            select(Patient.user_id)
+            .join(Ride, Ride.patient_id == Patient.id)
+            .where(Ride.id == ride_id)
+        )
+    ).scalar_one_or_none()
+    if requester_user_id == driver.user_id:
+        raise HTTPException(403, "You cannot accept your own ride")
+
+
+async def claim_scheduled_ride(ride_id: str, driver: Driver, db: AsyncSession) -> Ride:
+    """Reserve a booked ride. Exactly one driver wins a race for it.
+
+    The ride stays pending and disappears from other drivers; dispatch hands it to
+    this driver when its pickup window opens. 409 if it is taken, already in its
+    window (accept it from the live list), or the driver is at the claim limit.
+    """
+    await _ensure_not_own_ride(ride_id, driver, db)
+    await _ensure_driver_is_near(ride_id, driver, db)  # also 404s a missing ride
+    driver_id = driver.id
+    # One driver's claims run one at a time, so two at once cannot pass the limit.
+    await db.execute(select(Driver.id).where(Driver.id == driver_id).with_for_update())
+    held = (
+        await db.execute(
+            select(func.count())
+            .select_from(Ride)
+            .where(
+                Ride.claimed_driver_id == driver_id, Ride.status == RideStatus.pending
+            )
+        )
+    ).scalar_one()
+    if held >= settings.MAX_SCHEDULED_CLAIMS:
+        await db.rollback()
+        raise HTTPException(
+            409,
+            f"You can hold {settings.MAX_SCHEDULED_CLAIMS} booked rides at once. "
+            "Release one first.",
+        )
+    claimed = await db.execute(
+        update(Ride)
+        .where(
+            Ride.id == ride_id,
+            Ride.ride_type == RideType.scheduled,
+            Ride.status == RideStatus.pending,
+            Ride.driver_id.is_(None),
+            Ride.claimed_driver_id.is_(None),
+            Ride.scheduled_for > _dispatch_lead_cutoff(),
+        )
+        .values(claimed_driver_id=driver_id, claimed_at=datetime.now(timezone.utc))
+        .returning(Ride.id)
+    )
+    if claimed.scalar_one_or_none() is None:
+        await db.rollback()
+        raise HTTPException(
+            409, "This ride is no longer open to claim. Another driver may have it."
+        )
+    await db.commit()
+    await _tell_patient(
+        db,
+        ride_id,
+        "A driver is lined up",
+        "A driver has reserved your trip. We will confirm them closer to pickup.",
+    )
+    return await get_ride_by_id(ride_id, db)
+
+
+async def release_scheduled_claim(
+    ride_id: str, driver: Driver, db: AsyncSession
+) -> Ride:
+    """Give a claimed ride back, if there is still time for someone else to take it."""
+    ride = (
+        await db.execute(select(Ride).where(Ride.id == ride_id).with_for_update())
+    ).scalar_one_or_none()
+    if ride is None:
+        raise HTTPException(404, "Ride not found")
+    if ride.claimed_driver_id != driver.id:
+        await db.rollback()
+        raise HTTPException(403, "This is not your claim")
+    if ride.status != RideStatus.pending:
+        await db.rollback()
+        raise HTTPException(
+            409, "This ride is already yours to drive. Cancel it from the ride screen."
+        )
+    cutoff = datetime.now(timezone.utc) + timedelta(
+        minutes=settings.SCHEDULED_RELEASE_CUTOFF_MINUTES
+    )
+    if ride.scheduled_for is None or ride.scheduled_for <= cutoff:
+        await db.rollback()
+        raise HTTPException(
+            409,
+            "Pickup is too close to give this ride back: the patient is counting on you.",
+        )
+    ride.claimed_driver_id = None
+    ride.claimed_at = None
+    await db.commit()
+    await _tell_patient(
+        db,
+        ride_id,
+        "Finding another driver",
+        "Your reserved driver can no longer make it. We are finding you another one.",
+    )
+    return await get_ride_by_id(ride_id, db)
 
 
 async def _ensure_driver_is_near(
@@ -782,6 +1064,11 @@ async def accept_ride(
                 Ride.id == ride_id,
                 Ride.status == RideStatus.pending,
                 Ride.driver_id.is_(None),
+                # Not a ride another driver has claimed.
+                or_(
+                    Ride.claimed_driver_id.is_(None),
+                    Ride.claimed_driver_id == driver.id,
+                ),
             )
         )
         .values(

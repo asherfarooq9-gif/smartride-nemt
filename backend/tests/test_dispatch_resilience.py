@@ -1,5 +1,6 @@
 """Dispatch must fail loudly, never lose a ride, and never act on unchecked triage."""
 
+import uuid
 import asyncio
 import logging
 import sys
@@ -773,7 +774,9 @@ async def test_pending_list_only_contains_rides_within_the_search_radius(db):
         .values(pickup_lat=PATIENT_LAT + 5)  # roughly 550 km away
     )
     await db.commit()
-    driver = SimpleNamespace(current_lat=PATIENT_LAT, current_lng=PATIENT_LNG)
+    driver = SimpleNamespace(
+        id=uuid.uuid4(), current_lat=PATIENT_LAT, current_lng=PATIENT_LNG
+    )
 
     ids = {r.id for r in await ride_service.get_pending_rides(driver, db)}
 

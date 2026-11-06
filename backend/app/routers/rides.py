@@ -28,6 +28,7 @@ from app.models.models import Ride, User, RideStatus, RideType
 from app.schemas.rides import (
     EmergencyRideRequest,
     ScheduledRideRequest,
+    ScheduledSeriesRequest,
     RideStatusUpdate,
     RateRideRequest,
     RideResponse,
@@ -257,6 +258,46 @@ async def create_scheduled_ride(
     return _to_response(ride)
 
 
+@router.post(
+    "/scheduled/series",
+    response_model=RideListResponse,
+    status_code=201,
+    responses={
+        200: {
+            "description": (
+                "The same Idempotency-Key already booked this run: the same rides "
+                "are returned and nothing new is booked."
+            ),
+            "model": RideListResponse,
+        }
+    },
+)
+@limiter.limit("5/minute")
+async def create_scheduled_series(
+    request: Request,
+    response: Response,
+    body: ScheduledSeriesRequest,
+    idempotency_key: Optional[str] = Header(default=None, alias="Idempotency-Key"),
+    current_user: User = Depends(require_patient),
+    db: AsyncSession = Depends(get_db),
+):
+    """Book the same trip every day or every week, in one request."""
+    key = idempotency.validate_key(idempotency_key)
+    patient = await ride_service.get_patient_by_user(current_user, db)
+    rides, is_new = await ride_service.create_scheduled_series(
+        patient,
+        body,
+        db,
+        key=key,
+        fingerprint=idempotency.fingerprint(body) if key else None,
+    )
+    if is_new:
+        metrics.rides_created_total.labels(ride_type="scheduled").inc(len(rides))
+    else:
+        response.status_code = 200
+    return RideListResponse(items=[_to_response(r) for r in rides], total=len(rides))
+
+
 @router.get("/mine", response_model=RideListResponse)
 async def my_rides(
     page: int = Query(1, ge=1),
@@ -312,6 +353,7 @@ def _driver_info(ride: Ride) -> Optional[RideDriverInfo]:
         phone=d.user.phone,
         vehicle_plate=d.vehicle_plate,
         vehicle_type=d.vehicle_type,
+        payment_methods=list(d.payment_methods or []),
     )
 
 
@@ -389,6 +431,64 @@ async def pending_rides(
         raise HTTPException(403, "Driver not verified")
     rides = await ride_service.get_pending_rides(driver, db)
     return RideListResponse(items=[_to_response(r) for r in rides], total=len(rides))
+
+
+async def _verified_driver(current_user: User, db: AsyncSession):
+    driver = await ride_service.get_driver_by_user(current_user, db)
+    if not driver.is_verified:
+        raise HTTPException(403, "Driver not verified")
+    return driver
+
+
+@router.get("/scheduled/open", response_model=RideListResponse)
+async def open_scheduled_rides(
+    current_user: User = Depends(require_driver),
+    db: AsyncSession = Depends(get_db),
+):
+    """Booked rides near the driver that nobody has reserved yet, soonest first."""
+    driver = await _verified_driver(current_user, db)
+    rides = await ride_service.list_open_scheduled(driver, db)
+    return RideListResponse(items=[_to_response(r) for r in rides], total=len(rides))
+
+
+@router.get("/scheduled/claimed", response_model=RideListResponse)
+async def my_claimed_rides(
+    current_user: User = Depends(require_driver),
+    db: AsyncSession = Depends(get_db),
+):
+    """The booked rides this driver reserved, soonest first."""
+    driver = await _verified_driver(current_user, db)
+    rides = await ride_service.list_my_claims(driver, db)
+    return RideListResponse(items=[_to_response(r) for r in rides], total=len(rides))
+
+
+@router.post("/{ride_id}/claim", response_model=RideResponse)
+@limiter.limit("30/minute")
+async def claim_ride(
+    request: Request,
+    ride_id: UUID,
+    current_user: User = Depends(require_driver),
+    db: AsyncSession = Depends(get_db),
+):
+    """Reserve a booked ride ahead of time; 409 if someone else got it first."""
+    driver = await _verified_driver(current_user, db)
+    ride = await ride_service.claim_scheduled_ride(ride_id, driver, db)
+    metrics.rides_claimed_total.inc()
+    return _to_response(ride)
+
+
+@router.post("/{ride_id}/release", response_model=RideResponse)
+@limiter.limit("30/minute")
+async def release_ride(
+    request: Request,
+    ride_id: UUID,
+    current_user: User = Depends(require_driver),
+    db: AsyncSession = Depends(get_db),
+):
+    """Give a reserved ride back, while there is still time to find another driver."""
+    driver = await _verified_driver(current_user, db)
+    ride = await ride_service.release_scheduled_claim(ride_id, driver, db)
+    return _to_response(ride)
 
 
 @router.post("/{ride_id}/accept", response_model=RideResponse)
