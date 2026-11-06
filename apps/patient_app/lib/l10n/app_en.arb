@@ -65,6 +65,7 @@
   "payByLabel": "Pays by",
   "paymentSectionTitle": "How you take payment",
   "paymentSectionHint": "Patients see this once you are assigned. SmartRide does not handle the money.",
+  "paymentNotSet": "Not set yet",
   "paymentCash": "Cash",
   "paymentEasypaisa": "Easypaisa",
   "paymentJazzcash": "JazzCash",

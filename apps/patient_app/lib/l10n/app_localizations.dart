@@ -488,6 +488,12 @@ abstract class AppLocalizations {
   /// **'Patients see this once you are assigned. SmartRide does not handle the money.'**
   String get paymentSectionHint;
 
+  /// No description provided for @paymentNotSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set yet'**
+  String get paymentNotSet;
+
   /// No description provided for @paymentCash.
   ///
   /// In en, this message translates to:

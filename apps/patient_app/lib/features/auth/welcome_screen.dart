@@ -9,9 +9,12 @@ class WelcomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // The top of this screen is dark blue, so the clock and battery must be light.
+    // The top of this screen is dark blue, so the clock and battery must be
+    // light, but only while it is showing: a covered route's style still wins
+    // over the screen on top of it, which made the clock vanish on login.
+    final isShowing = ModalRoute.of(context)?.isCurrent ?? true;
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
+      value: isShowing ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       child: _buildScaffold(context),
     );
   }

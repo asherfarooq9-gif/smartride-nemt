@@ -354,6 +354,14 @@ class _TransactionsList extends StatelessWidget {
             ),
           ),
           const Divider(height: 1, color: kBorder),
+          if (transactions.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(kSpaceLG),
+              child: Text(
+                'No transactions yet.',
+                style: TextStyle(color: kTextSecondary),
+              ),
+            ),
           ...transactions.map((tx) {
             final txMap = tx as Map<String, dynamic>;
             final amount = (txMap['amount_pkr'] as num?)?.toDouble() ?? 0;

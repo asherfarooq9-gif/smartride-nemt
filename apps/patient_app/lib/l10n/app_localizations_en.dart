@@ -215,6 +215,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Patients see this once you are assigned. SmartRide does not handle the money.';
 
   @override
+  String get paymentNotSet => 'Not set yet';
+
+  @override
   String get paymentCash => 'Cash';
 
   @override

@@ -65,6 +65,7 @@
   "payByLabel": "ادائیگی",
   "paymentSectionTitle": "آپ ادائیگی کیسے لیتے ہیں",
   "paymentSectionHint": "ڈرائیور مقرر ہونے پر مریض یہ دیکھیں گے۔ اسمارٹ رائیڈ رقم کا لین دین نہیں کرتا۔",
+  "paymentNotSet": "ابھی سیٹ نہیں کیا",
   "paymentCash": "نقد",
   "paymentEasypaisa": "ایزی پیسہ",
   "paymentJazzcash": "جاز کیش",

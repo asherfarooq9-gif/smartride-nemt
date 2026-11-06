@@ -215,6 +215,9 @@ class AppLocalizationsUr extends AppLocalizations {
       'ڈرائیور مقرر ہونے پر مریض یہ دیکھیں گے۔ اسمارٹ رائیڈ رقم کا لین دین نہیں کرتا۔';
 
   @override
+  String get paymentNotSet => 'ابھی سیٹ نہیں کیا';
+
+  @override
   String get paymentCash => 'نقد';
 
   @override
