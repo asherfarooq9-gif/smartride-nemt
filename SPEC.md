@@ -1,6 +1,6 @@
 # Spec: Scheduled rides (driver Scheduled tab), repeat bookings, cash, Urdu
 
-Status: DRAFT v2, awaiting approval. No code written for this spec.
+Status: BUILT on branch `feat/driver-home-sidebar` (see the commits). Decisions taken for the open questions below: release cutoff 60 min, claim limit 5 at once, claims stored as a nullable `rides.claimed_driver_id` column, patient is pushed on claim and on release (no SMS to the family), emergency radius left at 10 km, idempotency stored in a `ride_idempotency_keys` table. The Scheduled tab is reached from the side menu (the driver home no longer has a bottom bar). Urdu covers Settings, the side menu, the Scheduled tab, booking and delete account; other screens are English until translated.
 
 ## Scope decision (latest, overrides anything below that conflicts)
 

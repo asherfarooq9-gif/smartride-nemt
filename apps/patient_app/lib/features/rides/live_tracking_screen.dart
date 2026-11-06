@@ -9,6 +9,8 @@ import 'package:smartride_core/smartride_core.dart' as core;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:patient_app/shared/english_map_tiles.dart';
 import 'package:patient_app/driver/ride_events.dart' show rideHasEnded;
+import 'package:patient_app/l10n/l10n.dart';
+import 'package:patient_app/core/payment_methods.dart';
 
 const _genericLoadError =
     'We could not load your ride. Please check your connection and try again.';
@@ -461,6 +463,11 @@ class _DriverCard extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final phone = driver?['phone'] as String?;
+    final methods = [
+      for (final m
+          in (driver?['payment_methods'] as List<dynamic>? ?? const []))
+        m.toString(),
+    ];
     final name = driver?['full_name'] as String? ?? 'Your Driver';
     final vehicle = driver != null
         ? '${driver!['vehicle_type'] ?? ''} · ${driver!['vehicle_plate'] ?? ''}'
@@ -501,6 +508,13 @@ class _DriverCard extends StatelessWidget {
                       style: textTheme.bodyMedium
                           ?.copyWith(color: colors.onSurfaceVariant),
                     ),
+                    if (methods.isNotEmpty)
+                      Text(
+                        '${context.l10n.payByLabel}: '
+                        '${paymentMethodsSummary(context.l10n, methods)}',
+                        style: textTheme.bodyMedium
+                            ?.copyWith(color: colors.onSurfaceVariant),
+                      ),
                   ],
                 ),
               ),

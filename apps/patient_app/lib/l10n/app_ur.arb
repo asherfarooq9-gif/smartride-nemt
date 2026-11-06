@@ -1,0 +1,82 @@
+{
+  "@@locale": "ur",
+  "settings": "ترتیبات",
+  "account": "اکاؤنٹ",
+  "profile": "پروفائل",
+  "appearance": "ظاہری شکل",
+  "darkMode": "ڈارک موڈ",
+  "language": "زبان",
+  "chooseLanguage": "زبان منتخب کریں",
+  "support": "معاونت",
+  "helpAndFaq": "مدد اور اکثر پوچھے گئے سوالات",
+  "contactUs": "ہم سے رابطہ کریں",
+  "about": "ایپ کے بارے میں",
+  "appVersion": "ایپ ورژن",
+  "signOut": "سائن آؤٹ",
+  "deleteAccount": "اکاؤنٹ ڈیلیٹ کریں",
+  "cancel": "منسوخ کریں",
+  "scheduled": "شیڈول شدہ",
+  "earnings": "آمدنی",
+  "demandForecast": "طلب کی پیش گوئی",
+  "wallet": "والٹ",
+  "rideHistory": "سفر کی تاریخ",
+  "openRides": "کھلی سواریاں",
+  "myRides": "میری سواریاں",
+  "reserveThisRide": "یہ سواری محفوظ کریں",
+  "giveBack": "واپس کریں",
+  "noOpenRidesTitle": "قریب کوئی کھلی سواری نہیں",
+  "noOpenRidesBody": "آپ کے قریب بک کی گئی سواریاں یہاں نظر آئیں گی۔ اپنا دن ترتیب دینے کے لیے ایک محفوظ کریں۔",
+  "noReservedTitle": "کوئی محفوظ سواری نہیں",
+  "noReservedBody": "آپ کی محفوظ کی گئی سواریاں یہاں نظر آئیں گی۔",
+  "couldNotLoadRides": "سواریاں لوڈ نہیں ہو سکیں",
+  "checkConnectionPullDown": "اپنا کنکشن چیک کریں اور دوبارہ کوشش کے لیے نیچے کھینچیں۔",
+  "reservedMessage": "محفوظ ہو گئی۔ یہ پک اپ سے 30 منٹ پہلے آپ کی ہو جائے گی۔",
+  "givenBackMessage": "واپس کر دی گئی۔",
+  "timeToBeConfirmed": "وقت کی تصدیق باقی ہے",
+  "bookARide": "سواری بک کریں",
+  "scheduleInAdvance": "طبی سفر پہلے سے شیڈول کریں",
+  "locationsLabel": "مقامات",
+  "useCurrentLocation": "میرا موجودہ مقام استعمال کریں",
+  "typePickupAddress": "اپنا پک اپ ایڈریس لکھیں...",
+  "destinationLabel": "منزل",
+  "selectHospital": "منزل کا ہسپتال منتخب کریں",
+  "specialtyLabel": "شعبہ (اختیاری)",
+  "whenLabel": "کب",
+  "selectDateTime": "تاریخ اور وقت منتخب کریں",
+  "confirmBooking": "بکنگ کی تصدیق کریں",
+  "chooseDateTime": "براہ کرم تاریخ اور وقت منتخب کریں",
+  "deleteAccountTitle": "اکاؤنٹ ڈیلیٹ کریں",
+  "deleteAccountBody": "آپ کا نام، فون نمبر، صحت کی تفصیلات، ہنگامی رابطہ اور سواری کے پک اپ ایڈریس ہٹا دیے جائیں گے، اور آپ ہر جگہ سے سائن آؤٹ ہو جائیں گے۔ اسے واپس نہیں کیا جا سکتا۔\n\nسواری اور ادائیگی کے ریکارڈ آپ کی تفصیلات کے بغیر محفوظ رہتے ہیں تاکہ ڈرائیورز کی آمدنی اور اعداد و شمار درست رہیں۔",
+  "password": "پاس ورڈ",
+  "enterPassword": "جاری رکھنے کے لیے اپنا پاس ورڈ درج کریں۔",
+  "showPassword": "پاس ورڈ دکھائیں",
+  "hidePassword": "پاس ورڈ چھپائیں",
+  "repeatLabel": "دہرائیں",
+  "noRepeat": "دہرانا نہیں",
+  "repeatDaily": "ہر روز",
+  "repeatWeekly": "ہر ہفتے",
+  "numberOfTrips": "سفروں کی تعداد",
+  "lastTripOn": "آخری سفر: {date}",
+  "tripsBooked": "{count} سفر بک ہو گئے",
+  "payByLabel": "ادائیگی",
+  "paymentSectionTitle": "آپ ادائیگی کیسے لیتے ہیں",
+  "paymentSectionHint": "ڈرائیور مقرر ہونے پر مریض یہ دیکھیں گے۔ اسمارٹ رائیڈ رقم کا لین دین نہیں کرتا۔",
+  "paymentCash": "نقد",
+  "paymentEasypaisa": "ایزی پیسہ",
+  "paymentJazzcash": "جاز کیش",
+  "paymentBank": "بینک ٹرانسفر",
+  "@lastTripOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "@tripsBooked": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
+}

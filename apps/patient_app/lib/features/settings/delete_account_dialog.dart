@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:patient_app/core/providers.dart';
 
 /// Asks for the password, then deletes the account. Returns true once the
@@ -37,7 +38,7 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
 
   Future<void> _delete() async {
     if (_password.text.isEmpty) {
-      setState(() => _error = 'Enter your password to continue.');
+      setState(() => _error = context.l10n.enterPassword);
       return;
     }
     setState(() {
@@ -59,19 +60,13 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Delete account'),
+      title: Text(context.l10n.deleteAccountTitle),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Your name, phone number, health details, emergency contact and '
-              'ride pickup addresses are removed, and you are signed out '
-              'everywhere. This cannot be undone.\n\n'
-              'Ride and payment records are kept without your details, so '
-              'drivers’ earnings and statistics stay correct.',
-            ),
+            Text(context.l10n.deleteAccountBody),
             const SizedBox(height: core.kSpaceMD),
             TextField(
               controller: _password,
@@ -79,11 +74,13 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
               enabled: !_isBusy,
               autofocus: true,
               decoration: InputDecoration(
-                labelText: 'Password',
+                labelText: context.l10n.password,
                 errorText: _error,
                 errorMaxLines: 3,
                 suffixIcon: IconButton(
-                  tooltip: _isHidden ? 'Show password' : 'Hide password',
+                  tooltip: _isHidden
+                      ? context.l10n.showPassword
+                      : context.l10n.hidePassword,
                   icon: Icon(
                     _isHidden ? Icons.visibility_off : Icons.visibility,
                   ),
@@ -98,7 +95,7 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
       actions: [
         TextButton(
           onPressed: _isBusy ? null : () => Navigator.pop(context, false),
-          child: const Text('Cancel'),
+          child: Text(context.l10n.cancel),
         ),
         TextButton(
           onPressed: _isBusy ? null : _delete,
@@ -109,7 +106,7 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Delete account'),
+              : Text(context.l10n.deleteAccountTitle),
         ),
       ],
     );

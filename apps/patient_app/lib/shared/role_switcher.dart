@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:patient_app/core/providers.dart';
 
 /// Side drawer shared by both portals. Lets a multi-role account flip between
@@ -10,12 +11,14 @@ class PortalDrawer extends ConsumerWidget {
   const PortalDrawer({super.key});
 
   /// What the driver reaches from the menu, so the home screen can stay bare.
-  static const _driverSections = [
-    (Icons.payments_outlined, 'Earnings', '/driver/earnings'),
-    (Icons.trending_up_rounded, 'Demand Forecast', '/driver/demand'),
-    (Icons.account_balance_wallet_outlined, 'Wallet', '/driver/wallet'),
-    (Icons.history_rounded, 'Ride History', '/driver/history'),
-  ];
+  static List<(IconData, String, String)> _driverSections(AppLocalizations l) =>
+      [
+        (Icons.event_available_outlined, l.scheduled, '/driver/scheduled'),
+        (Icons.payments_outlined, l.earnings, '/driver/earnings'),
+        (Icons.trending_up_rounded, l.demandForecast, '/driver/demand'),
+        (Icons.account_balance_wallet_outlined, l.wallet, '/driver/wallet'),
+        (Icons.history_rounded, l.rideHistory, '/driver/history'),
+      ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -84,7 +87,7 @@ class PortalDrawer extends ConsumerWidget {
                     style: TextStyle(fontWeight: FontWeight.w600)),
                 subtitle: Text('Current portal'),
               ),
-              for (final (icon, title, path) in _driverSections)
+              for (final (icon, title, path) in _driverSections(context.l10n))
                 ListTile(
                   leading: Icon(icon),
                   title: Text(title),

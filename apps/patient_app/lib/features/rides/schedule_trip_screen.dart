@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:patient_app/core/date_format.dart';
 import 'package:patient_app/core/location.dart';
 import 'package:patient_app/core/request_id.dart';
@@ -24,6 +25,16 @@ final scheduleHospitalsProvider =
   (_) => core.getHospitals(),
 );
 
+typedef ScheduledSeriesCreator = Future<List<core.RideResponse>> Function(
+  core.ScheduledRideRequest request, {
+  required String repeat,
+  required int occurrences,
+  String? idempotencyKey,
+});
+
+final scheduledSeriesCreatorProvider =
+    Provider<ScheduledSeriesCreator>((ref) => core.createScheduledSeries);
+
 typedef ScheduledRideCreator = Future<core.RideResponse> Function(
   core.ScheduledRideRequest request, {
   String? idempotencyKey,
@@ -46,6 +57,9 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
   String? _selectedSpecialty;
   DateTime? _selectedDateTime;
   bool _submitting = false;
+  // null = a single trip; otherwise "daily" or "weekly", [_occurrences] times.
+  String? _repeat;
+  int _occurrences = 4;
   ({String form, core.ScheduledRideRequest request, String key})? _attempt;
 
   @override
@@ -79,7 +93,7 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
   /// key with a slightly different pickup point.
   Future<(core.ScheduledRideRequest, String)> _attemptFor(DateTime dt) async {
     final address = _addressCtrl.text.trim();
-    final form = '$address|$dt|${_selectedHospital?.id}';
+    final form = '$address|$dt|${_selectedHospital?.id}|$_repeat|$_occurrences';
     final cached = _attempt;
     if (cached != null && cached.form == form) {
       return (cached.request, cached.key);
@@ -105,17 +119,33 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
     final dt = _selectedDateTime;
     if (dt == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please choose a date and time')),
+        SnackBar(content: Text(context.l10n.chooseDateTime)),
       );
       return;
     }
     setState(() => _submitting = true);
     try {
+      final l10n = context.l10n; // read before the awaits
       final (request, key) = await _attemptFor(dt);
-      final ride = await ref.read(scheduledRideCreatorProvider)(request,
-          idempotencyKey: key);
+      final repeat = _repeat;
+      final String firstRideId;
+      String? bookedMessage;
+      if (repeat == null) {
+        final ride = await ref.read(scheduledRideCreatorProvider)(request,
+            idempotencyKey: key);
+        firstRideId = ride.id;
+      } else {
+        final rides = await ref.read(scheduledSeriesCreatorProvider)(request,
+            repeat: repeat, occurrences: _occurrences, idempotencyKey: key);
+        firstRideId = rides.first.id;
+        bookedMessage = l10n.tripsBooked(rides.length);
+      }
       if (!mounted) return;
-      context.go('/booking-confirmed/${ride.id}');
+      final messenger = ScaffoldMessenger.of(context);
+      context.go('/booking-confirmed/$firstRideId');
+      if (bookedMessage != null) {
+        messenger.showSnackBar(SnackBar(content: Text(bookedMessage)));
+      }
     } on core.AppError catch (e) {
       _showError(e.message);
     } on Exception catch (e, st) {
@@ -124,6 +154,64 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
+  }
+
+  Widget _repeatChoices() {
+    final l = context.l10n;
+    final options = <(String?, String)>[
+      (null, l.noRepeat),
+      ('daily', l.repeatDaily),
+      ('weekly', l.repeatWeekly),
+    ];
+    final dt = _selectedDateTime;
+    final step = _repeat == 'daily' ? 1 : 7;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: core.kSpaceSM,
+          children: [
+            for (final (value, label) in options)
+              ChoiceChip(
+                label: Text(label),
+                selected: _repeat == value,
+                onSelected: (_) => setState(() => _repeat = value),
+              ),
+          ],
+        ),
+        if (_repeat != null) ...[
+          const SizedBox(height: core.kSpaceMD),
+          Row(
+            children: [
+              Expanded(child: Text(l.numberOfTrips)),
+              IconButton(
+                tooltip: '-',
+                onPressed: _occurrences > 2
+                    ? () => setState(() => _occurrences--)
+                    : null,
+                icon: const Icon(Icons.remove_circle_outline),
+              ),
+              Text('$_occurrences',
+                  style: Theme.of(context).textTheme.titleMedium),
+              IconButton(
+                tooltip: '+',
+                onPressed: _occurrences < 12
+                    ? () => setState(() => _occurrences++)
+                    : null,
+                icon: const Icon(Icons.add_circle_outline),
+              ),
+            ],
+          ),
+          if (dt != null)
+            Text(
+              l.lastTripOn(
+                formatWhen(dt.add(Duration(days: step * (_occurrences - 1)))),
+              ),
+              style: const TextStyle(color: core.kTextSecondary),
+            ),
+        ],
+      ],
+    );
   }
 
   void _showError(String message) {
@@ -166,18 +254,18 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                 ],
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
                   core.kSpaceXL, core.kSpaceMD, core.kSpaceXL, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Book a Ride',
-                      style:
-                          TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-                  SizedBox(height: core.kSpaceXS),
-                  Text('Schedule a medical trip in advance',
-                      style: TextStyle(
+                  Text(context.l10n.bookARide,
+                      style: const TextStyle(
+                          fontSize: 28, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: core.kSpaceXS),
+                  Text(context.l10n.scheduleInAdvance,
+                      style: const TextStyle(
                           fontSize: core.kFontSM, color: core.kTextSecondary)),
                 ],
               ),
@@ -189,27 +277,28 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Location
-                    const _SectionLabel('LOCATIONS'),
+                    _SectionLabel(context.l10n.locationsLabel),
                     const SizedBox(height: core.kSpaceSM),
                     _LocationTile(
                       icon: Icons.my_location,
-                      title: 'Use my current location',
+                      title: context.l10n.useCurrentLocation,
                       color: core.kPatientPrimary,
                       onTap: () => setState(() => _addressCtrl.text = ''),
                     ),
                     const SizedBox(height: core.kSpaceSM),
                     TextFormField(
                       controller: _addressCtrl,
-                      decoration: const InputDecoration(
-                        hintText: 'Type your pickup address...',
-                        prefixIcon: Icon(Icons.edit_location_alt_outlined),
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        hintText: context.l10n.typePickupAddress,
+                        prefixIcon:
+                            const Icon(Icons.edit_location_alt_outlined),
+                        border: const OutlineInputBorder(),
                       ),
                     ),
                     const SizedBox(height: core.kSpaceXL),
 
                     // Hospital
-                    const _SectionLabel('DESTINATION'),
+                    _SectionLabel(context.l10n.destinationLabel),
                     const SizedBox(height: core.kSpaceSM),
                     hospitalsAsync.when(
                       loading: () => const LinearProgressIndicator(),
@@ -223,7 +312,7 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                     const SizedBox(height: core.kSpaceXL),
 
                     // Specialty
-                    const _SectionLabel('SPECIALTY / DEPARTMENT (OPTIONAL)'),
+                    _SectionLabel(context.l10n.specialtyLabel),
                     const SizedBox(height: core.kSpaceSM),
                     Wrap(
                       spacing: core.kSpaceSM,
@@ -258,7 +347,7 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                     const SizedBox(height: core.kSpaceXL),
 
                     // When
-                    const _SectionLabel('WHEN'),
+                    _SectionLabel(context.l10n.whenLabel),
                     const SizedBox(height: core.kSpaceSM),
                     _TapCard(
                       semanticLabel: _selectedDateTime == null
@@ -273,7 +362,7 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                           const SizedBox(width: core.kSpaceMD),
                           Text(
                             _selectedDateTime == null
-                                ? 'Select date & time'
+                                ? context.l10n.selectDateTime
                                 : formatDateTime(_selectedDateTime!),
                             style: TextStyle(
                               color: _selectedDateTime == null
@@ -288,6 +377,10 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                         ],
                       ),
                     ),
+                    const SizedBox(height: core.kSpaceXL),
+                    _SectionLabel(context.l10n.repeatLabel),
+                    const SizedBox(height: core.kSpaceSM),
+                    _repeatChoices(),
                     const SizedBox(height: core.kSpaceXXL),
                     SizedBox(
                       height: core.kMinTapTarget,
@@ -300,8 +393,8 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                                 child: CircularProgressIndicator(
                                     strokeWidth: 2, color: Colors.white),
                               )
-                            : const Text('Confirm Booking',
-                                style: TextStyle(
+                            : Text(context.l10n.confirmBooking,
+                                style: const TextStyle(
                                     fontSize: core.kFontMD,
                                     fontWeight: FontWeight.bold)),
                       ),
@@ -416,7 +509,7 @@ class _HospitalPicker extends StatelessWidget {
   Widget build(BuildContext context) {
     return DropdownButtonFormField<core.HospitalResponse>(
       initialValue: selected,
-      hint: const Text('Select destination hospital'),
+      hint: Text(context.l10n.selectHospital),
       decoration: const InputDecoration(
         prefixIcon: Icon(Icons.local_hospital_outlined),
         border: OutlineInputBorder(),

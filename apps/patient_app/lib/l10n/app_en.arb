@@ -1,0 +1,82 @@
+{
+  "@@locale": "en",
+  "settings": "Settings",
+  "account": "Account",
+  "profile": "Profile",
+  "appearance": "Appearance",
+  "darkMode": "Dark Mode",
+  "language": "Language",
+  "chooseLanguage": "Choose language",
+  "support": "Support",
+  "helpAndFaq": "Help & FAQ",
+  "contactUs": "Contact Us",
+  "about": "About",
+  "appVersion": "App Version",
+  "signOut": "Sign Out",
+  "deleteAccount": "Delete Account",
+  "cancel": "Cancel",
+  "scheduled": "Scheduled",
+  "earnings": "Earnings",
+  "demandForecast": "Demand Forecast",
+  "wallet": "Wallet",
+  "rideHistory": "Ride History",
+  "openRides": "Open rides",
+  "myRides": "My rides",
+  "reserveThisRide": "Reserve this ride",
+  "giveBack": "Give back",
+  "noOpenRidesTitle": "No open rides nearby",
+  "noOpenRidesBody": "Booked trips near you show up here. Reserve one to plan your day.",
+  "noReservedTitle": "No reserved rides",
+  "noReservedBody": "Rides you reserve show up here.",
+  "couldNotLoadRides": "Could not load rides",
+  "checkConnectionPullDown": "Check your connection and pull down to try again.",
+  "reservedMessage": "Reserved. It becomes yours 30 minutes before pickup.",
+  "givenBackMessage": "Given back.",
+  "timeToBeConfirmed": "Time to be confirmed",
+  "bookARide": "Book a Ride",
+  "scheduleInAdvance": "Schedule a medical trip in advance",
+  "locationsLabel": "LOCATIONS",
+  "useCurrentLocation": "Use my current location",
+  "typePickupAddress": "Type your pickup address...",
+  "destinationLabel": "DESTINATION",
+  "selectHospital": "Select destination hospital",
+  "specialtyLabel": "SPECIALTY / DEPARTMENT (OPTIONAL)",
+  "whenLabel": "WHEN",
+  "selectDateTime": "Select date & time",
+  "confirmBooking": "Confirm Booking",
+  "chooseDateTime": "Please choose a date and time",
+  "deleteAccountTitle": "Delete account",
+  "deleteAccountBody": "Your name, phone number, health details, emergency contact and ride pickup addresses are removed, and you are signed out everywhere. This cannot be undone.\n\nRide and payment records are kept without your details, so drivers’ earnings and statistics stay correct.",
+  "password": "Password",
+  "enterPassword": "Enter your password to continue.",
+  "showPassword": "Show password",
+  "hidePassword": "Hide password",
+  "repeatLabel": "REPEAT",
+  "noRepeat": "Does not repeat",
+  "repeatDaily": "Every day",
+  "repeatWeekly": "Every week",
+  "numberOfTrips": "Number of trips",
+  "lastTripOn": "Last trip: {date}",
+  "tripsBooked": "{count} trips booked",
+  "payByLabel": "Pays by",
+  "paymentSectionTitle": "How you take payment",
+  "paymentSectionHint": "Patients see this once you are assigned. SmartRide does not handle the money.",
+  "paymentCash": "Cash",
+  "paymentEasypaisa": "Easypaisa",
+  "paymentJazzcash": "JazzCash",
+  "paymentBank": "Bank transfer",
+  "@lastTripOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "@tripsBooked": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
+}

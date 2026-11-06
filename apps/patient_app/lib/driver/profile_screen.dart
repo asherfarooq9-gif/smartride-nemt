@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
+import 'package:patient_app/l10n/l10n.dart';
+import 'package:patient_app/core/payment_methods.dart';
 
 final _profileProvider = FutureProvider.autoDispose<core.DriverResponse>(
   (_) => core.getDriverMe(),
@@ -43,8 +45,10 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
   final _vehicleModelCtrl = TextEditingController();
   final _vehiclePlateCtrl = TextEditingController();
   bool _editing = false;
+  List<String> _methods = [];
 
   void _populate(core.DriverResponse d) {
+    _methods = [...d.paymentMethods];
     _nameCtrl.text = d.fullName ?? '';
     _licenseCtrl.text = d.licenseNumber ?? '';
     _vehicleModelCtrl.text = d.vehicleModel ?? '';
@@ -110,6 +114,8 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
                 const SizedBox(height: core.kSpaceLG),
                 _field(_vehiclePlateCtrl, 'Vehicle plate',
                     Icons.confirmation_number),
+                const SizedBox(height: core.kSpaceXL),
+                _paymentMethods(driver),
                 if (!_editing) ...[
                   const SizedBox(height: core.kSpaceXL),
                   const Divider(),
@@ -163,6 +169,48 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
     );
   }
 
+  /// How this driver says they take payment. Editable only in edit mode.
+  Widget _paymentMethods(core.DriverResponse driver) {
+    final l = context.l10n;
+    final chosen = _editing ? _methods : driver.paymentMethods;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l.paymentSectionTitle,
+            style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: core.kSpaceXS),
+        Text(
+          l.paymentSectionHint,
+          style: Theme.of(context)
+              .textTheme
+              .bodySmall
+              ?.copyWith(color: core.kTextSecondary),
+        ),
+        const SizedBox(height: core.kSpaceSM),
+        Wrap(
+          spacing: core.kSpaceSM,
+          runSpacing: core.kSpaceSM,
+          children: [
+            for (final id in paymentMethodIds)
+              FilterChip(
+                label: Text(paymentMethodLabel(l, id)),
+                selected: chosen.contains(id),
+                onSelected: _editing
+                    ? (on) => setState(() {
+                          _methods = [
+                            for (final other in paymentMethodIds)
+                              if (other == id ? on : _methods.contains(other))
+                                other,
+                          ];
+                        })
+                    : null,
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _field(TextEditingController ctrl, String label, IconData icon) =>
       TextFormField(
         controller: ctrl,
@@ -185,6 +233,7 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
             vehiclePlate: _vehiclePlateCtrl.text.trim().isEmpty
                 ? null
                 : _vehiclePlateCtrl.text.trim(),
+            paymentMethods: _methods,
           ),
         );
     if (!mounted) return;

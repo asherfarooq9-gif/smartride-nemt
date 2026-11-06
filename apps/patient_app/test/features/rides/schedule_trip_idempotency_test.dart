@@ -36,6 +36,7 @@ class _Harness {
   final int failuresBeforeSuccess;
   final requests = <core.ScheduledRideRequest>[];
   final keys = <String?>[];
+  final series = <({String repeat, int occurrences, String? key})>[];
   var _lat = 33.70;
 
   Future<void> pump(WidgetTester tester) async {
@@ -64,6 +65,16 @@ class _Harness {
         locationReaderProvider.overrideWithValue(() async {
           _lat += 0.001;
           return _position(_lat);
+        }),
+        scheduledSeriesCreatorProvider.overrideWithValue((
+          request, {
+          required String repeat,
+          required int occurrences,
+          String? idempotencyKey,
+        }) async {
+          series.add(
+              (repeat: repeat, occurrences: occurrences, key: idempotencyKey));
+          return List.generate(occurrences, (_) => _ride());
         }),
         scheduledRideCreatorProvider
             .overrideWithValue((request, {String? idempotencyKey}) async {
@@ -137,5 +148,42 @@ void main() {
 
     expect(h.keys, hasLength(2));
     expect(h.keys[0], isNot(h.keys[1]));
+  });
+
+  testWidgets('a weekly repeat books the whole run with one key',
+      (tester) async {
+    final h = _Harness();
+    await h.pump(tester);
+
+    await h.pickDateTime(tester);
+    await tester.ensureVisible(find.text('Every week'));
+    await tester.tap(find.text('Every week'));
+    await tester.pumpAndSettle();
+    await h.confirm(tester);
+
+    expect(h.keys, isEmpty, reason: 'not booked as single rides');
+    expect(h.series, hasLength(1));
+    expect(h.series.single.repeat, 'weekly');
+    expect(h.series.single.occurrences, 4);
+    expect(h.series.single.key, isNotEmpty);
+    expect(find.text('confirmed ride-1'), findsOneWidget);
+  });
+
+  testWidgets('the trip count can be raised and lowered between 2 and 12',
+      (tester) async {
+    final h = _Harness();
+    await h.pump(tester);
+
+    await h.pickDateTime(tester);
+    await tester.ensureVisible(find.text('Every day'));
+    await tester.tap(find.text('Every day'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.add_circle_outline));
+    await tester.tap(find.byIcon(Icons.add_circle_outline));
+    await tester.pumpAndSettle();
+    await h.confirm(tester);
+
+    expect(h.series.single.repeat, 'daily');
+    expect(h.series.single.occurrences, 6);
   });
 }

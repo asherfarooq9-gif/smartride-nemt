@@ -9,6 +9,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: any
   smartride_core:
     path: ../../packages/smartride_core
   flutter_riverpod: ^2.5.1
@@ -40,6 +43,7 @@ dev_dependencies:
   flutter_secure_storage_platform_interface: ^1.1.2
 
 flutter:
+  generate: true
   uses-material-design: true
   assets:
     - .env

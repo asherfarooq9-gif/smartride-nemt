@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart' show kIsWeb, FlutterError;
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:patient_app/core/locale_provider.dart';
+import 'package:patient_app/l10n/app_localizations.dart';
 import 'package:patient_app/core/router.dart';
 import 'package:patient_app/core/error_reporting.dart';
 import 'package:patient_app/core/providers.dart';
@@ -156,6 +158,9 @@ class _SmartRideAppState extends ConsumerState<SmartRideApp> {
           isDriver ? AppTheme.driver(dark: true) : AppTheme.patient(dark: true),
       themeMode: ref.watch(effectiveThemeModeProvider),
       routerConfig: router,
+      locale: ref.watch(localeProvider),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       debugShowCheckedModeBanner: false,
     );
   }
