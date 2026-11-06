@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, FlutterError;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:patient_app/shared/offline_banner.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -166,9 +167,18 @@ class _SmartRideAppState extends ConsumerState<SmartRideApp> {
       // Native-feeling rubber-band scrolling on every platform.
       scrollBehavior: const _BouncyScrollBehavior(),
       // Follow the user's text size, but cap it so layouts do not break.
-      builder: (context, child) => MediaQuery.withClampedTextScaling(
-        maxScaleFactor: 1.4,
-        child: OfflineBanner(child: child ?? const SizedBox.shrink()),
+      builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+        // Default status bar icons for the theme; a screen with its own dark
+        // header (app bar, welcome) overrides this for its own area. Without it
+        // the icons stayed light after leaving such a screen and vanished on
+        // light screens.
+        value: Theme.of(context).brightness == Brightness.dark
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
+        child: MediaQuery.withClampedTextScaling(
+          maxScaleFactor: 1.4,
+          child: OfflineBanner(child: child ?? const SizedBox.shrink()),
+        ),
       ),
     );
   }

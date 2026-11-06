@@ -9,6 +9,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:patient_app/shared/english_map_tiles.dart';
+import 'package:patient_app/core/location.dart';
 import 'package:patient_app/core/providers.dart';
 import 'package:patient_app/driver/dashboard_notifier.dart';
 import 'package:patient_app/driver/navigation_links.dart';
@@ -36,6 +37,7 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
   bool _busy = false;
   bool _left = false;
   Timer? _refetch;
+  Timer? _positionTimer;
 
   // The GPS socket tells the driver when a ride ends, but it can be down exactly
   // when the patient cancels. Reading the ride again every so often is the backstop.
@@ -47,6 +49,10 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
     _refetch = Timer.periodic(_refetchEvery, (_) {
       if (mounted) ref.invalidate(_rideDetailProvider(widget.rideId));
     });
+    // Show the driver where they are on the map, not only where the patient is.
+    _positionTimer =
+        Timer.periodic(const Duration(seconds: 5), (_) => _updateMyPosition());
+    Future.microtask(_updateMyPosition);
     // Accepting starts location sharing; resuming after a restart does not, so
     // make sure it is running (a no-op when it already is).
     Future.microtask(() {
@@ -59,8 +65,15 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
   @override
   void dispose() {
     _refetch?.cancel();
+    _positionTimer?.cancel();
     _mapController.dispose();
     super.dispose();
+  }
+
+  Future<void> _updateMyPosition() async {
+    final position = await ref.read(locationReaderProvider)();
+    if (!mounted || position == null) return;
+    setState(() => _myPos = LatLng(position.latitude, position.longitude));
   }
 
   /// Leaves the ride screen once, saying why, and stops sharing location.
@@ -74,6 +87,10 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
     messenger.showSnackBar(SnackBar(content: Text(message)));
     router.go('/driver');
   }
+
+  /// 403 or 404 on a ride this driver was working on means it moved away.
+  bool _isNoLongerYours(core.AppError e) =>
+      e.statusCode == 403 || e.statusCode == 404;
 
   Future<void> _advance(core.RideStatus next) async {
     if (_busy) return;
@@ -93,7 +110,11 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
       if (e is! core.AppError) {
         core.ErrorReporter.report('Driver ride status update failed', e, st);
       }
-      if (mounted) {
+      if (e is core.AppError && _isNoLongerYours(e)) {
+        // The server gave the ride to someone else (for example the driver did
+        // not set off in time). Say so and go home instead of a bare "Forbidden".
+        await _leave('This ride is no longer yours. It has been reassigned.');
+      } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(e is core.AppError ? e.message : 'Update failed'),
@@ -209,7 +230,11 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
       body: rideAsync.when(
         loading: () => const core.LoadingState(),
         error: (e, _) => core.ErrorState(
-          message: e is core.AppError ? e.message : 'Failed to load ride',
+          message: e is core.AppError
+              ? (_isNoLongerYours(e)
+                  ? 'This ride is no longer yours. It has been reassigned.'
+                  : e.message)
+              : 'Failed to load ride',
           onRetry: () => ref.invalidate(_rideDetailProvider(widget.rideId)),
         ),
         data: (ride) {
@@ -242,6 +267,24 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
                                 Icons.location_on,
                                 color: core.kEmergencyRed,
                                 size: 40,
+                              ),
+                            ),
+                          ),
+                        if (_myPos != null)
+                          Marker(
+                            point: _myPos!,
+                            width: 24,
+                            height: 24,
+                            child: const Tooltip(
+                              message: 'You are here',
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: core.kPatientPrimary,
+                                  shape: BoxShape.circle,
+                                  border: Border.fromBorderSide(
+                                    BorderSide(color: Colors.white, width: 3),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -419,7 +462,8 @@ class _GpsStatusIcon extends StatelessWidget {
     final (icon, color, message) = switch (status) {
       GpsStreamStatus.live => (
           Icons.gps_fixed,
-          core.kOnlineGreen,
+          // This icon sits on the blue app bar, where green was hard to see.
+          Colors.white,
           'Sharing your location with the patient',
         ),
       GpsStreamStatus.starting || GpsStreamStatus.degraded => (
@@ -429,7 +473,7 @@ class _GpsStatusIcon extends StatelessWidget {
         ),
       GpsStreamStatus.idle => (
           Icons.gps_off,
-          core.kError,
+          const Color(0xFFFFB4AB),
           'Location sharing is off. The patient cannot see you.',
         ),
     };
