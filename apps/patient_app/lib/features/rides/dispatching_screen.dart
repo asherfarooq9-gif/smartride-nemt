@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -228,10 +229,10 @@ class _Messages extends StatelessWidget {
         Semantics(
           header: true,
           liveRegion: true,
-          child: const Text(
-            'Finding your driver...',
+          child: Text(
+            context.l10n.dispFinding,
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
               color: Colors.white,
@@ -239,20 +240,21 @@ class _Messages extends StatelessWidget {
           ),
         ),
         const SizedBox(height: core.kSpaceMD),
-        const Text(
-          'Locating the nearest driver and the right hospital for your needs.',
+        Text(
+          context.l10n.dispLocating,
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: core.kFontSmall,
             color: Colors.white70,
             height: 1.5,
           ),
         ),
         const SizedBox(height: core.kSpaceSM),
-        const Text(
-          'Please stay calm. Help is on the way.',
+        Text(
+          context.l10n.dispCalm,
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: core.kFontSmall, color: Colors.white70),
+          style:
+              const TextStyle(fontSize: core.kFontSmall, color: Colors.white70),
         ),
       ],
     );
@@ -268,10 +270,8 @@ class _ProblemPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final message = problem == _StatusProblem.offline
-        ? "Connection lost — we can't check your ride status. "
-            'Check your internet, or call 1122 directly below.'
-        : "We can't show this ride's status right now. "
-            'Please call 1122 directly below.';
+        ? context.l10n.dispConnLost
+        : context.l10n.dispNoStatus;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -307,9 +307,10 @@ class _ProblemPanel extends StatelessWidget {
           style: TextButton.styleFrom(
             minimumSize: const Size.fromHeight(core.kMinTapTarget),
           ),
-          child: const Text(
-            'Back to home',
-            style: TextStyle(color: Colors.white70, fontSize: core.kFontSmall),
+          child: Text(
+            context.l10n.backToHomeLower,
+            style: const TextStyle(
+                color: Colors.white70, fontSize: core.kFontSmall),
           ),
         ),
         const SizedBox(height: core.kSpaceSM),
@@ -330,9 +331,9 @@ class _EmergencyCallButton extends StatelessWidget {
         minimumSize: const Size.fromHeight(core.kMinTapTarget),
       ),
       icon: const Icon(Icons.phone, color: core.kDarkAccent, size: 20),
-      label: const Text(
-        'Call 1122 directly',
-        style: TextStyle(
+      label: Text(
+        context.l10n.call1122Directly,
+        style: const TextStyle(
           color: core.kDarkAccent,
           fontWeight: FontWeight.w600,
           fontSize: core.kFontSmall,

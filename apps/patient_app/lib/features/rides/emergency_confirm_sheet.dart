@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -85,7 +86,7 @@ class _EmergencyConfirmSheetState extends ConsumerState<EmergencyConfirmSheet> {
                   child: Semantics(
                     header: true,
                     child: Text(
-                      'Request emergency help?',
+                      context.l10n.ecTitle,
                       style: TextStyle(
                         fontSize: kFontHeading,
                         fontWeight: FontWeight.w700,
@@ -98,7 +99,7 @@ class _EmergencyConfirmSheetState extends ConsumerState<EmergencyConfirmSheet> {
             ),
             const SizedBox(height: kSpaceSM),
             Text(
-              'Check your pickup location, then tell us what is wrong.',
+              context.l10n.ecSubtitle,
               style: TextStyle(color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: kSpaceLG),
@@ -119,17 +120,17 @@ class _EmergencyConfirmSheetState extends ConsumerState<EmergencyConfirmSheet> {
                       widget.onContinue();
                     }
                   : null,
-              child: const Text('Continue'),
+              child: Text(context.l10n.continueLabel),
             ),
             const SizedBox(height: kSpaceSM),
             OutlinedButton.icon(
               onPressed: widget.onCall ?? _dial,
               icon: const Icon(Icons.phone_in_talk_outlined),
-              label: const Text('Call 1122'),
+              label: Text(context.l10n.call1122),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+              child: Text(context.l10n.cancel),
             ),
           ],
         ),
@@ -153,13 +154,13 @@ class _LocationCard extends StatelessWidget {
         switch (location.status) {
       LocationStatus.loading => (
           Icons.my_location_rounded,
-          'Finding your location…',
+          context.l10n.locFinding,
           null,
           null,
         ),
       LocationStatus.granted => (
           Icons.my_location_rounded,
-          'Using your current location',
+          context.l10n.locUsing,
           position == null
               ? null
               : 'Accurate to about ${position.accuracy.round()} m\n'
@@ -169,27 +170,27 @@ class _LocationCard extends StatelessWidget {
         ),
       LocationStatus.noFix => (
           Icons.location_searching_rounded,
-          'We cannot find you yet',
-          'Move to an open area, or call 1122 now.',
-          'Try again',
+          context.l10n.locNoFix,
+          context.l10n.locNoFixHelp,
+          context.l10n.tryAgain,
         ),
       LocationStatus.denied => (
           Icons.location_off_outlined,
-          'Location is needed to send help',
-          'Allow location so the nearest ambulance knows where you are.',
-          'Turn on location',
+          context.l10n.locNeeded,
+          context.l10n.locNeededHelp,
+          context.l10n.turnOnLocation,
         ),
       LocationStatus.deniedForever => (
           Icons.location_off_outlined,
-          'Location is blocked',
-          'Open settings and allow location for SmartRide.',
-          'Open settings',
+          context.l10n.locBlocked,
+          context.l10n.locBlockedHelp,
+          context.l10n.openSettings,
         ),
       LocationStatus.serviceOff => (
           Icons.location_off_outlined,
-          'Location is switched off',
-          'Turn on location in your phone settings, then try again.',
-          'Try again',
+          context.l10n.locOff,
+          context.l10n.locOffHelp,
+          context.l10n.tryAgain,
         ),
     };
 

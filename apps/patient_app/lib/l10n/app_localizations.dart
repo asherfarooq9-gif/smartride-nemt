@@ -1561,6 +1561,234 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cancelled'**
   String get statusCancelled;
+
+  /// No description provided for @ecTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Request emergency help?'**
+  String get ecTitle;
+
+  /// No description provided for @ecSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your pickup location, then tell us what is wrong.'**
+  String get ecSubtitle;
+
+  /// No description provided for @continueLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get continueLabel;
+
+  /// No description provided for @call1122.
+  ///
+  /// In en, this message translates to:
+  /// **'Call 1122'**
+  String get call1122;
+
+  /// No description provided for @locFinding.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding your location…'**
+  String get locFinding;
+
+  /// No description provided for @locUsing.
+  ///
+  /// In en, this message translates to:
+  /// **'Using your current location'**
+  String get locUsing;
+
+  /// No description provided for @locNoFix.
+  ///
+  /// In en, this message translates to:
+  /// **'We cannot find you yet'**
+  String get locNoFix;
+
+  /// No description provided for @locNoFixHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to an open area, or call 1122 now.'**
+  String get locNoFixHelp;
+
+  /// No description provided for @locNeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Location is needed to send help'**
+  String get locNeeded;
+
+  /// No description provided for @locNeededHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow location so the nearest ambulance knows where you are.'**
+  String get locNeededHelp;
+
+  /// No description provided for @turnOnLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on location'**
+  String get turnOnLocation;
+
+  /// No description provided for @locBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Location is blocked'**
+  String get locBlocked;
+
+  /// No description provided for @locBlockedHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Open settings and allow location for SmartRide.'**
+  String get locBlockedHelp;
+
+  /// No description provided for @openSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open settings'**
+  String get openSettings;
+
+  /// No description provided for @locOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Location is switched off'**
+  String get locOff;
+
+  /// No description provided for @locOffHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on location in your phone settings, then try again.'**
+  String get locOffHelp;
+
+  /// No description provided for @dispFinding.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding your driver...'**
+  String get dispFinding;
+
+  /// No description provided for @dispLocating.
+  ///
+  /// In en, this message translates to:
+  /// **'Locating the nearest driver and the right hospital for your needs.'**
+  String get dispLocating;
+
+  /// No description provided for @dispCalm.
+  ///
+  /// In en, this message translates to:
+  /// **'Please stay calm. Help is on the way.'**
+  String get dispCalm;
+
+  /// No description provided for @dispConnLost.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection lost — we can\'t check your ride status. Check your internet, or call 1122 directly below.'**
+  String get dispConnLost;
+
+  /// No description provided for @dispNoStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'We can\'t show this ride\'s status right now. Please call 1122 directly below.'**
+  String get dispNoStatus;
+
+  /// No description provided for @backToHomeLower.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to home'**
+  String get backToHomeLower;
+
+  /// No description provided for @call1122Directly.
+  ///
+  /// In en, this message translates to:
+  /// **'Call 1122 directly'**
+  String get call1122Directly;
+
+  /// No description provided for @getHelpNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Get Help Now'**
+  String get getHelpNow;
+
+  /// No description provided for @helpArranged.
+  ///
+  /// In en, this message translates to:
+  /// **'Help is being arranged. Tell us what\'s happening so we can send the right support.'**
+  String get helpArranged;
+
+  /// No description provided for @whatsHappening.
+  ///
+  /// In en, this message translates to:
+  /// **'WHAT\'S HAPPENING?'**
+  String get whatsHappening;
+
+  /// No description provided for @anyOtherDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'ANY OTHER DETAILS? (OPTIONAL)'**
+  String get anyOtherDetails;
+
+  /// No description provided for @detailsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. patient is conscious, address details...'**
+  String get detailsHint;
+
+  /// No description provided for @pickupAddressHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup address (leave blank for current location)'**
+  String get pickupAddressHint;
+
+  /// No description provided for @sendForHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Send for Help'**
+  String get sendForHelp;
+
+  /// No description provided for @orCallDirectly.
+  ///
+  /// In en, this message translates to:
+  /// **'Or call directly: 1122'**
+  String get orCallDirectly;
+
+  /// No description provided for @enableLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable'**
+  String get enableLabel;
+
+  /// No description provided for @symChestPain.
+  ///
+  /// In en, this message translates to:
+  /// **'Chest Pain'**
+  String get symChestPain;
+
+  /// No description provided for @symBreathing.
+  ///
+  /// In en, this message translates to:
+  /// **'Breathing Trouble'**
+  String get symBreathing;
+
+  /// No description provided for @symPregnancy.
+  ///
+  /// In en, this message translates to:
+  /// **'Pregnancy'**
+  String get symPregnancy;
+
+  /// No description provided for @symInjury.
+  ///
+  /// In en, this message translates to:
+  /// **'Injury / Accident'**
+  String get symInjury;
+
+  /// No description provided for @symChildSick.
+  ///
+  /// In en, this message translates to:
+  /// **'Child Sick'**
+  String get symChildSick;
+
+  /// No description provided for @symOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other / Not Sure'**
+  String get symOther;
 }
 
 class _AppLocalizationsDelegate

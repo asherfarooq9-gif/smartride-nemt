@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +14,18 @@ const _symptoms = [
   'Child Sick',
   'Other / Not Sure',
 ];
+
+/// The chip text in the user's language. What is sent to the server stays the
+/// English value in [_symptoms], because dispatch reads it for urgency.
+String _symptomLabel(AppLocalizations l, String symptom) => switch (symptom) {
+      'Chest Pain' => l.symChestPain,
+      'Breathing Trouble' => l.symBreathing,
+      'Pregnancy' => l.symPregnancy,
+      'Injury / Accident' => l.symInjury,
+      'Child Sick' => l.symChildSick,
+      'Other / Not Sure' => l.symOther,
+      _ => symptom,
+    };
 
 const _fieldFill = Color(0xFF2D1010);
 const _fieldBorder = Color(0xFF5A2020);
@@ -136,7 +149,7 @@ class _SymptomScreenState extends ConsumerState<SymptomScreen> {
           'We need your location to send help. Turn on location and try again.'),
       backgroundColor: core.kError,
       action: SnackBarAction(
-        label: 'Enable',
+        label: context.l10n.enableLabel,
         textColor: Colors.white,
         onPressed: () => context.push('/permissions'),
       ),
@@ -162,8 +175,8 @@ class _SymptomScreenState extends ConsumerState<SymptomScreen> {
                       onPressed: () => context.pop(),
                       icon: const Icon(Icons.close,
                           size: 18, color: Colors.white70),
-                      label: const Text('Cancel',
-                          style: TextStyle(color: Colors.white70)),
+                      label: Text(context.l10n.cancel,
+                          style: const TextStyle(color: Colors.white70)),
                     ),
                   ],
                 ),
@@ -209,22 +222,22 @@ class _FormBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
-          'Get Help Now',
-          style: TextStyle(
+        Text(
+          context.l10n.getHelpNow,
+          style: const TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
         ),
         const SizedBox(height: core.kSpaceXS),
-        const Text(
-          "Help is being arranged. Tell us what's happening so we can send the right support.",
-          style: TextStyle(
+        Text(
+          context.l10n.helpArranged,
+          style: const TextStyle(
               fontSize: core.kFontSmall, color: Colors.white70, height: 1.4),
         ),
         const SizedBox(height: core.kSpaceXL),
-        const _Caption("WHAT'S HAPPENING?"),
+        _Caption(context.l10n.whatsHappening),
         const SizedBox(height: core.kSpaceMD),
         Wrap(
           spacing: core.kSpaceSM,
@@ -232,7 +245,7 @@ class _FormBody extends StatelessWidget {
           children: [
             for (final s in _symptoms)
               _SymptomChip(
-                label: s,
+                label: _symptomLabel(context.l10n, s),
                 selected: selected.contains(s),
                 onTap: () => onToggle(s),
               ),
@@ -254,14 +267,14 @@ class _FormBody extends StatelessWidget {
             ),
           ),
         const SizedBox(height: core.kSpaceXL),
-        const _Caption('ANY OTHER DETAILS? (OPTIONAL)'),
+        _Caption(context.l10n.anyOtherDetails),
         const SizedBox(height: core.kSpaceMD),
         TextFormField(
           controller: detailsCtrl,
           maxLines: 3,
           style: const TextStyle(color: Colors.white),
           decoration: _fieldDecoration(
-            hint: 'e.g. patient is conscious, address details...',
+            hint: context.l10n.detailsHint,
           ),
         ),
         const SizedBox(height: core.kSpaceLG),
@@ -269,7 +282,7 @@ class _FormBody extends StatelessWidget {
           controller: addressCtrl,
           style: const TextStyle(color: Colors.white),
           decoration: _fieldDecoration(
-            hint: 'Pickup address (leave blank for current location)',
+            hint: context.l10n.pickupAddressHint,
             prefix: const Icon(Icons.location_on, color: Colors.white70),
           ),
         ),
@@ -351,19 +364,20 @@ class _SubmitBar extends StatelessWidget {
                           strokeWidth: 2, color: Colors.white),
                     ),
                   )
-                : const Text(
-                    'Send for Help',
-                    style: TextStyle(
+                : Text(
+                    context.l10n.sendForHelp,
+                    style: const TextStyle(
                       fontSize: core.kFontMD,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
           ),
           const SizedBox(height: core.kSpaceMD),
-          const Text(
-            'Or call directly: 1122',
+          Text(
+            context.l10n.orCallDirectly,
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white70, fontSize: core.kFontSmall),
+            style: const TextStyle(
+                color: Colors.white70, fontSize: core.kFontSmall),
           ),
         ],
       ),

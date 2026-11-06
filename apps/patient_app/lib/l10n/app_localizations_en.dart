@@ -757,4 +757,127 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get statusCancelled => 'Cancelled';
+
+  @override
+  String get ecTitle => 'Request emergency help?';
+
+  @override
+  String get ecSubtitle =>
+      'Check your pickup location, then tell us what is wrong.';
+
+  @override
+  String get continueLabel => 'Continue';
+
+  @override
+  String get call1122 => 'Call 1122';
+
+  @override
+  String get locFinding => 'Finding your location…';
+
+  @override
+  String get locUsing => 'Using your current location';
+
+  @override
+  String get locNoFix => 'We cannot find you yet';
+
+  @override
+  String get locNoFixHelp => 'Move to an open area, or call 1122 now.';
+
+  @override
+  String get locNeeded => 'Location is needed to send help';
+
+  @override
+  String get locNeededHelp =>
+      'Allow location so the nearest ambulance knows where you are.';
+
+  @override
+  String get turnOnLocation => 'Turn on location';
+
+  @override
+  String get locBlocked => 'Location is blocked';
+
+  @override
+  String get locBlockedHelp =>
+      'Open settings and allow location for SmartRide.';
+
+  @override
+  String get openSettings => 'Open settings';
+
+  @override
+  String get locOff => 'Location is switched off';
+
+  @override
+  String get locOffHelp =>
+      'Turn on location in your phone settings, then try again.';
+
+  @override
+  String get dispFinding => 'Finding your driver...';
+
+  @override
+  String get dispLocating =>
+      'Locating the nearest driver and the right hospital for your needs.';
+
+  @override
+  String get dispCalm => 'Please stay calm. Help is on the way.';
+
+  @override
+  String get dispConnLost =>
+      'Connection lost — we can\'t check your ride status. Check your internet, or call 1122 directly below.';
+
+  @override
+  String get dispNoStatus =>
+      'We can\'t show this ride\'s status right now. Please call 1122 directly below.';
+
+  @override
+  String get backToHomeLower => 'Back to home';
+
+  @override
+  String get call1122Directly => 'Call 1122 directly';
+
+  @override
+  String get getHelpNow => 'Get Help Now';
+
+  @override
+  String get helpArranged =>
+      'Help is being arranged. Tell us what\'s happening so we can send the right support.';
+
+  @override
+  String get whatsHappening => 'WHAT\'S HAPPENING?';
+
+  @override
+  String get anyOtherDetails => 'ANY OTHER DETAILS? (OPTIONAL)';
+
+  @override
+  String get detailsHint => 'e.g. patient is conscious, address details...';
+
+  @override
+  String get pickupAddressHint =>
+      'Pickup address (leave blank for current location)';
+
+  @override
+  String get sendForHelp => 'Send for Help';
+
+  @override
+  String get orCallDirectly => 'Or call directly: 1122';
+
+  @override
+  String get enableLabel => 'Enable';
+
+  @override
+  String get symChestPain => 'Chest Pain';
+
+  @override
+  String get symBreathing => 'Breathing Trouble';
+
+  @override
+  String get symPregnancy => 'Pregnancy';
+
+  @override
+  String get symInjury => 'Injury / Accident';
+
+  @override
+  String get symChildSick => 'Child Sick';
+
+  @override
+  String get symOther => 'Other / Not Sure';
 }

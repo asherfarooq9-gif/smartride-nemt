@@ -758,4 +758,127 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get statusCancelled => 'منسوخ';
+
+  @override
+  String get ecTitle => 'ہنگامی مدد کی درخواست کریں؟';
+
+  @override
+  String get ecSubtitle =>
+      'اپنی پک اپ لوکیشن دیکھیں، پھر بتائیں کہ کیا مسئلہ ہے۔';
+
+  @override
+  String get continueLabel => 'جاری رکھیں';
+
+  @override
+  String get call1122 => '1122 پر کال کریں';
+
+  @override
+  String get locFinding => 'آپ کی لوکیشن تلاش کی جا رہی ہے…';
+
+  @override
+  String get locUsing => 'آپ کی موجودہ لوکیشن استعمال ہو رہی ہے';
+
+  @override
+  String get locNoFix => 'ہم ابھی آپ کو تلاش نہیں کر سکے';
+
+  @override
+  String get locNoFixHelp => 'کھلی جگہ پر جائیں، یا ابھی 1122 پر کال کریں۔';
+
+  @override
+  String get locNeeded => 'مدد بھیجنے کے لیے لوکیشن ضروری ہے';
+
+  @override
+  String get locNeededHelp =>
+      'لوکیشن کی اجازت دیں تاکہ قریب ترین ایمبولینس کو معلوم ہو آپ کہاں ہیں۔';
+
+  @override
+  String get turnOnLocation => 'لوکیشن آن کریں';
+
+  @override
+  String get locBlocked => 'لوکیشن بلاک ہے';
+
+  @override
+  String get locBlockedHelp =>
+      'سیٹنگز کھولیں اور سمارٹ رائیڈ کے لیے لوکیشن کی اجازت دیں۔';
+
+  @override
+  String get openSettings => 'سیٹنگز کھولیں';
+
+  @override
+  String get locOff => 'لوکیشن بند ہے';
+
+  @override
+  String get locOffHelp =>
+      'فون کی سیٹنگز میں لوکیشن آن کریں، پھر دوبارہ کوشش کریں۔';
+
+  @override
+  String get dispFinding => 'آپ کا ڈرائیور تلاش کیا جا رہا ہے...';
+
+  @override
+  String get dispLocating =>
+      'قریب ترین ڈرائیور اور آپ کی ضرورت کے مطابق ہسپتال تلاش کیا جا رہا ہے۔';
+
+  @override
+  String get dispCalm => 'براہِ کرم پرسکون رہیں۔ مدد راستے میں ہے۔';
+
+  @override
+  String get dispConnLost =>
+      'کنکشن ٹوٹ گیا — ہم آپ کی سواری کی حیثیت نہیں دیکھ سکتے۔ انٹرنیٹ چیک کریں، یا نیچے سے براہِ راست 1122 پر کال کریں۔';
+
+  @override
+  String get dispNoStatus =>
+      'ہم اس وقت اس سواری کی حیثیت نہیں دکھا سکتے۔ براہِ کرم نیچے سے براہِ راست 1122 پر کال کریں۔';
+
+  @override
+  String get backToHomeLower => 'ہوم پر واپس جائیں';
+
+  @override
+  String get call1122Directly => 'براہِ راست 1122 پر کال کریں';
+
+  @override
+  String get getHelpNow => 'ابھی مدد حاصل کریں';
+
+  @override
+  String get helpArranged =>
+      'مدد کا انتظام کیا جا رہا ہے۔ ہمیں بتائیں کیا ہو رہا ہے تاکہ ہم درست مدد بھیج سکیں۔';
+
+  @override
+  String get whatsHappening => 'کیا ہو رہا ہے؟';
+
+  @override
+  String get anyOtherDetails => 'کوئی اور تفصیل؟ (اختیاری)';
+
+  @override
+  String get detailsHint => 'مثلاً مریض ہوش میں ہے، پتے کی تفصیل...';
+
+  @override
+  String get pickupAddressHint =>
+      'پک اپ کا پتہ (موجودہ لوکیشن کے لیے خالی چھوڑیں)';
+
+  @override
+  String get sendForHelp => 'مدد کے لیے بھیجیں';
+
+  @override
+  String get orCallDirectly => 'یا براہِ راست کال کریں: 1122';
+
+  @override
+  String get enableLabel => 'آن کریں';
+
+  @override
+  String get symChestPain => 'سینے میں درد';
+
+  @override
+  String get symBreathing => 'سانس کی تکلیف';
+
+  @override
+  String get symPregnancy => 'حمل';
+
+  @override
+  String get symInjury => 'چوٹ / حادثہ';
+
+  @override
+  String get symChildSick => 'بچہ بیمار ہے';
+
+  @override
+  String get symOther => 'کچھ اور / یقین نہیں';
 }
