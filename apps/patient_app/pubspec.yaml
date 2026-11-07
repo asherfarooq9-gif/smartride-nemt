@@ -1,4 +1,4 @@
-﻿name: patient_app
+name: patient_app
 description: SmartRide patient app for emergency and scheduled medical transport.
 publish_to: 'none'
 version: 1.0.0+1
@@ -11,7 +11,7 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
-  intl: any
+  intl: 0.20.3
   smartride_core:
     path: ../../packages/smartride_core
   flutter_riverpod: ^2.5.1
