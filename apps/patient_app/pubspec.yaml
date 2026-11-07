@@ -1,4 +1,4 @@
-﻿name: patient_app
+name: patient_app
 description: SmartRide patient app for emergency and scheduled medical transport.
 publish_to: 'none'
 version: 1.0.0+1
