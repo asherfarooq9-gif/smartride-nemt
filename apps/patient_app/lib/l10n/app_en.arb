@@ -332,5 +332,36 @@
         "type": "int"
       }
     }
-  }
+  },
+  "rateDriverBtn": "Rate Driver",
+  "done": "Done",
+  "noPhoneApp": "No phone app available on this device",
+  "noSmsApp": "No SMS app available on this device",
+  "liveTracking": "Live Tracking",
+  "connecting": "Connecting...",
+  "pickupLocation": "Pickup location",
+  "driverLocation": "Driver location",
+  "liveUnavailable": "Live location is unavailable.",
+  "liveReconnecting": "Reconnecting — driver location may be out of date",
+  "shareWithFamily": "Share live location with family",
+  "helpOnTheWay": "Help is on the way",
+  "arrivedDestination": "You have arrived at your destination.",
+  "rideHasEnded": "Your ride has ended.",
+  "rideCompletedTitle": "Ride Completed",
+  "rideEndedTitle": "Ride Ended",
+  "enableLocation": "Enable Location",
+  "notNow": "Not Now",
+  "locationDeniedBody": "Location access was denied. Open app settings to enable it.",
+  "locationWhyBody": "SmartRide needs your location to find nearby drivers and hospitals.",
+  "openAppSettings": "Open App Settings",
+  "allowAccess": "Allow Access",
+  "couldNotOpenDialler": "Could not open dialler — call 1122 manually",
+  "noDriversTitle": "No Drivers Available",
+  "noDriversNearby": "No drivers nearby",
+  "noDriversBody": "There are no available drivers in your area right now.",
+  "keepSearching": "Keep Searching",
+  "noConnectionTitle": "No Connection",
+  "noInternet": "No internet connection",
+  "checkConnection": "Check your connection and try again.",
+  "topUpPlans": "Top Up & Plans"
 }

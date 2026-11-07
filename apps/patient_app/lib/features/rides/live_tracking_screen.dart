@@ -144,10 +144,12 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
       context: context,
       barrierDismissible: false,
       builder: (_) => AlertDialog(
-        title: Text(status == 'completed' ? 'Ride Completed' : 'Ride Ended'),
+        title: Text(status == 'completed'
+            ? context.l10n.rideCompletedTitle
+            : context.l10n.rideEndedTitle),
         content: Text(status == 'completed'
-            ? 'You have arrived at your destination.'
-            : 'Your ride has ended.'),
+            ? context.l10n.arrivedDestination
+            : context.l10n.rideHasEnded),
         actions: [
           if (status == 'completed')
             TextButton(
@@ -155,14 +157,14 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
                 Navigator.of(context).pop();
                 context.go('/rate-driver/${widget.rideId}');
               },
-              child: const Text('Rate Driver'),
+              child: Text(context.l10n.rateDriverBtn),
             ),
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
               context.go('/');
             },
-            child: const Text('Done'),
+            child: Text(context.l10n.done),
           ),
         ],
       ),
@@ -183,7 +185,7 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
       await launchUrl(uri);
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No phone app available on this device')),
+        SnackBar(content: Text(context.l10n.noPhoneApp)),
       );
     }
   }
@@ -204,7 +206,7 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
       await launchUrl(uri);
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No SMS app available on this device')),
+        SnackBar(content: Text(context.l10n.noSmsApp)),
       );
     }
   }
@@ -224,7 +226,7 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
   Widget build(BuildContext context) {
     if (_error != null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Live Tracking')),
+        appBar: AppBar(title: Text(context.l10n.liveTracking)),
         body: core.ErrorState(
           message: _error!,
           onRetry: () {
@@ -235,7 +237,8 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
       );
     }
     if (!_loaded) {
-      return const Scaffold(body: core.LoadingState(message: 'Connecting...'));
+      return Scaffold(
+          body: core.LoadingState(message: context.l10n.connecting));
     }
 
     final center = _driverPos ?? _pickupPos ?? const LatLng(33.6844, 73.0479);
@@ -309,7 +312,7 @@ class _TrackingMap extends StatelessWidget {
               width: 40,
               height: 40,
               child: Semantics(
-                label: 'Pickup location',
+                label: context.l10n.pickupLocation,
                 child: const Icon(Icons.location_on,
                     color: core.kEmergencyRed, size: 40),
               ),
@@ -320,7 +323,7 @@ class _TrackingMap extends StatelessWidget {
               width: 40,
               height: 40,
               child: Semantics(
-                label: 'Driver location',
+                label: context.l10n.driverLocation,
                 child: const Icon(Icons.local_taxi,
                     color: core.kDriverPrimary, size: 40),
               ),
@@ -373,9 +376,9 @@ class _StatusPanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 2),
-          const Text(
-            'Help is on the way',
-            style: TextStyle(
+          Text(
+            context.l10n.helpOnTheWay,
+            style: const TextStyle(
               color: Colors.white,
               fontSize: core.kFontLG,
               fontWeight: FontWeight.bold,
@@ -397,12 +400,12 @@ class _StatusPanel extends StatelessWidget {
           ),
           if (hasGivenUp)
             _ConnectionNotice(
-              message: 'Live location is unavailable.',
+              message: context.l10n.liveUnavailable,
               onRetry: onRetry,
             )
           else if (!isConnected)
-            const _ConnectionNotice(
-              message: 'Reconnecting — driver location may be out of date',
+            _ConnectionNotice(
+              message: context.l10n.liveReconnecting,
             ),
         ],
       ),
@@ -441,7 +444,7 @@ class _ConnectionNotice extends StatelessWidget {
                   minimumSize:
                       const Size(core.kMinTapTarget, core.kMinTapTarget),
                 ),
-                child: const Text('Retry'),
+                child: Text(context.l10n.retry),
               ),
           ],
         ),
@@ -536,7 +539,7 @@ class _DriverCard extends StatelessWidget {
           OutlinedButton.icon(
             onPressed: onShare,
             icon: const Icon(Icons.share_location_outlined, size: 18),
-            label: const Text('Share live location with family'),
+            label: Text(context.l10n.shareWithFamily),
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(double.infinity, core.kMinTapTarget),
               shape: RoundedRectangleBorder(

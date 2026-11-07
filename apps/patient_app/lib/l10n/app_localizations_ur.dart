@@ -980,4 +980,101 @@ class AppLocalizationsUr extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get rateDriverBtn => 'ڈرائیور کو ریٹ کریں';
+
+  @override
+  String get done => 'مکمل';
+
+  @override
+  String get noPhoneApp => 'اس ڈیوائس پر فون ایپ دستیاب نہیں';
+
+  @override
+  String get noSmsApp => 'اس ڈیوائس پر ایس ایم ایس ایپ دستیاب نہیں';
+
+  @override
+  String get liveTracking => 'لائیو ٹریکنگ';
+
+  @override
+  String get connecting => 'جڑ رہا ہے...';
+
+  @override
+  String get pickupLocation => 'پک اپ لوکیشن';
+
+  @override
+  String get driverLocation => 'ڈرائیور کی لوکیشن';
+
+  @override
+  String get liveUnavailable => 'لائیو لوکیشن دستیاب نہیں۔';
+
+  @override
+  String get liveReconnecting =>
+      'دوبارہ جڑ رہا ہے — ڈرائیور کی لوکیشن پرانی ہو سکتی ہے';
+
+  @override
+  String get shareWithFamily => 'لائیو لوکیشن گھر والوں کے ساتھ شیئر کریں';
+
+  @override
+  String get helpOnTheWay => 'مدد راستے میں ہے';
+
+  @override
+  String get arrivedDestination => 'آپ اپنی منزل پر پہنچ گئے ہیں۔';
+
+  @override
+  String get rideHasEnded => 'آپ کی سواری ختم ہو گئی ہے۔';
+
+  @override
+  String get rideCompletedTitle => 'سواری مکمل';
+
+  @override
+  String get rideEndedTitle => 'سواری ختم';
+
+  @override
+  String get enableLocation => 'لوکیشن آن کریں';
+
+  @override
+  String get notNow => 'ابھی نہیں';
+
+  @override
+  String get locationDeniedBody =>
+      'لوکیشن کی اجازت مسترد ہو گئی۔ آن کرنے کے لیے ایپ سیٹنگز کھولیں۔';
+
+  @override
+  String get locationWhyBody =>
+      'قریبی ڈرائیور اور ہسپتال تلاش کرنے کے لیے سمارٹ رائیڈ کو آپ کی لوکیشن چاہیے۔';
+
+  @override
+  String get openAppSettings => 'ایپ سیٹنگز کھولیں';
+
+  @override
+  String get allowAccess => 'اجازت دیں';
+
+  @override
+  String get couldNotOpenDialler => 'ڈائلر نہیں کھل سکا — 1122 پر خود کال کریں';
+
+  @override
+  String get noDriversTitle => 'کوئی ڈرائیور دستیاب نہیں';
+
+  @override
+  String get noDriversNearby => 'قریب کوئی ڈرائیور نہیں';
+
+  @override
+  String get noDriversBody =>
+      'اس وقت آپ کے علاقے میں کوئی ڈرائیور دستیاب نہیں۔';
+
+  @override
+  String get keepSearching => 'تلاش جاری رکھیں';
+
+  @override
+  String get noConnectionTitle => 'کنکشن نہیں';
+
+  @override
+  String get noInternet => 'انٹرنیٹ کنکشن نہیں';
+
+  @override
+  String get checkConnection => 'اپنا کنکشن چیک کریں اور دوبارہ کوشش کریں۔';
+
+  @override
+  String get topUpPlans => 'ٹاپ اپ اور پلان';
 }

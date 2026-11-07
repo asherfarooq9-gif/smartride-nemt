@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:smartride_core/smartride_core.dart';
@@ -48,7 +49,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Enable Location'),
+        title: Text(context.l10n.enableLocation),
         leading: const BackButton(),
       ),
       body: Padding(
@@ -60,10 +61,10 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
             const Icon(Icons.location_on_outlined,
                 size: 64, color: kPatient600),
             const SizedBox(height: kSpaceXL),
-            const Text(
-              'Enable Location',
+            Text(
+              context.l10n.enableLocation,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: kFontHeading,
                 fontWeight: FontWeight.w700,
                 color: kText900,
@@ -72,8 +73,8 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
             const SizedBox(height: kSpaceMD),
             Text(
               _permanentlyDenied
-                  ? 'Location access was denied. Open app settings to enable it.'
-                  : 'SmartRide needs your location to find nearby drivers and hospitals.',
+                  ? context.l10n.locationDeniedBody
+                  : context.l10n.locationWhyBody,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: kFontBody,
@@ -83,7 +84,9 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
             ),
             const SizedBox(height: kSpaceXXL),
             PrimaryButton(
-              label: _permanentlyDenied ? 'Open App Settings' : 'Allow Access',
+              label: _permanentlyDenied
+                  ? context.l10n.openAppSettings
+                  : context.l10n.allowAccess,
               onPressed: _requestOrOpenSettings,
               color: kPatient600,
               height: kButtonHeight,
@@ -92,9 +95,9 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
             Center(
               child: TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text(
-                  'Not Now',
-                  style: TextStyle(color: kText400),
+                child: Text(
+                  context.l10n.notNow,
+                  style: const TextStyle(color: kText400),
                 ),
               ),
             ),
@@ -116,8 +119,7 @@ class NoDriversScreen extends StatelessWidget {
       await launchUrl(uri);
     } else if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Could not open dialler — call 1122 manually')),
+        SnackBar(content: Text(context.l10n.couldNotOpenDialler)),
       );
     }
   }
@@ -128,7 +130,7 @@ class NoDriversScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: kRed600,
         foregroundColor: Colors.white,
-        title: const Text('No Drivers Available'),
+        title: Text(context.l10n.noDriversTitle),
         leading: const BackButton(),
       ),
       body: Padding(
@@ -139,20 +141,20 @@ class NoDriversScreen extends StatelessWidget {
           children: [
             const Icon(Icons.car_crash_outlined, size: 64, color: kRed600),
             const SizedBox(height: kSpaceXL),
-            const Text(
-              'No drivers nearby',
+            Text(
+              context.l10n.noDriversNearby,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: kFontHeading,
                 fontWeight: FontWeight.w700,
                 color: kText900,
               ),
             ),
             const SizedBox(height: kSpaceMD),
-            const Text(
-              'There are no available drivers in your area right now.',
+            Text(
+              context.l10n.noDriversBody,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: kFontBody,
                 color: kText600,
                 height: 1.5,
@@ -160,7 +162,7 @@ class NoDriversScreen extends StatelessWidget {
             ),
             const SizedBox(height: kSpaceXXL),
             PrimaryButton(
-              label: 'Keep Searching',
+              label: context.l10n.keepSearching,
               onPressed: () => Navigator.of(context).pop(),
               color: kPatient600,
               height: kButtonHeight,
@@ -169,9 +171,9 @@ class NoDriversScreen extends StatelessWidget {
             Center(
               child: TextButton(
                 onPressed: () => _call1122(context),
-                child: const Text(
-                  'Call 1122',
-                  style: TextStyle(
+                child: Text(
+                  context.l10n.call1122,
+                  style: const TextStyle(
                     color: kRed600,
                     fontWeight: FontWeight.w600,
                   ),
@@ -194,7 +196,7 @@ class NoInternetScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('No Connection'),
+        title: Text(context.l10n.noConnectionTitle),
         leading: const BackButton(),
       ),
       body: Padding(
@@ -205,20 +207,20 @@ class NoInternetScreen extends StatelessWidget {
           children: [
             const Icon(Icons.wifi_off_outlined, size: 64, color: kText400),
             const SizedBox(height: kSpaceXL),
-            const Text(
-              'No internet connection',
+            Text(
+              context.l10n.noInternet,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: kFontHeading,
                 fontWeight: FontWeight.w700,
                 color: kText900,
               ),
             ),
             const SizedBox(height: kSpaceMD),
-            const Text(
-              'Check your connection and try again.',
+            Text(
+              context.l10n.checkConnection,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: kFontBody,
                 color: kText600,
                 height: 1.5,
@@ -226,7 +228,7 @@ class NoInternetScreen extends StatelessWidget {
             ),
             const SizedBox(height: kSpaceXXL),
             PrimaryButton(
-              label: 'Retry',
+              label: context.l10n.retry,
               onPressed: () => Navigator.of(context).pop(),
               color: kPatient600,
               height: kButtonHeight,

@@ -980,4 +980,102 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get rateDriverBtn => 'Rate Driver';
+
+  @override
+  String get done => 'Done';
+
+  @override
+  String get noPhoneApp => 'No phone app available on this device';
+
+  @override
+  String get noSmsApp => 'No SMS app available on this device';
+
+  @override
+  String get liveTracking => 'Live Tracking';
+
+  @override
+  String get connecting => 'Connecting...';
+
+  @override
+  String get pickupLocation => 'Pickup location';
+
+  @override
+  String get driverLocation => 'Driver location';
+
+  @override
+  String get liveUnavailable => 'Live location is unavailable.';
+
+  @override
+  String get liveReconnecting =>
+      'Reconnecting — driver location may be out of date';
+
+  @override
+  String get shareWithFamily => 'Share live location with family';
+
+  @override
+  String get helpOnTheWay => 'Help is on the way';
+
+  @override
+  String get arrivedDestination => 'You have arrived at your destination.';
+
+  @override
+  String get rideHasEnded => 'Your ride has ended.';
+
+  @override
+  String get rideCompletedTitle => 'Ride Completed';
+
+  @override
+  String get rideEndedTitle => 'Ride Ended';
+
+  @override
+  String get enableLocation => 'Enable Location';
+
+  @override
+  String get notNow => 'Not Now';
+
+  @override
+  String get locationDeniedBody =>
+      'Location access was denied. Open app settings to enable it.';
+
+  @override
+  String get locationWhyBody =>
+      'SmartRide needs your location to find nearby drivers and hospitals.';
+
+  @override
+  String get openAppSettings => 'Open App Settings';
+
+  @override
+  String get allowAccess => 'Allow Access';
+
+  @override
+  String get couldNotOpenDialler =>
+      'Could not open dialler — call 1122 manually';
+
+  @override
+  String get noDriversTitle => 'No Drivers Available';
+
+  @override
+  String get noDriversNearby => 'No drivers nearby';
+
+  @override
+  String get noDriversBody =>
+      'There are no available drivers in your area right now.';
+
+  @override
+  String get keepSearching => 'Keep Searching';
+
+  @override
+  String get noConnectionTitle => 'No Connection';
+
+  @override
+  String get noInternet => 'No internet connection';
+
+  @override
+  String get checkConnection => 'Check your connection and try again.';
+
+  @override
+  String get topUpPlans => 'Top Up & Plans';
 }

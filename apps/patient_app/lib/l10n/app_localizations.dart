@@ -1969,6 +1969,192 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 completed ride} other{{count} completed rides}}'**
   String completedRides(int count);
+
+  /// No description provided for @rateDriverBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate Driver'**
+  String get rateDriverBtn;
+
+  /// No description provided for @done.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get done;
+
+  /// No description provided for @noPhoneApp.
+  ///
+  /// In en, this message translates to:
+  /// **'No phone app available on this device'**
+  String get noPhoneApp;
+
+  /// No description provided for @noSmsApp.
+  ///
+  /// In en, this message translates to:
+  /// **'No SMS app available on this device'**
+  String get noSmsApp;
+
+  /// No description provided for @liveTracking.
+  ///
+  /// In en, this message translates to:
+  /// **'Live Tracking'**
+  String get liveTracking;
+
+  /// No description provided for @connecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting...'**
+  String get connecting;
+
+  /// No description provided for @pickupLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup location'**
+  String get pickupLocation;
+
+  /// No description provided for @driverLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver location'**
+  String get driverLocation;
+
+  /// No description provided for @liveUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Live location is unavailable.'**
+  String get liveUnavailable;
+
+  /// No description provided for @liveReconnecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnecting — driver location may be out of date'**
+  String get liveReconnecting;
+
+  /// No description provided for @shareWithFamily.
+  ///
+  /// In en, this message translates to:
+  /// **'Share live location with family'**
+  String get shareWithFamily;
+
+  /// No description provided for @helpOnTheWay.
+  ///
+  /// In en, this message translates to:
+  /// **'Help is on the way'**
+  String get helpOnTheWay;
+
+  /// No description provided for @arrivedDestination.
+  ///
+  /// In en, this message translates to:
+  /// **'You have arrived at your destination.'**
+  String get arrivedDestination;
+
+  /// No description provided for @rideHasEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Your ride has ended.'**
+  String get rideHasEnded;
+
+  /// No description provided for @rideCompletedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ride Completed'**
+  String get rideCompletedTitle;
+
+  /// No description provided for @rideEndedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ride Ended'**
+  String get rideEndedTitle;
+
+  /// No description provided for @enableLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Location'**
+  String get enableLocation;
+
+  /// No description provided for @notNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Not Now'**
+  String get notNow;
+
+  /// No description provided for @locationDeniedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Location access was denied. Open app settings to enable it.'**
+  String get locationDeniedBody;
+
+  /// No description provided for @locationWhyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'SmartRide needs your location to find nearby drivers and hospitals.'**
+  String get locationWhyBody;
+
+  /// No description provided for @openAppSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open App Settings'**
+  String get openAppSettings;
+
+  /// No description provided for @allowAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow Access'**
+  String get allowAccess;
+
+  /// No description provided for @couldNotOpenDialler.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open dialler — call 1122 manually'**
+  String get couldNotOpenDialler;
+
+  /// No description provided for @noDriversTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No Drivers Available'**
+  String get noDriversTitle;
+
+  /// No description provided for @noDriversNearby.
+  ///
+  /// In en, this message translates to:
+  /// **'No drivers nearby'**
+  String get noDriversNearby;
+
+  /// No description provided for @noDriversBody.
+  ///
+  /// In en, this message translates to:
+  /// **'There are no available drivers in your area right now.'**
+  String get noDriversBody;
+
+  /// No description provided for @keepSearching.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep Searching'**
+  String get keepSearching;
+
+  /// No description provided for @noConnectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No Connection'**
+  String get noConnectionTitle;
+
+  /// No description provided for @noInternet.
+  ///
+  /// In en, this message translates to:
+  /// **'No internet connection'**
+  String get noInternet;
+
+  /// No description provided for @checkConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your connection and try again.'**
+  String get checkConnection;
+
+  /// No description provided for @topUpPlans.
+  ///
+  /// In en, this message translates to:
+  /// **'Top Up & Plans'**
+  String get topUpPlans;
 }
 
 class _AppLocalizationsDelegate

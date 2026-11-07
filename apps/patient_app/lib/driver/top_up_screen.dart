@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:smartride_core/smartride_core.dart';
 
@@ -134,7 +135,7 @@ class _TopUpScreenState extends State<TopUpScreen> {
       appBar: AppBar(
         backgroundColor: kBlue600,
         foregroundColor: Colors.white,
-        title: const Text('Top Up & Plans'),
+        title: Text(context.l10n.topUpPlans),
         leading: const BackButton(),
       ),
       body: ListView(

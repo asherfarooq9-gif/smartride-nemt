@@ -332,5 +332,36 @@
         "type": "int"
       }
     }
-  }
+  },
+  "rateDriverBtn": "ڈرائیور کو ریٹ کریں",
+  "done": "مکمل",
+  "noPhoneApp": "اس ڈیوائس پر فون ایپ دستیاب نہیں",
+  "noSmsApp": "اس ڈیوائس پر ایس ایم ایس ایپ دستیاب نہیں",
+  "liveTracking": "لائیو ٹریکنگ",
+  "connecting": "جڑ رہا ہے...",
+  "pickupLocation": "پک اپ لوکیشن",
+  "driverLocation": "ڈرائیور کی لوکیشن",
+  "liveUnavailable": "لائیو لوکیشن دستیاب نہیں۔",
+  "liveReconnecting": "دوبارہ جڑ رہا ہے — ڈرائیور کی لوکیشن پرانی ہو سکتی ہے",
+  "shareWithFamily": "لائیو لوکیشن گھر والوں کے ساتھ شیئر کریں",
+  "helpOnTheWay": "مدد راستے میں ہے",
+  "arrivedDestination": "آپ اپنی منزل پر پہنچ گئے ہیں۔",
+  "rideHasEnded": "آپ کی سواری ختم ہو گئی ہے۔",
+  "rideCompletedTitle": "سواری مکمل",
+  "rideEndedTitle": "سواری ختم",
+  "enableLocation": "لوکیشن آن کریں",
+  "notNow": "ابھی نہیں",
+  "locationDeniedBody": "لوکیشن کی اجازت مسترد ہو گئی۔ آن کرنے کے لیے ایپ سیٹنگز کھولیں۔",
+  "locationWhyBody": "قریبی ڈرائیور اور ہسپتال تلاش کرنے کے لیے سمارٹ رائیڈ کو آپ کی لوکیشن چاہیے۔",
+  "openAppSettings": "ایپ سیٹنگز کھولیں",
+  "allowAccess": "اجازت دیں",
+  "couldNotOpenDialler": "ڈائلر نہیں کھل سکا — 1122 پر خود کال کریں",
+  "noDriversTitle": "کوئی ڈرائیور دستیاب نہیں",
+  "noDriversNearby": "قریب کوئی ڈرائیور نہیں",
+  "noDriversBody": "اس وقت آپ کے علاقے میں کوئی ڈرائیور دستیاب نہیں۔",
+  "keepSearching": "تلاش جاری رکھیں",
+  "noConnectionTitle": "کنکشن نہیں",
+  "noInternet": "انٹرنیٹ کنکشن نہیں",
+  "checkConnection": "اپنا کنکشن چیک کریں اور دوبارہ کوشش کریں۔",
+  "topUpPlans": "ٹاپ اپ اور پلان"
 }
