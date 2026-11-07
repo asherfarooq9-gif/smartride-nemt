@@ -154,7 +154,7 @@ export default function HospitalsPage() {
           <ErrorBanner message={formError} className="mt-4" />
           <div className="flex justify-end mt-4">
             <button type="button" onClick={save} disabled={saving}
-              className="bg-green-600 hover:bg-green-700 text-white text-sm px-6 py-2.5 rounded-md disabled:opacity-40 transition">
+              className="bg-accent hover:bg-navy text-white text-sm px-6 py-2.5 rounded-md disabled:opacity-40 transition">
               {saving ? 'Saving…' : 'Save Hospital'}
             </button>
           </div>

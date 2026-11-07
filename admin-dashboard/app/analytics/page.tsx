@@ -90,7 +90,7 @@ export default function AnalyticsPage() {
           <button
             type="button"
             onClick={writeSnapshot}
-            className="flex items-center gap-2 text-sm bg-slate-700 hover:bg-slate-800 text-white px-4 py-2 rounded-md transition"
+            className="flex items-center gap-2 text-sm bg-accent hover:bg-navy text-white px-4 py-2 rounded-md transition"
           >
             <Database size={14} />
             Write Snapshot
@@ -150,7 +150,7 @@ export default function AnalyticsPage() {
             <BarChart2 size={36} className="opacity-30" />
             <p className="text-sm">No data yet — write a snapshot first</p>
             <button type="button" onClick={writeSnapshot}
-              className="text-sm bg-slate-700 text-white px-4 py-2 rounded-md hover:bg-slate-800 transition flex items-center gap-2">
+              className="text-sm bg-accent text-white px-4 py-2 rounded-md hover:bg-navy transition flex items-center gap-2">
               <Database size={14} /> Write Snapshot
             </button>
           </div>
