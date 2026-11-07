@@ -6,6 +6,7 @@ import 'package:patient_app/core/locale_provider.dart';
 import 'package:patient_app/l10n/l10n.dart';
 import 'package:patient_app/core/providers.dart';
 import 'package:patient_app/features/settings/delete_account_dialog.dart';
+import 'package:patient_app/shared/apple_list.dart';
 
 /// Shared by the patient and driver apps. [isDriver] picks the profile route,
 /// the sign-out wording and destination, and stops GPS streaming on sign-out.
@@ -19,82 +20,82 @@ class SettingsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.settings)),
       body: ListView(
+        padding: const EdgeInsets.only(bottom: core.kSpaceXXL),
         children: [
-          _SectionHeader(context.l10n.account),
-          ListTile(
-            leading: const Icon(Icons.person),
-            title: Text(context.l10n.profile),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () =>
-                context.push(isDriver ? '/driver/profile' : '/profile'),
+          AppleSection(
+            header: context.l10n.account,
+            children: [
+              AppleRow(
+                icon: Icons.person,
+                title: context.l10n.profile,
+                onTap: () =>
+                    context.push(isDriver ? '/driver/profile' : '/profile'),
+              ),
+            ],
           ),
-          const Divider(),
-          _SectionHeader(context.l10n.appearance),
-          SwitchListTile(
-            secondary: const Icon(Icons.dark_mode_outlined),
-            title: Text(context.l10n.darkMode),
-            value: ref.watch(themeModeProvider) == ThemeMode.dark,
-            onChanged: (val) =>
-                ref.read(themeModeProvider.notifier).setDark(val),
+          AppleSection(
+            header: context.l10n.appearance,
+            dividerIndent: appleIconDividerIndent,
+            children: [
+              AppleSwitchRow(
+                icon: Icons.dark_mode_outlined,
+                title: context.l10n.darkMode,
+                value: ref.watch(themeModeProvider) == ThemeMode.dark,
+                onChanged: (val) =>
+                    ref.read(themeModeProvider.notifier).setDark(val),
+              ),
+              AppleRow(
+                icon: Icons.language,
+                title: context.l10n.language,
+                value: _currentLanguageName(ref),
+                onTap: () => _chooseLanguage(context, ref),
+              ),
+            ],
           ),
-          ListTile(
-            leading: const Icon(Icons.language),
-            title: Text(context.l10n.language),
-            trailing: Text(
-              _currentLanguageName(ref),
-              style: const TextStyle(color: core.kTextSecondary),
-            ),
-            onTap: () => _chooseLanguage(context, ref),
+          AppleSection(
+            header: context.l10n.support,
+            dividerIndent: appleIconDividerIndent,
+            children: [
+              AppleRow(
+                icon: Icons.help_outline,
+                title: context.l10n.helpAndFaq,
+                onTap: () => context.push('/help'),
+              ),
+              AppleRow(
+                icon: Icons.contact_support,
+                title: context.l10n.contactUs,
+                onTap: () => context.push('/contact'),
+              ),
+            ],
           ),
-          const Divider(),
-          _SectionHeader(context.l10n.support),
-          ListTile(
-            leading: const Icon(Icons.help_outline),
-            title: Text(context.l10n.helpAndFaq),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () => context.push('/help'),
+          AppleSection(
+            header: context.l10n.about,
+            children: [
+              AppleRow(
+                icon: Icons.info_outline,
+                title: context.l10n.appVersion,
+                value: '1.0.0',
+              ),
+            ],
           ),
-          ListTile(
-            leading: const Icon(Icons.contact_support),
-            title: Text(context.l10n.contactUs),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () => context.push('/contact'),
-          ),
-          const Divider(),
-          _SectionHeader(context.l10n.about),
-          ListTile(
-            leading: const Icon(Icons.info_outline),
-            title: Text(context.l10n.appVersion),
-            trailing: const Text(
-              '1.0.0',
-              style: TextStyle(color: core.kTextSecondary),
-            ),
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.logout, color: core.kError),
-            title: Text(
-              context.l10n.signOut,
-              style: const TextStyle(color: core.kError),
-            ),
-            onTap: () => _confirmSignOut(context, ref),
-          ),
-          ListTile(
-            leading: const Icon(Icons.devices_other, color: core.kError),
-            title: Text(
-              context.l10n.signOutEverywhere,
-              style: const TextStyle(color: core.kError),
-            ),
-            onTap: () => _signOutEverywhere(context, ref),
-          ),
-          ListTile(
-            leading:
-                const Icon(Icons.delete_forever_outlined, color: core.kError),
-            title: Text(
-              context.l10n.deleteAccount,
-              style: const TextStyle(color: core.kError),
-            ),
-            onTap: () => _deleteAccount(context, ref),
+          AppleSection(
+            children: [
+              AppleRow(
+                title: context.l10n.signOut,
+                destructive: true,
+                onTap: () => _confirmSignOut(context, ref),
+              ),
+              AppleRow(
+                title: context.l10n.signOutEverywhere,
+                destructive: true,
+                onTap: () => _signOutEverywhere(context, ref),
+              ),
+              AppleRow(
+                title: context.l10n.deleteAccount,
+                destructive: true,
+                onTap: () => _deleteAccount(context, ref),
+              ),
+            ],
           ),
         ],
       ),
@@ -218,30 +219,5 @@ class SettingsScreen extends ConsumerWidget {
     }
     await ref.read(authProvider.notifier).signOut();
     if (context.mounted) context.go(isDriver ? '/welcome' : '/login');
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.title);
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        core.kSpaceLG,
-        core.kSpaceLG,
-        core.kSpaceLG,
-        core.kSpaceXS,
-      ),
-      child: Text(
-        title,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: core.kTextSecondary,
-              fontWeight: FontWeight.w600,
-            ),
-      ),
-    );
   }
 }
