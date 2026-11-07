@@ -5,6 +5,10 @@ WORKDIR /app
 # No .pyc writes: production runs with a read-only root filesystem.
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 
+# Pull in fixed versions of system packages that are newer than the base image
+# (the CI image scan fails on fixable HIGH/CRITICAL findings). Lists are removed to keep the image small.
+RUN apt-get update     && apt-get upgrade -y --no-install-recommends     && rm -rf /var/lib/apt/lists/*
+
 RUN useradd --create-home --uid 10001 app
 
 COPY requirements.txt .
