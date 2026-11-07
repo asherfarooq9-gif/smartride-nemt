@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -152,10 +153,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     } else if (result == AcceptResult.successWithoutTracking) {
       context.push('/driver/ride/$rideId');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ride accepted, but location sharing is off. '
-              'Allow location access so the patient can see you.'),
-          duration: Duration(seconds: 8),
+        SnackBar(
+          content: Text(context.l10n.acceptedNoLocation),
+          duration: const Duration(seconds: 8),
         ),
       );
     } else {
@@ -163,7 +163,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       // in a snackbar that outlives the 15 s refresh.
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(outcome.message ?? 'Could not accept the ride'),
+          content: Text(outcome.message ?? context.l10n.couldNotAcceptRide),
           duration: const Duration(seconds: 6),
         ),
       );

@@ -1343,4 +1343,59 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cancelledByPatient => 'Cancelled by patient';
+
+  @override
+  String get demandNotEnough => 'Not enough history yet';
+
+  @override
+  String get demandQuiet => 'Quiet for the next few hours';
+
+  @override
+  String get demandBasedOn => 'Based on ride requests over the last 4 weeks';
+
+  @override
+  String get demandWhenRequests =>
+      'Busy hours show up once riders have made requests';
+
+  @override
+  String get demandAhead => 'Demand ahead';
+
+  @override
+  String get demandForecastTitle => 'Demand Forecast';
+
+  @override
+  String get couldNotLoadForecast => 'Could not load the forecast';
+
+  @override
+  String get acceptedNoLocation =>
+      'Ride accepted, but location sharing is off. Allow location access so the patient can see you.';
+
+  @override
+  String get couldNotAcceptRide => 'Could not accept the ride';
+
+  @override
+  String get enterAnAmount => 'Enter an amount';
+
+  @override
+  String get selectPlanOrAmount => 'Select a plan or amount';
+
+  @override
+  String demandBusiest(String hour) {
+    return 'Busiest around $hour';
+  }
+
+  @override
+  String continueAmount(String amount) {
+    return 'Continue · PKR $amount';
+  }
+
+  @override
+  String continuePlan(String plan, String price) {
+    return 'Continue · $plan · PKR $price';
+  }
+
+  @override
+  String topUpInstructions(String amount, String method, String email) {
+    return 'Nothing has been charged. Send PKR $amount by $method, then send the receipt to SmartRide support ($email). Your wallet is credited once an admin confirms the payment.';
+  }
 }

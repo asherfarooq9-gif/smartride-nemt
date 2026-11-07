@@ -205,7 +205,8 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
           if (dt != null)
             Text(
               l.lastTripOn(
-                formatWhen(dt.add(Duration(days: step * (_occurrences - 1)))),
+                formatWhen(dt.add(Duration(days: step * (_occurrences - 1))),
+                    lang: Localizations.localeOf(context).languageCode),
               ),
               style: const TextStyle(color: core.kTextSecondary),
             ),
@@ -353,7 +354,7 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                     _TapCard(
                       semanticLabel: _selectedDateTime == null
                           ? 'Select date and time'
-                          : 'Date and time: ${formatDateTime(_selectedDateTime!)}. Change',
+                          : 'Date and time: ${formatDateTime(_selectedDateTime!, lang: Localizations.localeOf(context).languageCode)}. Change',
                       onTap: _pickDateTime,
                       padding: core.kSpaceLG,
                       child: Row(
@@ -365,7 +366,9 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                             child: Text(
                               _selectedDateTime == null
                                   ? context.l10n.selectDateTime
-                                  : formatDateTime(_selectedDateTime!),
+                                  : formatDateTime(_selectedDateTime!,
+                                      lang: Localizations.localeOf(context)
+                                          .languageCode),
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: _selectedDateTime == null

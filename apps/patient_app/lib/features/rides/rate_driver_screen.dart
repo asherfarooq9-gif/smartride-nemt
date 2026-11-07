@@ -92,7 +92,13 @@ class _RatingForm extends StatelessWidget {
   final VoidCallback onSubmit;
   final VoidCallback onSkip;
 
-  static const _labels = ['Terrible', 'Poor', 'Okay', 'Good', 'Excellent'];
+  List<String> _labels(AppLocalizations l) => [
+        l.ratingTerrible,
+        l.ratingPoor,
+        l.ratingOkay,
+        l.ratingGood,
+        l.ratingExcellent,
+      ];
 
   @override
   Widget build(BuildContext context) {
@@ -116,7 +122,7 @@ class _RatingForm extends StatelessWidget {
           ),
           const SizedBox(height: core.kSpaceSM),
           Text(
-            _labels[ratingInt - 1],
+            _labels(context.l10n)[ratingInt - 1],
             textAlign: TextAlign.center,
             style: Theme.of(context)
                 .textTheme

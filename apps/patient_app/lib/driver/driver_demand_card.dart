@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
@@ -51,16 +52,15 @@ class DemandForecastCard extends StatelessWidget {
   static const double _barMaxHeight = 40;
   static const double _barMinHeight = 6;
 
-  String get _headline {
+  String _headline(AppLocalizations l) {
     final busiest = forecast.busiest;
-    if (!forecast.hasData) return 'Not enough history yet';
-    if (busiest == null) return 'Quiet for the next few hours';
-    return 'Busiest around ${demandHourLabel(busiest.hour)}';
+    if (!forecast.hasData) return l.demandNotEnough;
+    if (busiest == null) return l.demandQuiet;
+    return l.demandBusiest(demandHourLabel(busiest.hour));
   }
 
-  String get _detail => forecast.hasData
-      ? 'Based on ride requests over the last 4 weeks'
-      : 'Busy hours show up once riders have made requests';
+  String _detail(AppLocalizations l) =>
+      forecast.hasData ? l.demandBasedOn : l.demandWhenRequests;
 
   Color _barColor(core.DemandLevel level, Color quiet) => switch (level) {
         core.DemandLevel.high => _kHigh,
@@ -73,7 +73,8 @@ class DemandForecastCard extends StatelessWidget {
     final palette = HomePalette.of(context);
     final peak = forecast.busiest?.predictedRides ?? 0;
     return Semantics(
-      label: 'Demand ahead. $_headline. $_detail',
+      label:
+          '${context.l10n.demandAhead}. ${_headline(context.l10n)}. ${_detail(context.l10n)}',
       excludeSemantics: true,
       child: HomeGlassCard(
         radius: 16,
@@ -88,14 +89,14 @@ class DemandForecastCard extends StatelessWidget {
                   Icon(Icons.insights_rounded, size: 16, color: palette.muted),
                   const SizedBox(width: 6),
                   Text(
-                    'Demand ahead',
+                    context.l10n.demandAhead,
                     style: TextStyle(fontSize: 11.5, color: palette.muted),
                   ),
                 ],
               ),
               const SizedBox(height: 4),
               Text(
-                _headline,
+                _headline(context.l10n),
                 key: const ValueKey('demand-headline'),
                 style: TextStyle(
                   fontSize: 17,
@@ -104,7 +105,7 @@ class DemandForecastCard extends StatelessWidget {
                 ),
               ),
               Text(
-                _detail,
+                _detail(context.l10n),
                 style: TextStyle(fontSize: 11.5, color: palette.muted),
               ),
               if (forecast.hours.isNotEmpty) ...[

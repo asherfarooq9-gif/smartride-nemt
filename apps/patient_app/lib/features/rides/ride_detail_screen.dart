@@ -83,7 +83,8 @@ class RideDetailScreen extends ConsumerWidget {
               if (ride.createdAt != null)
                 _InfoCard(
                   title: context.l10n.requestedTitle,
-                  value: formatIsoDateTime(ride.createdAt!),
+                  value: formatIsoDateTime(ride.createdAt!,
+                      lang: Localizations.localeOf(context).languageCode),
                   icon: Icons.access_time,
                 ),
               if (ride.status == core.RideStatus.completed &&

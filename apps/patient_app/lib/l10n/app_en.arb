@@ -454,5 +454,57 @@
   "enRouteToYou": "En route to you",
   "callDriver": "Call driver",
   "loadingYourRides": "Loading your rides",
-  "cancelledByPatient": "Cancelled by patient"
+  "cancelledByPatient": "Cancelled by patient",
+  "demandNotEnough": "Not enough history yet",
+  "demandQuiet": "Quiet for the next few hours",
+  "demandBasedOn": "Based on ride requests over the last 4 weeks",
+  "demandWhenRequests": "Busy hours show up once riders have made requests",
+  "demandAhead": "Demand ahead",
+  "demandForecastTitle": "Demand Forecast",
+  "couldNotLoadForecast": "Could not load the forecast",
+  "acceptedNoLocation": "Ride accepted, but location sharing is off. Allow location access so the patient can see you.",
+  "couldNotAcceptRide": "Could not accept the ride",
+  "enterAnAmount": "Enter an amount",
+  "selectPlanOrAmount": "Select a plan or amount",
+  "demandBusiest": "Busiest around {hour}",
+  "@demandBusiest": {
+    "placeholders": {
+      "hour": {
+        "type": "String"
+      }
+    }
+  },
+  "continueAmount": "Continue · PKR {amount}",
+  "@continueAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "continuePlan": "Continue · {plan} · PKR {price}",
+  "@continuePlan": {
+    "placeholders": {
+      "plan": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "topUpInstructions": "Nothing has been charged. Send PKR {amount} by {method}, then send the receipt to SmartRide support ({email}). Your wallet is credited once an admin confirms the payment.",
+  "@topUpInstructions": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "method": {
+        "type": "String"
+      },
+      "email": {
+        "type": "String"
+      }
+    }
+  }
 }

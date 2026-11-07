@@ -199,7 +199,8 @@ class _RideCard extends StatelessWidget {
 
     return Semantics(
       container: true,
-      label: 'Booked ride ${when == null ? '' : formatWhen(when)}',
+      label:
+          'Booked ride ${when == null ? '' : formatWhen(when, lang: Localizations.localeOf(context).languageCode)}',
       child: Card(
         margin: EdgeInsets.zero,
         child: Padding(
@@ -210,7 +211,8 @@ class _RideCard extends StatelessWidget {
               Text(
                 when == null
                     ? context.l10n.timeToBeConfirmed
-                    : formatWhen(when),
+                    : formatWhen(when,
+                        lang: Localizations.localeOf(context).languageCode),
                 style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700, letterSpacing: -0.2),
               ),

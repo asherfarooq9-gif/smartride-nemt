@@ -84,16 +84,16 @@ class _TopUpScreenState extends State<TopUpScreen> {
     super.dispose();
   }
 
-  String get _confirmLabel {
+  String _confirmLabel(AppLocalizations l) {
     if (_isCustom) {
       final amt = _customAmount.text.trim();
-      return amt.isEmpty ? 'Enter an amount' : 'Continue · PKR $amt';
+      return amt.isEmpty ? l.enterAnAmount : l.continueAmount(amt);
     }
     if (_selectedPlan != null) {
       final plan = _plans[_selectedPlan!];
-      return 'Continue · ${plan.name} · PKR ${plan.price}';
+      return l.continuePlan(plan.name, plan.price.toString());
     }
-    return 'Select a plan or amount';
+    return l.selectPlanOrAmount;
   }
 
   bool get _canConfirm {
@@ -116,10 +116,8 @@ class _TopUpScreenState extends State<TopUpScreen> {
       context: context,
       builder: (_) => _InstructionsDialog(
         title: context.l10n.howToTopUp,
-        message: 'Nothing has been charged. Send PKR $amount by '
-            '$_paymentMethod, then send the receipt to SmartRide support '
-            '($_supportEmail). Your wallet is credited once an admin '
-            'confirms the payment.',
+        message: context.l10n
+            .topUpInstructions(amount, _paymentMethod, _supportEmail),
         onDone: () {
           Navigator.of(context).pop();
           Navigator.of(context).pop();
@@ -202,7 +200,7 @@ class _TopUpScreenState extends State<TopUpScreen> {
           ),
           const SizedBox(height: kSpaceXXL),
           PrimaryButton(
-            label: _confirmLabel,
+            label: _confirmLabel(context.l10n),
             onPressed: _canConfirm ? () => _showInstructions(context) : null,
             color: kBlue600,
             height: kButtonHeight,

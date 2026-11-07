@@ -454,5 +454,57 @@
   "enRouteToYou": "آپ کی طرف آ رہا ہے",
   "callDriver": "ڈرائیور کو کال کریں",
   "loadingYourRides": "آپ کی سواریاں لوڈ ہو رہی ہیں",
-  "cancelledByPatient": "مریض نے منسوخ کیا"
+  "cancelledByPatient": "مریض نے منسوخ کیا",
+  "demandNotEnough": "ابھی کافی ریکارڈ نہیں",
+  "demandQuiet": "اگلے چند گھنٹے پرسکون رہیں گے",
+  "demandBasedOn": "پچھلے 4 ہفتوں کی سواری کی درخواستوں کی بنیاد پر",
+  "demandWhenRequests": "مصروف اوقات سواریوں کی درخواستیں آنے کے بعد نظر آئیں گے",
+  "demandAhead": "آگے کی طلب",
+  "demandForecastTitle": "طلب کی پیش گوئی",
+  "couldNotLoadForecast": "پیش گوئی لوڈ نہیں ہو سکی",
+  "acceptedNoLocation": "سواری قبول ہو گئی، مگر لوکیشن شیئرنگ بند ہے۔ لوکیشن کی اجازت دیں تاکہ مریض آپ کو دیکھ سکے۔",
+  "couldNotAcceptRide": "سواری قبول نہیں ہو سکی",
+  "enterAnAmount": "رقم لکھیں",
+  "selectPlanOrAmount": "پلان یا رقم چنیں",
+  "demandBusiest": "سب سے زیادہ مصروفیت {hour} کے قریب",
+  "@demandBusiest": {
+    "placeholders": {
+      "hour": {
+        "type": "String"
+      }
+    }
+  },
+  "continueAmount": "جاری رکھیں · PKR {amount}",
+  "@continueAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "continuePlan": "جاری رکھیں · {plan} · PKR {price}",
+  "@continuePlan": {
+    "placeholders": {
+      "plan": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "topUpInstructions": "ابھی کوئی رقم نہیں کٹی۔ PKR {amount} بذریعہ {method} بھیجیں، پھر رسید سمارٹ رائیڈ سپورٹ ({email}) کو بھیجیں۔ ایڈمن کے ادائیگی کی تصدیق کے بعد آپ کا والٹ کریڈٹ ہو جائے گا۔",
+  "@topUpInstructions": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "method": {
+        "type": "String"
+      },
+      "email": {
+        "type": "String"
+      }
+    }
+  }
 }

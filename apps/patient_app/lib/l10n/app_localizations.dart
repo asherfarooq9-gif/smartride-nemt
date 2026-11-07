@@ -2659,6 +2659,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cancelled by patient'**
   String get cancelledByPatient;
+
+  /// No description provided for @demandNotEnough.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough history yet'**
+  String get demandNotEnough;
+
+  /// No description provided for @demandQuiet.
+  ///
+  /// In en, this message translates to:
+  /// **'Quiet for the next few hours'**
+  String get demandQuiet;
+
+  /// No description provided for @demandBasedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Based on ride requests over the last 4 weeks'**
+  String get demandBasedOn;
+
+  /// No description provided for @demandWhenRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'Busy hours show up once riders have made requests'**
+  String get demandWhenRequests;
+
+  /// No description provided for @demandAhead.
+  ///
+  /// In en, this message translates to:
+  /// **'Demand ahead'**
+  String get demandAhead;
+
+  /// No description provided for @demandForecastTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Demand Forecast'**
+  String get demandForecastTitle;
+
+  /// No description provided for @couldNotLoadForecast.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load the forecast'**
+  String get couldNotLoadForecast;
+
+  /// No description provided for @acceptedNoLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Ride accepted, but location sharing is off. Allow location access so the patient can see you.'**
+  String get acceptedNoLocation;
+
+  /// No description provided for @couldNotAcceptRide.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not accept the ride'**
+  String get couldNotAcceptRide;
+
+  /// No description provided for @enterAnAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an amount'**
+  String get enterAnAmount;
+
+  /// No description provided for @selectPlanOrAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a plan or amount'**
+  String get selectPlanOrAmount;
+
+  /// No description provided for @demandBusiest.
+  ///
+  /// In en, this message translates to:
+  /// **'Busiest around {hour}'**
+  String demandBusiest(String hour);
+
+  /// No description provided for @continueAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue · PKR {amount}'**
+  String continueAmount(String amount);
+
+  /// No description provided for @continuePlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue · {plan} · PKR {price}'**
+  String continuePlan(String plan, String price);
+
+  /// No description provided for @topUpInstructions.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing has been charged. Send PKR {amount} by {method}, then send the receipt to SmartRide support ({email}). Your wallet is credited once an admin confirms the payment.'**
+  String topUpInstructions(String amount, String method, String email);
 }
 
 class _AppLocalizationsDelegate

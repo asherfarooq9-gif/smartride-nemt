@@ -1344,4 +1344,59 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get cancelledByPatient => 'مریض نے منسوخ کیا';
+
+  @override
+  String get demandNotEnough => 'ابھی کافی ریکارڈ نہیں';
+
+  @override
+  String get demandQuiet => 'اگلے چند گھنٹے پرسکون رہیں گے';
+
+  @override
+  String get demandBasedOn => 'پچھلے 4 ہفتوں کی سواری کی درخواستوں کی بنیاد پر';
+
+  @override
+  String get demandWhenRequests =>
+      'مصروف اوقات سواریوں کی درخواستیں آنے کے بعد نظر آئیں گے';
+
+  @override
+  String get demandAhead => 'آگے کی طلب';
+
+  @override
+  String get demandForecastTitle => 'طلب کی پیش گوئی';
+
+  @override
+  String get couldNotLoadForecast => 'پیش گوئی لوڈ نہیں ہو سکی';
+
+  @override
+  String get acceptedNoLocation =>
+      'سواری قبول ہو گئی، مگر لوکیشن شیئرنگ بند ہے۔ لوکیشن کی اجازت دیں تاکہ مریض آپ کو دیکھ سکے۔';
+
+  @override
+  String get couldNotAcceptRide => 'سواری قبول نہیں ہو سکی';
+
+  @override
+  String get enterAnAmount => 'رقم لکھیں';
+
+  @override
+  String get selectPlanOrAmount => 'پلان یا رقم چنیں';
+
+  @override
+  String demandBusiest(String hour) {
+    return 'سب سے زیادہ مصروفیت $hour کے قریب';
+  }
+
+  @override
+  String continueAmount(String amount) {
+    return 'جاری رکھیں · PKR $amount';
+  }
+
+  @override
+  String continuePlan(String plan, String price) {
+    return 'جاری رکھیں · $plan · PKR $price';
+  }
+
+  @override
+  String topUpInstructions(String amount, String method, String email) {
+    return 'ابھی کوئی رقم نہیں کٹی۔ PKR $amount بذریعہ $method بھیجیں، پھر رسید سمارٹ رائیڈ سپورٹ ($email) کو بھیجیں۔ ایڈمن کے ادائیگی کی تصدیق کے بعد آپ کا والٹ کریڈٹ ہو جائے گا۔';
+  }
 }
