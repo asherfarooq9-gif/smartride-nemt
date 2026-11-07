@@ -881,4 +881,103 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get symOther => 'کچھ اور / یقین نہیں';
+
+  @override
+  String get walletTitle => 'والٹ';
+
+  @override
+  String get failedLoadWallet => 'والٹ لوڈ نہیں ہو سکا';
+
+  @override
+  String get retry => 'دوبارہ کوشش';
+
+  @override
+  String get driverEarningsHistory => 'ڈرائیور کی کمائی کی تاریخ ←';
+
+  @override
+  String get accountBalance => 'اکاؤنٹ بیلنس';
+
+  @override
+  String get lowBalanceChip => '⚠ کم بیلنس';
+
+  @override
+  String get allSet => '● سب ٹھیک ہے';
+
+  @override
+  String get perCompletedRide => 'فی مکمل سواری';
+
+  @override
+  String get changePlan => 'پلان بدلیں ←';
+
+  @override
+  String get commissionPaid => 'ادا شدہ کمیشن';
+
+  @override
+  String get netEarnings => 'خالص کمائی';
+
+  @override
+  String get recentTransactions => 'حالیہ لین دین';
+
+  @override
+  String get noTransactionsYet => 'ابھی کوئی لین دین نہیں۔';
+
+  @override
+  String get myEarnings => 'میری کمائی';
+
+  @override
+  String get loadingEarnings => 'کمائی لوڈ ہو رہی ہے...';
+
+  @override
+  String get failedLoadEarnings => 'کمائی لوڈ نہیں ہو سکی';
+
+  @override
+  String get noCompletedRidesYet => 'ابھی کوئی مکمل سواری نہیں۔';
+
+  @override
+  String get totalEarned => 'کل کمائی';
+
+  @override
+  String get tripHistory => 'سفر کی تاریخ';
+
+  @override
+  String get failedLoadHistory => 'سفر کی تاریخ لوڈ نہیں ہو سکی';
+
+  @override
+  String get noCompletedTrips =>
+      'ابھی کوئی مکمل سفر نہیں۔\nشروع کرنے کے لیے کوئی سواری قبول کریں۔';
+
+  @override
+  String get emergencyWord => 'ایمرجنسی';
+
+  @override
+  String get rideBooked => 'سواری بُک ہو گئی!';
+
+  @override
+  String get bookingBody =>
+      'آپ کا سفر طے ہو گیا ہے۔\nپک اپ سے پہلے ہم آپ کو یاد دہانی بھیجیں گے۔';
+
+  @override
+  String get bookingId => 'بکنگ آئی ڈی';
+
+  @override
+  String get currentLocation => 'موجودہ لوکیشن';
+
+  @override
+  String get rideTypeLabel => 'سواری کی قسم';
+
+  @override
+  String get standardLabel => 'معیاری';
+
+  @override
+  String get viewMyRides => 'میری سواریاں دیکھیں';
+
+  @override
+  String completedRides(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count سواریاں مکمل',
+    );
+    return '$_temp0';
+  }
 }

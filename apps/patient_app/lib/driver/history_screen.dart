@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smartride_core/smartride_core.dart';
@@ -17,7 +18,7 @@ class DriverHistoryScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: kBlue600,
         foregroundColor: Colors.white,
-        title: const Text('Trip History'),
+        title: Text(context.l10n.tripHistory),
         leading: const BackButton(),
       ),
       body: ref.watch(_historyProvider).when(
@@ -26,15 +27,14 @@ class DriverHistoryScreen extends ConsumerWidget {
             ),
             error: (e, _) => ErrorState(
               message:
-                  e is AppError ? e.message : 'Failed to load trip history',
+                  e is AppError ? e.message : context.l10n.failedLoadHistory,
               onRetry: () => ref.invalidate(_historyProvider),
             ),
             data: (data) {
               final rides = data['rides'] as List<dynamic>? ?? [];
               if (rides.isEmpty) {
-                return const EmptyState(
-                  message:
-                      'No completed trips yet.\nAccept a ride to get started.',
+                return EmptyState(
+                  message: context.l10n.noCompletedTrips,
                   icon: Icons.directions_car_outlined,
                 );
               }
@@ -207,9 +207,9 @@ class _TypeBadge extends StatelessWidget {
           color: kRed50,
           borderRadius: BorderRadius.circular(kRadiusSM),
         ),
-        child: const Text(
-          'Emergency',
-          style: TextStyle(
+        child: Text(
+          context.l10n.emergencyWord,
+          style: const TextStyle(
             fontSize: kFontCaption,
             fontWeight: FontWeight.w700,
             color: kRed600,
@@ -217,9 +217,9 @@ class _TypeBadge extends StatelessWidget {
         ),
       );
     }
-    return const Text(
-      'Scheduled',
-      style: TextStyle(
+    return Text(
+      context.l10n.scheduled,
+      style: const TextStyle(
         fontSize: kFontCaption,
         fontWeight: FontWeight.w600,
         color: kText400,

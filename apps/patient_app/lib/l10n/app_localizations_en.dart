@@ -880,4 +880,104 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get symOther => 'Other / Not Sure';
+
+  @override
+  String get walletTitle => 'Wallet';
+
+  @override
+  String get failedLoadWallet => 'Failed to load wallet';
+
+  @override
+  String get retry => 'Retry';
+
+  @override
+  String get driverEarningsHistory => 'Driver earnings history →';
+
+  @override
+  String get accountBalance => 'ACCOUNT BALANCE';
+
+  @override
+  String get lowBalanceChip => '⚠ Low balance';
+
+  @override
+  String get allSet => '● All set';
+
+  @override
+  String get perCompletedRide => 'per completed ride';
+
+  @override
+  String get changePlan => 'Change Plan →';
+
+  @override
+  String get commissionPaid => 'Commission paid';
+
+  @override
+  String get netEarnings => 'Net earnings';
+
+  @override
+  String get recentTransactions => 'Recent Transactions';
+
+  @override
+  String get noTransactionsYet => 'No transactions yet.';
+
+  @override
+  String get myEarnings => 'My Earnings';
+
+  @override
+  String get loadingEarnings => 'Loading earnings...';
+
+  @override
+  String get failedLoadEarnings => 'Failed to load earnings';
+
+  @override
+  String get noCompletedRidesYet => 'No completed rides yet.';
+
+  @override
+  String get totalEarned => 'Total Earned';
+
+  @override
+  String get tripHistory => 'Trip History';
+
+  @override
+  String get failedLoadHistory => 'Failed to load trip history';
+
+  @override
+  String get noCompletedTrips =>
+      'No completed trips yet.\nAccept a ride to get started.';
+
+  @override
+  String get emergencyWord => 'Emergency';
+
+  @override
+  String get rideBooked => 'Ride Booked!';
+
+  @override
+  String get bookingBody =>
+      'Your trip has been scheduled.\nWe\'ll send a reminder before pickup.';
+
+  @override
+  String get bookingId => 'Booking ID';
+
+  @override
+  String get currentLocation => 'Current location';
+
+  @override
+  String get rideTypeLabel => 'Ride type';
+
+  @override
+  String get standardLabel => 'Standard';
+
+  @override
+  String get viewMyRides => 'View My Rides';
+
+  @override
+  String completedRides(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count completed rides',
+      one: '1 completed ride',
+    );
+    return '$_temp0';
+  }
 }

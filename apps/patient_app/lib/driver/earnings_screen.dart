@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
@@ -14,11 +15,12 @@ class EarningsScreen extends ConsumerWidget {
     final earningsAsync = ref.watch(_earningsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('My Earnings')),
+      appBar: AppBar(title: Text(context.l10n.myEarnings)),
       body: earningsAsync.when(
-        loading: () => const core.LoadingState(message: 'Loading earnings...'),
+        loading: () => core.LoadingState(message: context.l10n.loadingEarnings),
         error: (e, _) => core.ErrorState(
-          message: e is core.AppError ? e.message : 'Failed to load earnings',
+          message:
+              e is core.AppError ? e.message : context.l10n.failedLoadEarnings,
           onRetry: () => ref.refresh(_earningsProvider),
         ),
         data: (data) {
@@ -32,8 +34,8 @@ class EarningsScreen extends ConsumerWidget {
               ),
               Expanded(
                 child: rides.isEmpty
-                    ? const core.EmptyState(
-                        message: 'No completed rides yet.',
+                    ? core.EmptyState(
+                        message: context.l10n.noCompletedRidesYet,
                         icon: Icons.payments_outlined,
                       )
                     : ListView.builder(
@@ -71,9 +73,10 @@ class _SummaryCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Text(
-            'Total Earned',
-            style: TextStyle(color: Colors.white70, fontSize: core.kFontSM),
+          Text(
+            context.l10n.totalEarned,
+            style:
+                const TextStyle(color: Colors.white70, fontSize: core.kFontSM),
           ),
           const SizedBox(height: core.kSpaceXS),
           Text(
@@ -86,7 +89,7 @@ class _SummaryCard extends StatelessWidget {
           ),
           const SizedBox(height: core.kSpaceXS),
           Text(
-            '$rideCount completed ride${rideCount == 1 ? '' : 's'}',
+            context.l10n.completedRides(rideCount),
             style: const TextStyle(color: Colors.white70),
           ),
         ],

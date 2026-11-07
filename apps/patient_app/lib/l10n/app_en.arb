@@ -295,5 +295,42 @@
   "symPregnancy": "Pregnancy",
   "symInjury": "Injury / Accident",
   "symChildSick": "Child Sick",
-  "symOther": "Other / Not Sure"
+  "symOther": "Other / Not Sure",
+  "walletTitle": "Wallet",
+  "failedLoadWallet": "Failed to load wallet",
+  "retry": "Retry",
+  "driverEarningsHistory": "Driver earnings history →",
+  "accountBalance": "ACCOUNT BALANCE",
+  "lowBalanceChip": "⚠ Low balance",
+  "allSet": "● All set",
+  "perCompletedRide": "per completed ride",
+  "changePlan": "Change Plan →",
+  "commissionPaid": "Commission paid",
+  "netEarnings": "Net earnings",
+  "recentTransactions": "Recent Transactions",
+  "noTransactionsYet": "No transactions yet.",
+  "myEarnings": "My Earnings",
+  "loadingEarnings": "Loading earnings...",
+  "failedLoadEarnings": "Failed to load earnings",
+  "noCompletedRidesYet": "No completed rides yet.",
+  "totalEarned": "Total Earned",
+  "tripHistory": "Trip History",
+  "failedLoadHistory": "Failed to load trip history",
+  "noCompletedTrips": "No completed trips yet.\nAccept a ride to get started.",
+  "emergencyWord": "Emergency",
+  "rideBooked": "Ride Booked!",
+  "bookingBody": "Your trip has been scheduled.\nWe'll send a reminder before pickup.",
+  "bookingId": "Booking ID",
+  "currentLocation": "Current location",
+  "rideTypeLabel": "Ride type",
+  "standardLabel": "Standard",
+  "viewMyRides": "View My Rides",
+  "completedRides": "{count, plural, =1{1 completed ride} other{{count} completed rides}}",
+  "@completedRides": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

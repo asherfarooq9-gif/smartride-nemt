@@ -1789,6 +1789,186 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Other / Not Sure'**
   String get symOther;
+
+  /// No description provided for @walletTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet'**
+  String get walletTitle;
+
+  /// No description provided for @failedLoadWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load wallet'**
+  String get failedLoadWallet;
+
+  /// No description provided for @retry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get retry;
+
+  /// No description provided for @driverEarningsHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver earnings history →'**
+  String get driverEarningsHistory;
+
+  /// No description provided for @accountBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'ACCOUNT BALANCE'**
+  String get accountBalance;
+
+  /// No description provided for @lowBalanceChip.
+  ///
+  /// In en, this message translates to:
+  /// **'⚠ Low balance'**
+  String get lowBalanceChip;
+
+  /// No description provided for @allSet.
+  ///
+  /// In en, this message translates to:
+  /// **'● All set'**
+  String get allSet;
+
+  /// No description provided for @perCompletedRide.
+  ///
+  /// In en, this message translates to:
+  /// **'per completed ride'**
+  String get perCompletedRide;
+
+  /// No description provided for @changePlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Plan →'**
+  String get changePlan;
+
+  /// No description provided for @commissionPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Commission paid'**
+  String get commissionPaid;
+
+  /// No description provided for @netEarnings.
+  ///
+  /// In en, this message translates to:
+  /// **'Net earnings'**
+  String get netEarnings;
+
+  /// No description provided for @recentTransactions.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent Transactions'**
+  String get recentTransactions;
+
+  /// No description provided for @noTransactionsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No transactions yet.'**
+  String get noTransactionsYet;
+
+  /// No description provided for @myEarnings.
+  ///
+  /// In en, this message translates to:
+  /// **'My Earnings'**
+  String get myEarnings;
+
+  /// No description provided for @loadingEarnings.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading earnings...'**
+  String get loadingEarnings;
+
+  /// No description provided for @failedLoadEarnings.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load earnings'**
+  String get failedLoadEarnings;
+
+  /// No description provided for @noCompletedRidesYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No completed rides yet.'**
+  String get noCompletedRidesYet;
+
+  /// No description provided for @totalEarned.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Earned'**
+  String get totalEarned;
+
+  /// No description provided for @tripHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Trip History'**
+  String get tripHistory;
+
+  /// No description provided for @failedLoadHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load trip history'**
+  String get failedLoadHistory;
+
+  /// No description provided for @noCompletedTrips.
+  ///
+  /// In en, this message translates to:
+  /// **'No completed trips yet.\nAccept a ride to get started.'**
+  String get noCompletedTrips;
+
+  /// No description provided for @emergencyWord.
+  ///
+  /// In en, this message translates to:
+  /// **'Emergency'**
+  String get emergencyWord;
+
+  /// No description provided for @rideBooked.
+  ///
+  /// In en, this message translates to:
+  /// **'Ride Booked!'**
+  String get rideBooked;
+
+  /// No description provided for @bookingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your trip has been scheduled.\nWe\'ll send a reminder before pickup.'**
+  String get bookingBody;
+
+  /// No description provided for @bookingId.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking ID'**
+  String get bookingId;
+
+  /// No description provided for @currentLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Current location'**
+  String get currentLocation;
+
+  /// No description provided for @rideTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Ride type'**
+  String get rideTypeLabel;
+
+  /// No description provided for @standardLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Standard'**
+  String get standardLabel;
+
+  /// No description provided for @viewMyRides.
+  ///
+  /// In en, this message translates to:
+  /// **'View My Rides'**
+  String get viewMyRides;
+
+  /// No description provided for @completedRides.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 completed ride} other{{count} completed rides}}'**
+  String completedRides(int count);
 }
 
 class _AppLocalizationsDelegate

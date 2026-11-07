@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -18,7 +19,7 @@ class WalletScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: kBlue600,
         foregroundColor: Colors.white,
-        title: const Text('Wallet'),
+        title: Text(context.l10n.walletTitle),
         leading: const BackButton(),
       ),
       body: ref.watch(_walletProvider).when(
@@ -27,14 +28,14 @@ class WalletScreen extends ConsumerWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    'Failed to load wallet',
-                    style: TextStyle(color: kText600),
+                  Text(
+                    context.l10n.failedLoadWallet,
+                    style: const TextStyle(color: kText600),
                   ),
                   const SizedBox(height: kSpaceMD),
                   TextButton(
                     onPressed: () => ref.invalidate(_walletProvider),
-                    child: const Text('Retry'),
+                    child: Text(context.l10n.retry),
                   ),
                 ],
               ),
@@ -74,9 +75,9 @@ class WalletScreen extends ConsumerWidget {
                   Center(
                     child: TextButton(
                       onPressed: () => context.push('/driver/earnings'),
-                      child: const Text(
-                        'Driver earnings history →',
-                        style: TextStyle(
+                      child: Text(
+                        context.l10n.driverEarningsHistory,
+                        style: const TextStyle(
                           color: kBlue600,
                           fontWeight: FontWeight.w600,
                         ),
@@ -119,9 +120,9 @@ class _BalanceCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'ACCOUNT BALANCE',
-            style: TextStyle(
+          Text(
+            context.l10n.accountBalance,
+            style: const TextStyle(
               fontSize: kFontCaption,
               fontWeight: FontWeight.w700,
               color: Colors.white70,
@@ -148,7 +149,7 @@ class _BalanceCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(kRadiusPill),
             ),
             child: Text(
-              lowBalance ? '⚠ Low balance' : '● All set',
+              lowBalance ? context.l10n.lowBalanceChip : context.l10n.allSet,
               style: TextStyle(
                 fontSize: kFontCaption,
                 fontWeight: FontWeight.w600,
@@ -172,9 +173,9 @@ class _BalanceCard extends StatelessWidget {
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: kSpaceXL),
               ),
-              child: const Text(
-                'Top Up',
-                style: TextStyle(fontWeight: FontWeight.w700),
+              child: Text(
+                context.l10n.topUp,
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
           ),
@@ -227,15 +228,15 @@ class _CurrentPlanCard extends StatelessWidget {
             color: kText900,
           ),
         ),
-        subtitle: const Text(
-          'per completed ride',
-          style: TextStyle(fontSize: kFontSmall, color: kText600),
+        subtitle: Text(
+          context.l10n.perCompletedRide,
+          style: const TextStyle(fontSize: kFontSmall, color: kText600),
         ),
         trailing: GestureDetector(
           onTap: onChangePlan,
-          child: const Text(
-            'Change Plan →',
-            style: TextStyle(
+          child: Text(
+            context.l10n.changePlan,
+            style: const TextStyle(
               fontSize: kFontSmall,
               fontWeight: FontWeight.w600,
               color: kBlue600,
@@ -269,7 +270,7 @@ class _WeekSummaryRow extends StatelessWidget {
         children: [
           Expanded(
             child: _SummaryItem(
-              label: 'Commission paid',
+              label: context.l10n.commissionPaid,
               value: formatPkr(weeklyCommission),
               valueColor: kRed600,
             ),
@@ -278,7 +279,7 @@ class _WeekSummaryRow extends StatelessWidget {
               width: 1, height: 40, child: ColoredBox(color: kBorder)),
           Expanded(
             child: _SummaryItem(
-              label: 'Net earnings',
+              label: context.l10n.netEarnings,
               value: formatPkr(weeklyNet),
               valueColor: kOnlineGreen,
             ),
@@ -342,12 +343,12 @@ class _TransactionsList extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding:
-                EdgeInsets.fromLTRB(kSpaceLG, kSpaceLG, kSpaceLG, kSpaceSM),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+                kSpaceLG, kSpaceLG, kSpaceLG, kSpaceSM),
             child: Text(
-              'Recent Transactions',
-              style: TextStyle(
+              context.l10n.recentTransactions,
+              style: const TextStyle(
                 fontSize: kFontBody,
                 fontWeight: FontWeight.w700,
                 color: kText900,
@@ -356,11 +357,11 @@ class _TransactionsList extends StatelessWidget {
           ),
           const Divider(height: 1, color: kBorder),
           if (transactions.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(kSpaceLG),
+            Padding(
+              padding: const EdgeInsets.all(kSpaceLG),
               child: Text(
-                'No transactions yet.',
-                style: TextStyle(color: kTextSecondary),
+                context.l10n.noTransactionsYet,
+                style: const TextStyle(color: kTextSecondary),
               ),
             ),
           ...transactions.map((tx) {

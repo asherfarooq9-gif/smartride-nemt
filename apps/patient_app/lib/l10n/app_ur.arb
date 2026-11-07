@@ -295,5 +295,42 @@
   "symPregnancy": "حمل",
   "symInjury": "چوٹ / حادثہ",
   "symChildSick": "بچہ بیمار ہے",
-  "symOther": "کچھ اور / یقین نہیں"
+  "symOther": "کچھ اور / یقین نہیں",
+  "walletTitle": "والٹ",
+  "failedLoadWallet": "والٹ لوڈ نہیں ہو سکا",
+  "retry": "دوبارہ کوشش",
+  "driverEarningsHistory": "ڈرائیور کی کمائی کی تاریخ ←",
+  "accountBalance": "اکاؤنٹ بیلنس",
+  "lowBalanceChip": "⚠ کم بیلنس",
+  "allSet": "● سب ٹھیک ہے",
+  "perCompletedRide": "فی مکمل سواری",
+  "changePlan": "پلان بدلیں ←",
+  "commissionPaid": "ادا شدہ کمیشن",
+  "netEarnings": "خالص کمائی",
+  "recentTransactions": "حالیہ لین دین",
+  "noTransactionsYet": "ابھی کوئی لین دین نہیں۔",
+  "myEarnings": "میری کمائی",
+  "loadingEarnings": "کمائی لوڈ ہو رہی ہے...",
+  "failedLoadEarnings": "کمائی لوڈ نہیں ہو سکی",
+  "noCompletedRidesYet": "ابھی کوئی مکمل سواری نہیں۔",
+  "totalEarned": "کل کمائی",
+  "tripHistory": "سفر کی تاریخ",
+  "failedLoadHistory": "سفر کی تاریخ لوڈ نہیں ہو سکی",
+  "noCompletedTrips": "ابھی کوئی مکمل سفر نہیں۔\nشروع کرنے کے لیے کوئی سواری قبول کریں۔",
+  "emergencyWord": "ایمرجنسی",
+  "rideBooked": "سواری بُک ہو گئی!",
+  "bookingBody": "آپ کا سفر طے ہو گیا ہے۔\nپک اپ سے پہلے ہم آپ کو یاد دہانی بھیجیں گے۔",
+  "bookingId": "بکنگ آئی ڈی",
+  "currentLocation": "موجودہ لوکیشن",
+  "rideTypeLabel": "سواری کی قسم",
+  "standardLabel": "معیاری",
+  "viewMyRides": "میری سواریاں دیکھیں",
+  "completedRides": "{count, plural, other{{count} سواریاں مکمل}}",
+  "@completedRides": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }
