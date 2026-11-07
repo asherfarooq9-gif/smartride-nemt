@@ -16,8 +16,6 @@ class DriverHistoryScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: kCanvas,
       appBar: AppBar(
-        backgroundColor: kBlue600,
-        foregroundColor: Colors.white,
         title: Text(context.l10n.tripHistory),
         leading: const BackButton(),
       ),

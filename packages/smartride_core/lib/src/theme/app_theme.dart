@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'design_tokens.dart';
 
@@ -93,17 +94,30 @@ class AppTheme {
         for (final platform in TargetPlatform.values)
           platform: const CupertinoPageTransitionsBuilder(),
       }),
+      // An iOS navigation bar: the page colour, a centred title in ink, and
+      // blue icons. Blue never fills the bar; it only marks what can be tapped.
       appBarTheme: AppBarTheme(
-        backgroundColor: primary,
-        foregroundColor: kOnPrimary,
+        backgroundColor: dark ? kDarkBg : kCanvas,
+        foregroundColor: dark ? kDarkText1 : kText900,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        centerTitle: false,
+        centerTitle: true,
+        iconTheme: IconThemeData(color: dark ? kDarkAccent : primary),
+        actionsIconTheme: IconThemeData(color: dark ? kDarkAccent : primary),
+        systemOverlayStyle:
+            dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         titleTextStyle: GoogleFonts.dmSans(
-          color: kOnPrimary,
-          fontSize: kFontSubhead,
-          fontWeight: FontWeight.w700,
+          color: dark ? kDarkText1 : kText900,
+          fontSize: 17,
+          fontWeight: FontWeight.w600,
         ),
+      ),
+      // The back arrow is the iOS chevron on every platform. It mirrors in
+      // right-to-left languages such as Urdu.
+      actionIconTheme: ActionIconThemeData(
+        backButtonIconBuilder: (_) =>
+            const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(

@@ -131,8 +131,6 @@ class _TopUpScreenState extends State<TopUpScreen> {
     return Scaffold(
       backgroundColor: kCanvas,
       appBar: AppBar(
-        backgroundColor: kBlue600,
-        foregroundColor: Colors.white,
         title: Text(context.l10n.topUpPlans),
         leading: const BackButton(),
       ),

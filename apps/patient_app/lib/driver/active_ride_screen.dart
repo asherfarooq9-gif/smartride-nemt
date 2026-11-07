@@ -461,11 +461,11 @@ class _GpsStatusIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final (icon, color, message) = switch (status) {
       GpsStreamStatus.live => (
           Icons.gps_fixed,
-          // This icon sits on the blue app bar, where green was hard to see.
-          Colors.white,
+          core.kOnlineGreen,
           context.l10n.gpsSharing,
         ),
       GpsStreamStatus.starting || GpsStreamStatus.degraded => (
@@ -475,7 +475,7 @@ class _GpsStatusIcon extends StatelessWidget {
         ),
       GpsStreamStatus.idle => (
           Icons.gps_off,
-          const Color(0xFFFFB4AB),
+          isDark ? core.kDarkRed : core.kError,
           context.l10n.gpsOff,
         ),
     };
