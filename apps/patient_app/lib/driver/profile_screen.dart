@@ -71,12 +71,12 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: Text(context.l10n.navProfile),
         actions: [
           if (!_editing)
             IconButton(
               icon: const Icon(Icons.edit),
-              tooltip: 'Edit profile',
+              tooltip: context.l10n.editProfile,
               onPressed: () {
                 final p = ref.read(driverProfileProvider).value;
                 if (p != null) _populate(p);
@@ -130,19 +130,19 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
               const Divider(),
               ListTile(
                 leading: const Icon(Icons.history),
-                title: const Text('Trip History'),
+                title: Text(context.l10n.tripHistory),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/driver/history'),
               ),
               ListTile(
                 leading: const Icon(Icons.account_balance_wallet_outlined),
-                title: const Text('Wallet'),
+                title: Text(context.l10n.walletTitle),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/driver/wallet'),
               ),
               ListTile(
                 leading: const Icon(Icons.bar_chart_outlined),
-                title: const Text('Earnings'),
+                title: Text(context.l10n.earnings),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/driver/earnings'),
               ),
@@ -155,13 +155,13 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => setState(() => _editing = false),
-                      child: const Text('Cancel'),
+                      child: Text(context.l10n.cancel),
                     ),
                   ),
                   const SizedBox(width: core.kSpaceLG),
                   Expanded(
                     child: core.PrimaryButton(
-                      label: 'Save',
+                      label: context.l10n.save,
                       onPressed: isUpdating ? null : _save,
                       isLoading: isUpdating,
                       height: core.kMinTapTarget,
@@ -259,7 +259,7 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
       setState(() => _editing = false);
       ref.invalidate(driverProfileProvider);
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Profile updated')));
+          .showSnackBar(SnackBar(content: Text(context.l10n.profileUpdated)));
     }
   }
 }

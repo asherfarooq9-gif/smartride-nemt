@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smartride_core/smartride_core.dart';
@@ -12,7 +13,7 @@ class SavedPlacesScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Saved Places'),
+        title: Text(context.l10n.savedPlaces),
         leading: const BackButton(),
       ),
       floatingActionButton: FloatingActionButton(
@@ -71,16 +72,16 @@ class SavedPlacesScreen extends ConsumerWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Remove place'),
+        title: Text(context.l10n.removePlace),
         content: Text('Remove "${place.label}" from saved places?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
+              child: Text(context.l10n.cancel)),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: kError),
-            child: const Text('Remove'),
+            child: Text(context.l10n.remove),
           ),
         ],
       ),
@@ -140,10 +141,11 @@ class _PlaceCard extends StatelessWidget {
             if (value == 'delete') onDelete();
           },
           itemBuilder: (_) => [
-            const PopupMenuItem(value: 'edit', child: Text('Edit')),
-            const PopupMenuItem(
+            PopupMenuItem(value: 'edit', child: Text(context.l10n.edit)),
+            PopupMenuItem(
               value: 'delete',
-              child: Text('Delete', style: TextStyle(color: kError)),
+              child: Text(context.l10n.delete,
+                  style: const TextStyle(color: kError)),
             ),
           ],
         ),
@@ -196,14 +198,14 @@ class _EmptyState extends StatelessWidget {
         children: [
           const Icon(Icons.place_outlined, size: 64, color: kText400),
           const SizedBox(height: kSpaceLG),
-          const Text('No saved places yet',
-              style: TextStyle(fontSize: kFontBody, color: kText600)),
+          Text(context.l10n.noSavedPlaces,
+              style: const TextStyle(fontSize: kFontBody, color: kText600)),
           const SizedBox(height: kSpaceSM),
           TextButton(
             onPressed: onAdd,
-            child: const Text('Add your first place',
-                style:
-                    TextStyle(color: kPatient600, fontWeight: FontWeight.w600)),
+            child: Text(context.l10n.addFirstPlace,
+                style: const TextStyle(
+                    color: kPatient600, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -324,9 +326,9 @@ class _PlaceSheetState extends State<_PlaceSheet> {
             const SizedBox(height: kSpaceLG),
             TextFormField(
               controller: _labelCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Label',
-                prefixIcon: Icon(Icons.label_outline),
+              decoration: InputDecoration(
+                labelText: context.l10n.labelField,
+                prefixIcon: const Icon(Icons.label_outline),
               ),
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? 'Required' : null,
@@ -335,9 +337,9 @@ class _PlaceSheetState extends State<_PlaceSheet> {
             const SizedBox(height: kSpaceMD),
             TextFormField(
               controller: _addressCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Address',
-                prefixIcon: Icon(Icons.location_on_outlined),
+              decoration: InputDecoration(
+                labelText: context.l10n.addressField,
+                prefixIcon: const Icon(Icons.location_on_outlined),
               ),
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? 'Required' : null,
@@ -350,7 +352,7 @@ class _PlaceSheetState extends State<_PlaceSheet> {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel'),
+                    child: Text(context.l10n.cancel),
                   ),
                 ),
                 const SizedBox(width: kSpaceMD),

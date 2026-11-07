@@ -1077,4 +1077,40 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get topUpPlans => 'ٹاپ اپ اور پلان';
+
+  @override
+  String get removePlace => 'جگہ ہٹائیں';
+
+  @override
+  String get remove => 'ہٹائیں';
+
+  @override
+  String get delete => 'حذف کریں';
+
+  @override
+  String get noSavedPlaces => 'ابھی کوئی محفوظ جگہ نہیں';
+
+  @override
+  String get addFirstPlace => 'اپنی پہلی جگہ شامل کریں';
+
+  @override
+  String get labelField => 'نام';
+
+  @override
+  String get addressField => 'پتہ';
+
+  @override
+  String get fewerRides => 'کم سواریاں';
+
+  @override
+  String get moreRides => 'زیادہ سواریاں';
+
+  @override
+  String get couldNotLoadHospitals => 'ہسپتال لوڈ نہیں ہو سکے';
+
+  @override
+  String get editProfile => 'پروفائل میں ترمیم';
+
+  @override
+  String get save => 'محفوظ کریں';
 }

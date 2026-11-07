@@ -1078,4 +1078,40 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get topUpPlans => 'Top Up & Plans';
+
+  @override
+  String get removePlace => 'Remove place';
+
+  @override
+  String get remove => 'Remove';
+
+  @override
+  String get delete => 'Delete';
+
+  @override
+  String get noSavedPlaces => 'No saved places yet';
+
+  @override
+  String get addFirstPlace => 'Add your first place';
+
+  @override
+  String get labelField => 'Label';
+
+  @override
+  String get addressField => 'Address';
+
+  @override
+  String get fewerRides => 'Fewer rides';
+
+  @override
+  String get moreRides => 'More rides';
+
+  @override
+  String get couldNotLoadHospitals => 'Could not load hospitals';
+
+  @override
+  String get editProfile => 'Edit profile';
+
+  @override
+  String get save => 'Save';
 }

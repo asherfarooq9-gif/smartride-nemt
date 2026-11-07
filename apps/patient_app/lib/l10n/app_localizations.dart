@@ -2155,6 +2155,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Top Up & Plans'**
   String get topUpPlans;
+
+  /// No description provided for @removePlace.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove place'**
+  String get removePlace;
+
+  /// No description provided for @remove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get remove;
+
+  /// No description provided for @delete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get delete;
+
+  /// No description provided for @noSavedPlaces.
+  ///
+  /// In en, this message translates to:
+  /// **'No saved places yet'**
+  String get noSavedPlaces;
+
+  /// No description provided for @addFirstPlace.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your first place'**
+  String get addFirstPlace;
+
+  /// No description provided for @labelField.
+  ///
+  /// In en, this message translates to:
+  /// **'Label'**
+  String get labelField;
+
+  /// No description provided for @addressField.
+  ///
+  /// In en, this message translates to:
+  /// **'Address'**
+  String get addressField;
+
+  /// No description provided for @fewerRides.
+  ///
+  /// In en, this message translates to:
+  /// **'Fewer rides'**
+  String get fewerRides;
+
+  /// No description provided for @moreRides.
+  ///
+  /// In en, this message translates to:
+  /// **'More rides'**
+  String get moreRides;
+
+  /// No description provided for @couldNotLoadHospitals.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load hospitals'**
+  String get couldNotLoadHospitals;
+
+  /// No description provided for @editProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit profile'**
+  String get editProfile;
+
+  /// No description provided for @save.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get save;
 }
 
 class _AppLocalizationsDelegate

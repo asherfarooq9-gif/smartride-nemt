@@ -185,7 +185,7 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
             children: [
               Expanded(child: Text(l.numberOfTrips)),
               IconButton(
-                tooltip: 'Fewer rides',
+                tooltip: context.l10n.fewerRides,
                 onPressed: _occurrences > 2
                     ? () => setState(() => _occurrences--)
                     : null,
@@ -194,7 +194,7 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
               Text('$_occurrences',
                   style: Theme.of(context).textTheme.titleMedium),
               IconButton(
-                tooltip: 'More rides',
+                tooltip: context.l10n.moreRides,
                 onPressed: _occurrences < 12
                     ? () => setState(() => _occurrences++)
                     : null,
@@ -242,8 +242,8 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                     onPressed: () => context.pop(),
                     icon: const Icon(Icons.arrow_back_ios,
                         size: 16, color: core.kPatientPrimary),
-                    label: const Text('Back',
-                        style: TextStyle(
+                    label: Text(context.l10n.back,
+                        style: const TextStyle(
                             color: core.kPatientPrimary,
                             fontSize: core.kFontSM)),
                     style: TextButton.styleFrom(
@@ -302,7 +302,8 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                     const SizedBox(height: core.kSpaceSM),
                     hospitalsAsync.when(
                       loading: () => const LinearProgressIndicator(),
-                      error: (_, __) => const Text('Could not load hospitals'),
+                      error: (_, __) =>
+                          Text(context.l10n.couldNotLoadHospitals),
                       data: (hospitals) => _HospitalPicker(
                         hospitals: hospitals,
                         selected: _selectedHospital,

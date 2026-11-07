@@ -363,5 +363,17 @@
   "noConnectionTitle": "No Connection",
   "noInternet": "No internet connection",
   "checkConnection": "Check your connection and try again.",
-  "topUpPlans": "Top Up & Plans"
+  "topUpPlans": "Top Up & Plans",
+  "removePlace": "Remove place",
+  "remove": "Remove",
+  "delete": "Delete",
+  "noSavedPlaces": "No saved places yet",
+  "addFirstPlace": "Add your first place",
+  "labelField": "Label",
+  "addressField": "Address",
+  "fewerRides": "Fewer rides",
+  "moreRides": "More rides",
+  "couldNotLoadHospitals": "Could not load hospitals",
+  "editProfile": "Edit profile",
+  "save": "Save"
 }

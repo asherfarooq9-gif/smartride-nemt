@@ -363,5 +363,17 @@
   "noConnectionTitle": "کنکشن نہیں",
   "noInternet": "انٹرنیٹ کنکشن نہیں",
   "checkConnection": "اپنا کنکشن چیک کریں اور دوبارہ کوشش کریں۔",
-  "topUpPlans": "ٹاپ اپ اور پلان"
+  "topUpPlans": "ٹاپ اپ اور پلان",
+  "removePlace": "جگہ ہٹائیں",
+  "remove": "ہٹائیں",
+  "delete": "حذف کریں",
+  "noSavedPlaces": "ابھی کوئی محفوظ جگہ نہیں",
+  "addFirstPlace": "اپنی پہلی جگہ شامل کریں",
+  "labelField": "نام",
+  "addressField": "پتہ",
+  "fewerRides": "کم سواریاں",
+  "moreRides": "زیادہ سواریاں",
+  "couldNotLoadHospitals": "ہسپتال لوڈ نہیں ہو سکے",
+  "editProfile": "پروفائل میں ترمیم",
+  "save": "محفوظ کریں"
 }
