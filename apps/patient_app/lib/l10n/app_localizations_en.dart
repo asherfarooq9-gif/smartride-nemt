@@ -1398,4 +1398,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String topUpInstructions(String amount, String method, String email) {
     return 'Nothing has been charged. Send PKR $amount by $method, then send the receipt to SmartRide support ($email). Your wallet is credited once an admin confirms the payment.';
   }
+
+  @override
+  String get locationNeededToBook =>
+      'We need your location to book a pickup. Turn on location and try again.';
+
+  @override
+  String get bookingFailed => 'Booking failed. Please try again.';
+
+  @override
+  String get selectDateTimeSemantic => 'Select date and time';
+
+  @override
+  String get emptySymptoms =>
+      'Tell us what is happening: choose an option or describe it below. If someone is in immediate danger, call 1122.';
+
+  @override
+  String get couldNotSendRequest =>
+      'We could not send your request. Please try again, or call 1122.';
+
+  @override
+  String get locationNeededToHelp =>
+      'We need your location to send help. Turn on location and try again.';
+
+  @override
+  String get sendingRequest => 'Sending your request';
+
+  @override
+  String get verificationSemantic =>
+      'Verification pending. You cannot go online until your account is verified.';
+
+  @override
+  String get vehicleModelField => 'Vehicle model';
 }

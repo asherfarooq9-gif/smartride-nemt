@@ -2749,6 +2749,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nothing has been charged. Send PKR {amount} by {method}, then send the receipt to SmartRide support ({email}). Your wallet is credited once an admin confirms the payment.'**
   String topUpInstructions(String amount, String method, String email);
+
+  /// No description provided for @locationNeededToBook.
+  ///
+  /// In en, this message translates to:
+  /// **'We need your location to book a pickup. Turn on location and try again.'**
+  String get locationNeededToBook;
+
+  /// No description provided for @bookingFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking failed. Please try again.'**
+  String get bookingFailed;
+
+  /// No description provided for @selectDateTimeSemantic.
+  ///
+  /// In en, this message translates to:
+  /// **'Select date and time'**
+  String get selectDateTimeSemantic;
+
+  /// No description provided for @emptySymptoms.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us what is happening: choose an option or describe it below. If someone is in immediate danger, call 1122.'**
+  String get emptySymptoms;
+
+  /// No description provided for @couldNotSendRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not send your request. Please try again, or call 1122.'**
+  String get couldNotSendRequest;
+
+  /// No description provided for @locationNeededToHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'We need your location to send help. Turn on location and try again.'**
+  String get locationNeededToHelp;
+
+  /// No description provided for @sendingRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending your request'**
+  String get sendingRequest;
+
+  /// No description provided for @verificationSemantic.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification pending. You cannot go online until your account is verified.'**
+  String get verificationSemantic;
+
+  /// No description provided for @vehicleModelField.
+  ///
+  /// In en, this message translates to:
+  /// **'Vehicle model'**
+  String get vehicleModelField;
 }
 
 class _AppLocalizationsDelegate

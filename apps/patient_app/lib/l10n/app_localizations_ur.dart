@@ -1399,4 +1399,36 @@ class AppLocalizationsUr extends AppLocalizations {
   String topUpInstructions(String amount, String method, String email) {
     return 'ابھی کوئی رقم نہیں کٹی۔ PKR $amount بذریعہ $method بھیجیں، پھر رسید سمارٹ رائیڈ سپورٹ ($email) کو بھیجیں۔ ایڈمن کے ادائیگی کی تصدیق کے بعد آپ کا والٹ کریڈٹ ہو جائے گا۔';
   }
+
+  @override
+  String get locationNeededToBook =>
+      'پک اپ بُک کرنے کے لیے ہمیں آپ کی لوکیشن چاہیے۔ لوکیشن آن کریں اور دوبارہ کوشش کریں۔';
+
+  @override
+  String get bookingFailed => 'بکنگ نہیں ہو سکی۔ براہِ کرم دوبارہ کوشش کریں۔';
+
+  @override
+  String get selectDateTimeSemantic => 'تاریخ اور وقت چنیں';
+
+  @override
+  String get emptySymptoms =>
+      'ہمیں بتائیں کیا ہو رہا ہے: کوئی آپشن چنیں یا نیچے بیان کریں۔ اگر کسی کی جان کو فوری خطرہ ہے تو 1122 پر کال کریں۔';
+
+  @override
+  String get couldNotSendRequest =>
+      'ہم آپ کی درخواست نہیں بھیج سکے۔ براہِ کرم دوبارہ کوشش کریں، یا 1122 پر کال کریں۔';
+
+  @override
+  String get locationNeededToHelp =>
+      'مدد بھیجنے کے لیے ہمیں آپ کی لوکیشن چاہیے۔ لوکیشن آن کریں اور دوبارہ کوشش کریں۔';
+
+  @override
+  String get sendingRequest => 'آپ کی درخواست بھیجی جا رہی ہے';
+
+  @override
+  String get verificationSemantic =>
+      'تصدیق باقی ہے۔ اکاؤنٹ کی تصدیق تک آپ آن لائن نہیں ہو سکتے۔';
+
+  @override
+  String get vehicleModelField => 'گاڑی کا ماڈل';
 }

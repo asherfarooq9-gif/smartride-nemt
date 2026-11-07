@@ -29,9 +29,6 @@ String _symptomLabel(AppLocalizations l, String symptom) => switch (symptom) {
 
 const _fieldFill = Color(0xFF2D1010);
 const _fieldBorder = Color(0xFF5A2020);
-const _emptySymptomsMessage =
-    'Tell us what is happening: choose an option or describe it below. '
-    'If someone is in immediate danger, call 1122.';
 
 typedef EmergencyRideCreator = Future<core.RideResponse> Function(
   core.EmergencyRideRequest request, {
@@ -120,6 +117,7 @@ class _SymptomScreenState extends ConsumerState<SymptomScreen> {
       pickupLat: position.latitude,
       pickupLng: position.longitude,
     );
+    final sendFailed = context.l10n.couldNotSendRequest;
     try {
       final ride = await ref.read(emergencyRideCreatorProvider)(
         request,
@@ -130,8 +128,7 @@ class _SymptomScreenState extends ConsumerState<SymptomScreen> {
       _showError(e.message);
     } on Exception catch (e, st) {
       core.ErrorReporter.report('Emergency request failed', e, st);
-      _showError('We could not send your request. Please try again, '
-          'or call 1122.');
+      _showError(sendFailed);
     }
   }
 
@@ -145,8 +142,7 @@ class _SymptomScreenState extends ConsumerState<SymptomScreen> {
 
   void _askForLocation() {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: const Text(
-          'We need your location to send help. Turn on location and try again.'),
+      content: Text(context.l10n.locationNeededToHelp),
       backgroundColor: core.kError,
       action: SnackBarAction(
         label: context.l10n.enableLabel,
@@ -256,9 +252,9 @@ class _FormBody extends StatelessWidget {
             padding: const EdgeInsets.only(top: core.kSpaceMD),
             child: Semantics(
               liveRegion: true,
-              child: const Text(
-                _emptySymptomsMessage,
-                style: TextStyle(
+              child: Text(
+                context.l10n.emptySymptoms,
+                style: const TextStyle(
                   color: Color(0xFFFFB4AB),
                   fontSize: core.kFontSmall,
                   height: 1.4,
@@ -356,7 +352,7 @@ class _SubmitBar extends StatelessWidget {
             ),
             child: isBusy
                 ? Semantics(
-                    label: 'Sending your request',
+                    label: context.l10n.sendingRequest,
                     child: const SizedBox(
                       width: 20,
                       height: 20,

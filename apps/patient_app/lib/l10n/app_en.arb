@@ -506,5 +506,14 @@
         "type": "String"
       }
     }
-  }
+  },
+  "locationNeededToBook": "We need your location to book a pickup. Turn on location and try again.",
+  "bookingFailed": "Booking failed. Please try again.",
+  "selectDateTimeSemantic": "Select date and time",
+  "emptySymptoms": "Tell us what is happening: choose an option or describe it below. If someone is in immediate danger, call 1122.",
+  "couldNotSendRequest": "We could not send your request. Please try again, or call 1122.",
+  "locationNeededToHelp": "We need your location to send help. Turn on location and try again.",
+  "sendingRequest": "Sending your request",
+  "verificationSemantic": "Verification pending. You cannot go online until your account is verified.",
+  "vehicleModelField": "Vehicle model"
 }

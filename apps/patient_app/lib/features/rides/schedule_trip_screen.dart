@@ -98,10 +98,10 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
     if (cached != null && cached.form == form) {
       return (cached.request, cached.key);
     }
+    final needLocation = context.l10n.locationNeededToBook;
     final position = await ref.read(locationReaderProvider)();
     if (position == null) {
-      throw const core.AppError(
-          'We need your location to book a pickup. Turn on location and try again.');
+      throw core.AppError(needLocation);
     }
     final request = core.ScheduledRideRequest(
       pickupLat: position.latitude,
@@ -150,7 +150,7 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
       _showError(e.message);
     } on Exception catch (e, st) {
       core.ErrorReporter.report('Booking a ride failed', e, st);
-      _showError('Booking failed. Please try again.');
+      _showError(context.l10n.bookingFailed);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -353,7 +353,7 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                     const SizedBox(height: core.kSpaceSM),
                     _TapCard(
                       semanticLabel: _selectedDateTime == null
-                          ? 'Select date and time'
+                          ? context.l10n.selectDateTimeSemantic
                           : 'Date and time: ${formatDateTime(_selectedDateTime!, lang: Localizations.localeOf(context).languageCode)}. Change',
                       onTap: _pickDateTime,
                       padding: core.kSpaceLG,

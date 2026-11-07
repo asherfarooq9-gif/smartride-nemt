@@ -20,7 +20,9 @@ class DriverGreeting extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = HomePalette.of(context);
-    final who = (name == null || name!.trim().isEmpty) ? 'Driver' : name!;
+    final who = (name == null || name!.trim().isEmpty)
+        ? context.l10n.driverWord
+        : name!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -69,8 +71,7 @@ class VerificationCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Semantics(
       container: true,
-      label: 'Verification pending. You cannot go online until your account '
-          'is verified.',
+      label: context.l10n.verificationSemantic,
       excludeSemantics: true,
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -192,7 +193,9 @@ class WalletCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isLowBalance ? 'Low balance' : 'Wallet Balance',
+                        isLowBalance
+                            ? context.l10n.lowBalance
+                            : context.l10n.walletBalance,
                         style: const TextStyle(
                           fontSize: 12.5,
                           color: Colors.white,
@@ -231,7 +234,7 @@ class _TopUpButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: 'Top up wallet',
+      label: context.l10n.topUpWalletLabel,
       excludeSemantics: true,
       // The pill is compact, but the area that answers a tap is still 44 high.
       child: InkWell(

@@ -88,7 +88,8 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
       body: profileAsync.when(
         loading: () => const core.LoadingState(),
         error: (e, _) => core.ErrorState(
-          message: e is core.AppError ? e.message : 'Failed to load profile',
+          message:
+              e is core.AppError ? e.message : context.l10n.failedLoadProfile,
           onRetry: () => ref.invalidate(driverProfileProvider),
         ),
         data: (driver) {
@@ -115,14 +116,15 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
             const SizedBox(height: core.kSpaceSM),
             Text(driver.phone, textAlign: TextAlign.center),
             const SizedBox(height: core.kSpaceXL),
-            _field(_nameCtrl, 'Full name', Icons.person),
+            _field(_nameCtrl, context.l10n.fullNameField, Icons.person),
             const SizedBox(height: core.kSpaceLG),
-            _field(_licenseCtrl, 'License number', Icons.badge),
+            _field(_licenseCtrl, context.l10n.licenseField, Icons.badge),
             const SizedBox(height: core.kSpaceLG),
-            _field(_vehicleModelCtrl, 'Vehicle model', Icons.directions_car),
+            _field(_vehicleModelCtrl, context.l10n.vehicleModelField,
+                Icons.directions_car),
             const SizedBox(height: core.kSpaceLG),
-            _field(
-                _vehiclePlateCtrl, 'Vehicle plate', Icons.confirmation_number),
+            _field(_vehiclePlateCtrl, context.l10n.plateField,
+                Icons.confirmation_number),
             const SizedBox(height: core.kSpaceXL),
             _paymentMethods(driver),
             if (!_editing) ...[
