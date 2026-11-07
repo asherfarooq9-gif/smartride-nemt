@@ -50,16 +50,16 @@ export default function Modal({ open, onClose, title, children, width = 'lg' }: 
         // Only a press that both started and ended on the backdrop closes it.
         if (e.target === e.currentTarget && pressStartedOnBackdrop.current) onClose()
       }}
-      className={`m-auto w-[calc(100%-2rem)] ${WIDTHS[width]} rounded-2xl bg-white p-0 text-gray-900 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm`}
+      className={`m-auto w-[calc(100%-2rem)] ${WIDTHS[width]} rounded-lg border border-edge bg-panel-raised p-0 text-ink shadow-[0_24px_60px_rgb(var(--shadow)/0.25)] backdrop:bg-ink/40`}
     >
       {open && (
         <div className="flex max-h-[90vh] flex-col">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-blue-100">
-            <h2 id={titleId} className="text-lg font-semibold text-blue-900">{title}</h2>
+          <div className="flex items-center justify-between px-6 py-4 border-b border-edge">
+            <h2 id={titleId} className="title text-base">{title}</h2>
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg hover:bg-blue-50 transition text-gray-500 hover:text-blue-900"
+              className="p-1.5 rounded hover:bg-panel-inset transition text-ink-dim hover:text-ink"
               aria-label="Close"
             >
               <X size={18} aria-hidden="true" />

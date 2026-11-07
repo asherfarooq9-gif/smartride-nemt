@@ -49,7 +49,7 @@ test.describe('signed out', () => {
 
     await page.goto('/login')
     await page.getByLabel('Phone').fill('+923001110001')
-    await page.getByLabel('Password').fill('patient123')
+    await page.getByLabel('Password', { exact: true }).fill('patient123')
     await page.getByRole('button', { name: 'Sign in' }).click()
 
     await expect(page.getByRole('alert').filter({ hasText: 'Admin access only' })).toBeVisible()
@@ -65,7 +65,7 @@ test.describe('signed out', () => {
     )
 
     await page.getByLabel('Phone').fill(ADMIN.phone)
-    await page.getByLabel('Password').fill('wrong-password')
+    await page.getByLabel('Password', { exact: true }).fill('wrong-password')
     await page.getByRole('button', { name: 'Sign in' }).click()
     await expect(page.getByRole('alert').filter({ hasText: 'Invalid credentials' })).toBeVisible()
 

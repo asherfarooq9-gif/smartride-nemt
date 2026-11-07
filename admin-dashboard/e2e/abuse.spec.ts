@@ -11,19 +11,24 @@ test('pages are served with hardening headers', async ({ page }) => {
   expect(headers['x-powered-by']).toBeUndefined()
 })
 
-test('the CSP allows scripts only through a fresh per-request nonce', async ({ page }) => {
-  const scriptSrc = async () => {
-    const response = await page.goto('/login')
-    const csp = response!.headers()['content-security-policy']
-    return csp.split(';').map(d => d.trim()).find(d => d.startsWith('script-src '))!
-  }
-  const first = await scriptSrc()
-  const second = await scriptSrc()
-  expect(first).toMatch(/'nonce-[A-Za-z0-9+/=]+'/)
-  expect(first).not.toContain("'unsafe-inline'")
-  expect(first).not.toBe(second)
-  // The nonce must actually reach Next's inline scripts, or the page would not hydrate.
-  await expect(page.getByRole('button', { name: 'Sign in' })).toBeEnabled()
+// Signed out, so the sign-in form stays on screen instead of redirecting to the dashboard.
+test.describe('csp nonce', () => {
+  test.use({ storageState: { cookies: [], origins: [] } })
+
+  test('the CSP allows scripts only through a fresh per-request nonce', async ({ page }) => {
+    const scriptSrc = async () => {
+      const response = await page.goto('/login')
+      const csp = response!.headers()['content-security-policy']
+      return csp.split(';').map(d => d.trim()).find(d => d.startsWith('script-src '))!
+    }
+    const first = await scriptSrc()
+    const second = await scriptSrc()
+    expect(first).toMatch(/'nonce-[A-Za-z0-9+/=]+'/)
+    expect(first).not.toContain("'unsafe-inline'")
+    expect(first).not.toBe(second)
+    // The nonce must actually reach Next's inline scripts, or the page would not hydrate.
+    await expect(page.getByRole('button', { name: 'Sign in' })).toBeEnabled()
+  })
 })
 
 test('script injected through a hospital name is shown as text and never runs', async ({ page }) => {
@@ -76,7 +81,9 @@ test('after signing out the back button cannot reveal data', async ({ page, requ
 
   await page.goto('/rides')
   await page.goto('/')
-  await page.getByRole('button', { name: 'Toggle sidebar' }).click()
+  // Below 768px the rail is replaced by a bottom bar, and Sign out lives in the top bar instead.
+  const toggle = page.getByRole('button', { name: 'Collapse sidebar' })
+  if (await toggle.isVisible()) await toggle.click()
   await page.getByRole('button', { name: /sign out|logout/i }).click()
   await expect(page).toHaveURL(/\/login$/)
 

@@ -26,12 +26,12 @@ export default function ConfirmDialog({ open, title, message, confirmLabel, canc
 
   return (
     <Modal open={open} onClose={onCancel} title={title} width="md">
-      <p className="text-sm text-gray-700 mb-6">{message}</p>
+      <p className="text-sm text-ink mb-6">{message}</p>
       <div className="flex gap-3 justify-end">
-        <button type="button" ref={cancelRef} onClick={onCancel} className="px-4 py-2 text-sm border border-gray-200 rounded-xl hover:border-gray-300 transition">
+        <button type="button" ref={cancelRef} onClick={onCancel} className="px-4 py-2 text-sm border border-edge rounded-md hover:border-edge-strong transition">
           {cancelLabel}
         </button>
-        <button type="button" onClick={onConfirm} className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-xl transition">
+        <button type="button" onClick={onConfirm} className="px-4 py-2 text-sm bg-lamp-red hover:bg-lamp-red/85 text-white rounded-md transition">
           {confirmLabel}
         </button>
       </div>

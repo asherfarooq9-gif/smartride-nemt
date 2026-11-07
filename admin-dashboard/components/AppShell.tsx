@@ -4,6 +4,8 @@ import { usePathname, useRouter } from 'next/navigation'
 import { hasToken, subscribeToken } from '@/lib/api'
 import Sidebar from '@/components/Sidebar'
 import TopBar from '@/components/TopBar'
+import MobileNav from '@/components/MobileNav'
+import EmergencyBanner from '@/components/EmergencyBanner'
 
 /**
  * Auth gate + chrome. Children (and therefore their API calls) render only after
@@ -29,10 +31,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar pathname={pathname} />
-      <main className="min-w-0 flex-1 overflow-auto">
-        <TopBar pathname={pathname} />
-        <div className="p-6">{children}</div>
-      </main>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <EmergencyBanner />
+        <main className="min-h-0 min-w-0 flex-1 overflow-auto">
+          <TopBar />
+          <div className="mx-auto max-w-[1600px] p-4 pb-24 md:p-6 md:pb-6">{children}</div>
+        </main>
+      </div>
+      <MobileNav pathname={pathname} />
     </div>
   )
 }

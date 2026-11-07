@@ -7,8 +7,8 @@ import { BellOff } from 'lucide-react'
 export default function AlertsPage() {
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-blue-900">Alerts</h1>
-      <div className="bg-white rounded-2xl border border-blue-100 shadow-sm">
+      <h1 className="title text-3xl">Alerts</h1>
+      <div className="bg-panel-raised rounded-md border border-edge ">
         <EmptyState
           icon={BellOff}
           title="Alerts are not connected yet"

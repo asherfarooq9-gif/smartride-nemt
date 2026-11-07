@@ -1,7 +1,10 @@
 import './globals.css'
 import type { Metadata, Viewport } from 'next'
 import { connection } from 'next/server'
+import { DM_Sans } from 'next/font/google'
 import AppShell from '@/components/AppShell'
+
+const body = DM_Sans({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-body', display: 'swap' })
 
 export const metadata: Metadata = {
   title: { default: 'SmartRide Admin', template: '%s | SmartRide Admin' },
@@ -19,8 +22,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // scripts at render time, which a statically prerendered page cannot do.
   await connection()
   return (
-    <html lang="en">
-      <body className="bg-blue-50 text-gray-900">
+    <html lang="en" className={body.variable}>
+      <body>
         <AppShell>{children}</AppShell>
       </body>
     </html>

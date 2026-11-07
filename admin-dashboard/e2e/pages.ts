@@ -9,11 +9,12 @@ interface AppPage {
 }
 
 export const APP_PAGES: AppPage[] = [
-  { path: '/', heading: 'Dashboard', ready: p => p.getByText('Total Rides') },
+  { path: '/', heading: 'Dashboard', ready: p => p.getByRole('heading', { name: 'Active rides' }) },
   { path: '/rides', heading: /^Rides/, ready: p => p.getByText(RIDE_ADDRESS) },
   { path: '/drivers', heading: /^Drivers/, ready: (p, project) => p.getByRole('button', { name: testDriver(project).full_name }) },
   { path: '/patients', heading: /^Patients/, ready: p => p.getByRole('button', { name: TEST_PATIENT.full_name, exact: true }) },
   { path: '/hospitals', heading: /^Hospitals/, ready: p => p.locator('tbody tr:not(.animate-pulse)').first() },
   { path: '/analytics', heading: /Analytics/, ready: p => p.getByText(/Peak Predicted|No data yet/).first() },
+  { path: '/map', heading: /Live map/, ready: p => p.getByRole('heading', { name: 'What is on the map' }) },
   { path: '/alerts', heading: /Alerts/, ready: p => p.getByText('Alerts are not connected yet') },
 ]

@@ -21,11 +21,11 @@ test('a hidden tab stops polling and catches up as soon as it is visible again',
     }
   })
   await page.goto('/')
-  await expect(page.getByText('Total Rides')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Active rides' })).toBeVisible()
   const afterFirstLoad = summaryCalls
 
   await page.evaluate(() => window.__setHidden(true))
-  await page.clock.runFor(95_000) // runs all three 30 s poll ticks that fall due while hidden
+  await page.clock.runFor(95_000) // runs all six 15 s poll ticks that fall due while hidden
   await page.waitForTimeout(500) // real time: let any request those ticks started reach the network
   expect(summaryCalls).toBe(afterFirstLoad)
 
