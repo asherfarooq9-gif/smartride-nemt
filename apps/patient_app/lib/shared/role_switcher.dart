@@ -44,12 +44,15 @@ class PortalDrawer extends ConsumerWidget {
                   const Icon(Icons.local_hospital,
                       color: Colors.white, size: 40),
                   const SizedBox(height: core.kSpaceSM),
-                  const Text('SmartRide',
-                      style: TextStyle(
+                  Text(context.l10n.smartRideName,
+                      style: const TextStyle(
                           color: Colors.white,
                           fontSize: 22,
                           fontWeight: FontWeight.bold)),
-                  Text(isDriver ? 'Driver portal' : 'Patient portal',
+                  Text(
+                      isDriver
+                          ? context.l10n.driverPortal
+                          : context.l10n.patientPortal,
                       style: const TextStyle(color: Colors.white70)),
                 ],
               ),
@@ -57,22 +60,23 @@ class PortalDrawer extends ConsumerWidget {
 
             // ── Patient portal entry ───────────────────────────────────────
             if (!isDriver)
-              const ListTile(
-                leading: Icon(Icons.check_circle, color: core.kPatientPrimary),
-                title: Text('Patient',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('Current portal'),
+              ListTile(
+                leading:
+                    const Icon(Icons.check_circle, color: core.kPatientPrimary),
+                title: Text(context.l10n.patientWord,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(context.l10n.currentPortal),
               )
             else if (hasPatient)
               ListTile(
                 leading: const Icon(Icons.medical_services_outlined),
-                title: const Text('Switch to Patient'),
+                title: Text(context.l10n.switchToPatient),
                 onTap: () => _switch(context, ref, 'patient', '/'),
               )
             else
               ListTile(
                 leading: const Icon(Icons.add_circle_outline),
-                title: const Text('Become a Patient'),
+                title: Text(context.l10n.becomePatient),
                 onTap: () {
                   Navigator.pop(context);
                   context.push('/become-patient');
@@ -81,11 +85,12 @@ class PortalDrawer extends ConsumerWidget {
 
             // ── Driver portal entry ────────────────────────────────────────
             if (isDriver) ...[
-              const ListTile(
-                leading: Icon(Icons.check_circle, color: core.kOnlineGreen),
-                title: Text('Driver',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('Current portal'),
+              ListTile(
+                leading:
+                    const Icon(Icons.check_circle, color: core.kOnlineGreen),
+                title: Text(context.l10n.driverWord,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(context.l10n.currentPortal),
               ),
               for (final (icon, title, path) in _driverSections(context.l10n))
                 ListTile(
@@ -99,13 +104,13 @@ class PortalDrawer extends ConsumerWidget {
             ] else if (hasDriver)
               ListTile(
                 leading: const Icon(Icons.drive_eta_outlined),
-                title: const Text('Switch to Driver'),
+                title: Text(context.l10n.switchToDriver),
                 onTap: () => _switch(context, ref, 'driver', '/driver'),
               )
             else
               ListTile(
                 leading: const Icon(Icons.add_circle_outline),
-                title: const Text('Become a Driver'),
+                title: Text(context.l10n.becomeDriver),
                 onTap: () {
                   Navigator.pop(context);
                   context.push('/become-driver');
@@ -115,7 +120,7 @@ class PortalDrawer extends ConsumerWidget {
             const Divider(),
             ListTile(
               leading: const Icon(Icons.person_outline),
-              title: const Text('Profile'),
+              title: Text(context.l10n.profileTitle),
               onTap: () {
                 Navigator.pop(context);
                 context.push(isDriver ? '/driver/profile' : '/profile');
@@ -123,7 +128,7 @@ class PortalDrawer extends ConsumerWidget {
             ),
             ListTile(
               leading: const Icon(Icons.settings_outlined),
-              title: const Text('Settings'),
+              title: Text(context.l10n.settingsTitle),
               onTap: () {
                 Navigator.pop(context);
                 context.push(isDriver ? '/driver/settings' : '/settings');
@@ -132,8 +137,8 @@ class PortalDrawer extends ConsumerWidget {
             const Divider(),
             ListTile(
               leading: const Icon(Icons.logout, color: core.kError),
-              title:
-                  const Text('Sign Out', style: TextStyle(color: core.kError)),
+              title: Text(context.l10n.signOutTitle,
+                  style: const TextStyle(color: core.kError)),
               onTap: () async {
                 await ref.read(gpsStreamProvider.notifier).stopStreaming();
                 await ref.read(authProvider.notifier).signOut();
@@ -165,17 +170,17 @@ Future<void> switchPortal(
     final leave = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Active ride in progress'),
+        title: Text(context.l10n.activeRideInProgress),
         content: const Text(
             'You are currently driving a ride. Switching portals will keep '
             'the ride active in the background. Continue?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Stay')),
+              child: Text(context.l10n.stay)),
           TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Switch')),
+              child: Text(context.l10n.switchLabel)),
         ],
       ),
     );
@@ -189,7 +194,7 @@ Future<void> switchPortal(
   } on Exception catch (e, st) {
     core.ErrorReporter.report('Switching portal failed', e, st);
     if (context.mounted) {
-      _showSwitchError(context, 'Could not switch portals. Please try again.');
+      _showSwitchError(context, context.l10n.couldNotSwitch);
     }
     return;
   }

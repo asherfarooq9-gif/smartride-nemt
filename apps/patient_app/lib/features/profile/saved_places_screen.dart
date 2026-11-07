@@ -172,9 +172,9 @@ class _AddPlaceButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(kRadiusLG),
         ),
       ),
-      child: const Text(
-        '＋  Add a place',
-        style: TextStyle(
+      child: Text(
+        context.l10n.addPlaceBtn,
+        style: const TextStyle(
           fontSize: kFontSmall,
           fontWeight: FontWeight.w600,
           color: kPatient600,
@@ -231,12 +231,12 @@ class _PlaceSheetState extends State<_PlaceSheet> {
   final _addressCtrl = TextEditingController();
   String _iconType = 'place';
 
-  static const _iconOptions = [
-    ('home', 'Home', Icons.home_outlined),
-    ('work', 'Work', Icons.work_outline),
-    ('hospital', 'Hospital', Icons.local_hospital_outlined),
-    ('place', 'Other', Icons.place_outlined),
-  ];
+  List<(String, String, IconData)> _iconOptions(AppLocalizations l) => [
+        ('home', l.placeHome, Icons.home_outlined),
+        ('work', l.placeWork, Icons.work_outline),
+        ('hospital', l.placeHospital, Icons.local_hospital_outlined),
+        ('place', l.placeOther, Icons.place_outlined),
+      ];
 
   @override
   void initState() {
@@ -293,7 +293,7 @@ class _PlaceSheetState extends State<_PlaceSheet> {
             ),
             const SizedBox(height: kSpaceLG),
             Text(
-              isEdit ? 'Edit Place' : 'Add Place',
+              isEdit ? context.l10n.editPlace : context.l10n.addPlace,
               style: const TextStyle(
                 fontSize: kFontSubhead,
                 fontWeight: FontWeight.w700,
@@ -305,7 +305,7 @@ class _PlaceSheetState extends State<_PlaceSheet> {
               spacing: kSpaceSM,
               runSpacing: kSpaceSM,
               children: [
-                for (final (type, lbl, icon) in _iconOptions)
+                for (final (type, lbl, icon) in _iconOptions(context.l10n))
                   ChoiceChip(
                     label: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -330,8 +330,9 @@ class _PlaceSheetState extends State<_PlaceSheet> {
                 labelText: context.l10n.labelField,
                 prefixIcon: const Icon(Icons.label_outline),
               ),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+              validator: (v) => (v == null || v.trim().isEmpty)
+                  ? context.l10n.required
+                  : null,
               textInputAction: TextInputAction.next,
             ),
             const SizedBox(height: kSpaceMD),
@@ -341,8 +342,9 @@ class _PlaceSheetState extends State<_PlaceSheet> {
                 labelText: context.l10n.addressField,
                 prefixIcon: const Icon(Icons.location_on_outlined),
               ),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+              validator: (v) => (v == null || v.trim().isEmpty)
+                  ? context.l10n.required
+                  : null,
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _submit(),
             ),
@@ -358,7 +360,7 @@ class _PlaceSheetState extends State<_PlaceSheet> {
                 const SizedBox(width: kSpaceMD),
                 Expanded(
                   child: PrimaryButton(
-                    label: isEdit ? 'Save' : 'Add',
+                    label: isEdit ? context.l10n.save : 'Add',
                     onPressed: _submit,
                     height: kMinTapTarget,
                   ),

@@ -504,15 +504,17 @@ class _EditForm extends StatelessWidget {
           const SizedBox(height: core.kSpaceSM),
           TextFormField(
             controller: ecNameCtrl,
-            decoration: const InputDecoration(
-                labelText: 'Contact Name', prefixIcon: Icon(Icons.contacts)),
+            decoration: InputDecoration(
+                labelText: context.l10n.contactName,
+                prefixIcon: const Icon(Icons.contacts)),
           ),
           const SizedBox(height: core.kSpaceLG),
           TextFormField(
             controller: ecPhoneCtrl,
             keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(
-                labelText: 'Contact Phone', prefixIcon: Icon(Icons.phone)),
+            decoration: InputDecoration(
+                labelText: context.l10n.contactPhone,
+                prefixIcon: const Icon(Icons.phone)),
           ),
           const SizedBox(height: core.kSpaceXXL),
           Row(

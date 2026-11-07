@@ -530,7 +530,7 @@ class _RidesSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Semantics(
-      label: 'Loading your rides',
+      label: context.l10n.loadingYourRides,
       child: Column(
         children: [
           for (var i = 0; i < 2; i++)

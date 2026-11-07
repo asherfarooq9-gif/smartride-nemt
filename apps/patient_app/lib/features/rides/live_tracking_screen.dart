@@ -474,10 +474,10 @@ class _DriverCard extends StatelessWidget {
           in (driver?['payment_methods'] as List<dynamic>? ?? const []))
         m.toString(),
     ];
-    final name = driver?['full_name'] as String? ?? 'Your Driver';
+    final name = driver?['full_name'] as String? ?? context.l10n.yourDriver;
     final vehicle = driver != null
         ? '${driver!['vehicle_type'] ?? ''} · ${driver!['vehicle_plate'] ?? ''}'
-        : 'En route to you';
+        : context.l10n.enRouteToYou;
 
     return Container(
       margin: const EdgeInsets.all(core.kSpaceLG),
@@ -525,7 +525,7 @@ class _DriverCard extends StatelessWidget {
                 ),
               ),
               IconButton.filled(
-                tooltip: 'Call driver',
+                tooltip: context.l10n.callDriver,
                 onPressed: phone == null ? null : () => onCall(phone),
                 icon: const Icon(Icons.phone),
                 style: IconButton.styleFrom(

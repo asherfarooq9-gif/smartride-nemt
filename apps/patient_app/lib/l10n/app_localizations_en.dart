@@ -1202,4 +1202,145 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get enterAmount => 'Enter amount';
+
+  @override
+  String get smartRideName => 'SmartRide';
+
+  @override
+  String get driverPortal => 'Driver portal';
+
+  @override
+  String get patientPortal => 'Patient portal';
+
+  @override
+  String get currentPortal => 'Current portal';
+
+  @override
+  String get switchToPatient => 'Switch to Patient';
+
+  @override
+  String get switchToDriver => 'Switch to Driver';
+
+  @override
+  String get becomePatient => 'Become a Patient';
+
+  @override
+  String get becomeDriver => 'Become a Driver';
+
+  @override
+  String get profileTitle => 'Profile';
+
+  @override
+  String get signOutTitle => 'Sign Out';
+
+  @override
+  String get activeRideInProgress => 'Active ride in progress';
+
+  @override
+  String get switchWarning =>
+      'You are currently driving a ride. Switching portals will keep the ride active in the background. Continue?';
+
+  @override
+  String get stay => 'Stay';
+
+  @override
+  String get switchLabel => 'Switch';
+
+  @override
+  String get couldNotSwitch => 'Could not switch portals. Please try again.';
+
+  @override
+  String get signOutDriverBody =>
+      'This will stop GPS streaming and sign you out.';
+
+  @override
+  String get signOutBody => 'Are you sure you want to sign out?';
+
+  @override
+  String get couldNotAddRole => 'Could not add this role. Please try again.';
+
+  @override
+  String get addDriverProfile =>
+      'Add a driver profile to start accepting rides.';
+
+  @override
+  String get addPatientProfile => 'Add a patient profile to request rides.';
+
+  @override
+  String get licenseField => 'License number';
+
+  @override
+  String get plateField => 'Vehicle plate';
+
+  @override
+  String get vehicleTypeField => 'Vehicle type';
+
+  @override
+  String get vehicleTypeExample => 'Vehicle type (e.g. Sedan, Ambulette)';
+
+  @override
+  String get fullNameField => 'Full name';
+
+  @override
+  String get contactName => 'Contact Name';
+
+  @override
+  String get contactPhone => 'Contact Phone';
+
+  @override
+  String get addPlaceBtn => '＋  Add a place';
+
+  @override
+  String get placeHome => 'Home';
+
+  @override
+  String get placeWork => 'Work';
+
+  @override
+  String get placeHospital => 'Hospital';
+
+  @override
+  String get placeOther => 'Other';
+
+  @override
+  String get editPlace => 'Edit Place';
+
+  @override
+  String get addPlace => 'Add Place';
+
+  @override
+  String get required => 'Required';
+
+  @override
+  String get patientWord => 'Patient';
+
+  @override
+  String get driverWord => 'Driver';
+
+  @override
+  String get yourLocation => 'Your location';
+
+  @override
+  String get centreOnMe => 'Centre on my location';
+
+  @override
+  String get locationIsOff => 'Location is off';
+
+  @override
+  String get findingYou => 'Finding you…';
+
+  @override
+  String get yourDriver => 'Your Driver';
+
+  @override
+  String get enRouteToYou => 'En route to you';
+
+  @override
+  String get callDriver => 'Call driver';
+
+  @override
+  String get loadingYourRides => 'Loading your rides';
+
+  @override
+  String get cancelledByPatient => 'Cancelled by patient';
 }

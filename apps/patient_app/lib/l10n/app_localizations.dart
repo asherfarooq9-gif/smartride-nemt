@@ -2383,6 +2383,282 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter amount'**
   String get enterAmount;
+
+  /// No description provided for @smartRideName.
+  ///
+  /// In en, this message translates to:
+  /// **'SmartRide'**
+  String get smartRideName;
+
+  /// No description provided for @driverPortal.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver portal'**
+  String get driverPortal;
+
+  /// No description provided for @patientPortal.
+  ///
+  /// In en, this message translates to:
+  /// **'Patient portal'**
+  String get patientPortal;
+
+  /// No description provided for @currentPortal.
+  ///
+  /// In en, this message translates to:
+  /// **'Current portal'**
+  String get currentPortal;
+
+  /// No description provided for @switchToPatient.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to Patient'**
+  String get switchToPatient;
+
+  /// No description provided for @switchToDriver.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to Driver'**
+  String get switchToDriver;
+
+  /// No description provided for @becomePatient.
+  ///
+  /// In en, this message translates to:
+  /// **'Become a Patient'**
+  String get becomePatient;
+
+  /// No description provided for @becomeDriver.
+  ///
+  /// In en, this message translates to:
+  /// **'Become a Driver'**
+  String get becomeDriver;
+
+  /// No description provided for @profileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get profileTitle;
+
+  /// No description provided for @signOutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign Out'**
+  String get signOutTitle;
+
+  /// No description provided for @activeRideInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Active ride in progress'**
+  String get activeRideInProgress;
+
+  /// No description provided for @switchWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'You are currently driving a ride. Switching portals will keep the ride active in the background. Continue?'**
+  String get switchWarning;
+
+  /// No description provided for @stay.
+  ///
+  /// In en, this message translates to:
+  /// **'Stay'**
+  String get stay;
+
+  /// No description provided for @switchLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch'**
+  String get switchLabel;
+
+  /// No description provided for @couldNotSwitch.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not switch portals. Please try again.'**
+  String get couldNotSwitch;
+
+  /// No description provided for @signOutDriverBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This will stop GPS streaming and sign you out.'**
+  String get signOutDriverBody;
+
+  /// No description provided for @signOutBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to sign out?'**
+  String get signOutBody;
+
+  /// No description provided for @couldNotAddRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not add this role. Please try again.'**
+  String get couldNotAddRole;
+
+  /// No description provided for @addDriverProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a driver profile to start accepting rides.'**
+  String get addDriverProfile;
+
+  /// No description provided for @addPatientProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a patient profile to request rides.'**
+  String get addPatientProfile;
+
+  /// No description provided for @licenseField.
+  ///
+  /// In en, this message translates to:
+  /// **'License number'**
+  String get licenseField;
+
+  /// No description provided for @plateField.
+  ///
+  /// In en, this message translates to:
+  /// **'Vehicle plate'**
+  String get plateField;
+
+  /// No description provided for @vehicleTypeField.
+  ///
+  /// In en, this message translates to:
+  /// **'Vehicle type'**
+  String get vehicleTypeField;
+
+  /// No description provided for @vehicleTypeExample.
+  ///
+  /// In en, this message translates to:
+  /// **'Vehicle type (e.g. Sedan, Ambulette)'**
+  String get vehicleTypeExample;
+
+  /// No description provided for @fullNameField.
+  ///
+  /// In en, this message translates to:
+  /// **'Full name'**
+  String get fullNameField;
+
+  /// No description provided for @contactName.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Name'**
+  String get contactName;
+
+  /// No description provided for @contactPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Phone'**
+  String get contactPhone;
+
+  /// No description provided for @addPlaceBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'＋  Add a place'**
+  String get addPlaceBtn;
+
+  /// No description provided for @placeHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get placeHome;
+
+  /// No description provided for @placeWork.
+  ///
+  /// In en, this message translates to:
+  /// **'Work'**
+  String get placeWork;
+
+  /// No description provided for @placeHospital.
+  ///
+  /// In en, this message translates to:
+  /// **'Hospital'**
+  String get placeHospital;
+
+  /// No description provided for @placeOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get placeOther;
+
+  /// No description provided for @editPlace.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Place'**
+  String get editPlace;
+
+  /// No description provided for @addPlace.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Place'**
+  String get addPlace;
+
+  /// No description provided for @required.
+  ///
+  /// In en, this message translates to:
+  /// **'Required'**
+  String get required;
+
+  /// No description provided for @patientWord.
+  ///
+  /// In en, this message translates to:
+  /// **'Patient'**
+  String get patientWord;
+
+  /// No description provided for @driverWord.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver'**
+  String get driverWord;
+
+  /// No description provided for @yourLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Your location'**
+  String get yourLocation;
+
+  /// No description provided for @centreOnMe.
+  ///
+  /// In en, this message translates to:
+  /// **'Centre on my location'**
+  String get centreOnMe;
+
+  /// No description provided for @locationIsOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Location is off'**
+  String get locationIsOff;
+
+  /// No description provided for @findingYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding you…'**
+  String get findingYou;
+
+  /// No description provided for @yourDriver.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Driver'**
+  String get yourDriver;
+
+  /// No description provided for @enRouteToYou.
+  ///
+  /// In en, this message translates to:
+  /// **'En route to you'**
+  String get enRouteToYou;
+
+  /// No description provided for @callDriver.
+  ///
+  /// In en, this message translates to:
+  /// **'Call driver'**
+  String get callDriver;
+
+  /// No description provided for @loadingYourRides.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading your rides'**
+  String get loadingYourRides;
+
+  /// No description provided for @cancelledByPatient.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled by patient'**
+  String get cancelledByPatient;
 }
 
 class _AppLocalizationsDelegate

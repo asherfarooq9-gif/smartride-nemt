@@ -194,21 +194,19 @@ class SettingsScreen extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Sign Out'),
+        title: Text(context.l10n.signOutTitle),
         content: Text(
-          isDriver
-              ? 'This will stop GPS streaming and sign you out.'
-              : 'Are you sure you want to sign out?',
+          isDriver ? context.l10n.signOutDriverBody : context.l10n.signOutBody,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: core.kError),
-            child: const Text('Sign Out'),
+            child: Text(context.l10n.signOutTitle),
           ),
         ],
       ),

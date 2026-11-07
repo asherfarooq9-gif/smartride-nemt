@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -96,7 +97,7 @@ class _RecenterButtonState extends ConsumerState<RecenterButton>
   @override
   Widget build(BuildContext context) {
     return GlassCircleButton(
-      tooltip: 'Centre on my location',
+      tooltip: context.l10n.centreOnMe,
       icon: Icons.near_me_rounded,
       iconColor: Theme.of(context).colorScheme.primary,
       onPressed: _recenter,
@@ -113,10 +114,10 @@ class LocationHint extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final status = ref.watch(patientLocationProvider).status;
     final label = switch (status) {
-      LocationStatus.denied => 'Turn on location',
-      LocationStatus.deniedForever => 'Open settings',
-      LocationStatus.serviceOff => 'Location is off',
-      LocationStatus.noFix => 'Finding you…',
+      LocationStatus.denied => context.l10n.turnOnLocation,
+      LocationStatus.deniedForever => context.l10n.openSettings,
+      LocationStatus.serviceOff => context.l10n.locationIsOff,
+      LocationStatus.noFix => context.l10n.findingYou,
       LocationStatus.loading || LocationStatus.granted => null,
     };
     if (label == null) return const SizedBox.shrink();

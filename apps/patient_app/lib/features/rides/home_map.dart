@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -198,7 +199,7 @@ class _HomeMapState extends ConsumerState<HomeMap> {
                 width: 56,
                 height: 56,
                 child: Semantics(
-                  label: 'Your location',
+                  label: context.l10n.yourLocation,
                   child: _PulsingLocationDot(
                     isPulsing: widget.isPulsing &&
                         !MediaQuery.disableAnimationsOf(context),

@@ -1200,4 +1200,148 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get enterAmount => 'رقم لکھیں';
+
+  @override
+  String get smartRideName => 'سمارٹ رائیڈ';
+
+  @override
+  String get driverPortal => 'ڈرائیور پورٹل';
+
+  @override
+  String get patientPortal => 'مریض پورٹل';
+
+  @override
+  String get currentPortal => 'موجودہ پورٹل';
+
+  @override
+  String get switchToPatient => 'مریض پورٹل پر جائیں';
+
+  @override
+  String get switchToDriver => 'ڈرائیور پورٹل پر جائیں';
+
+  @override
+  String get becomePatient => 'مریض بنیں';
+
+  @override
+  String get becomeDriver => 'ڈرائیور بنیں';
+
+  @override
+  String get profileTitle => 'پروفائل';
+
+  @override
+  String get signOutTitle => 'سائن آؤٹ';
+
+  @override
+  String get activeRideInProgress => 'سواری جاری ہے';
+
+  @override
+  String get switchWarning =>
+      'آپ اس وقت سواری چلا رہے ہیں۔ پورٹل بدلنے سے سواری پس منظر میں جاری رہے گی۔ جاری رکھیں؟';
+
+  @override
+  String get stay => 'رکیں';
+
+  @override
+  String get switchLabel => 'بدلیں';
+
+  @override
+  String get couldNotSwitch =>
+      'پورٹل نہیں بدلا جا سکا۔ براہِ کرم دوبارہ کوشش کریں۔';
+
+  @override
+  String get signOutDriverBody =>
+      'اس سے جی پی ایس شیئرنگ رک جائے گی اور آپ سائن آؤٹ ہو جائیں گے۔';
+
+  @override
+  String get signOutBody => 'کیا آپ واقعی سائن آؤٹ ہونا چاہتے ہیں؟';
+
+  @override
+  String get couldNotAddRole =>
+      'یہ کردار شامل نہیں ہو سکا۔ براہِ کرم دوبارہ کوشش کریں۔';
+
+  @override
+  String get addDriverProfile =>
+      'سواریاں قبول کرنا شروع کرنے کے لیے ڈرائیور پروفائل شامل کریں۔';
+
+  @override
+  String get addPatientProfile =>
+      'سواری منگوانے کے لیے مریض پروفائل شامل کریں۔';
+
+  @override
+  String get licenseField => 'لائسنس نمبر';
+
+  @override
+  String get plateField => 'گاڑی کی پلیٹ';
+
+  @override
+  String get vehicleTypeField => 'گاڑی کی قسم';
+
+  @override
+  String get vehicleTypeExample => 'گاڑی کی قسم (مثلاً سیڈان، ایمبولیٹ)';
+
+  @override
+  String get fullNameField => 'پورا نام';
+
+  @override
+  String get contactName => 'رابطے کا نام';
+
+  @override
+  String get contactPhone => 'رابطے کا فون';
+
+  @override
+  String get addPlaceBtn => '＋  جگہ شامل کریں';
+
+  @override
+  String get placeHome => 'گھر';
+
+  @override
+  String get placeWork => 'دفتر';
+
+  @override
+  String get placeHospital => 'ہسپتال';
+
+  @override
+  String get placeOther => 'دیگر';
+
+  @override
+  String get editPlace => 'جگہ میں ترمیم';
+
+  @override
+  String get addPlace => 'جگہ شامل کریں';
+
+  @override
+  String get required => 'ضروری';
+
+  @override
+  String get patientWord => 'مریض';
+
+  @override
+  String get driverWord => 'ڈرائیور';
+
+  @override
+  String get yourLocation => 'آپ کی لوکیشن';
+
+  @override
+  String get centreOnMe => 'میری لوکیشن پر لے جائیں';
+
+  @override
+  String get locationIsOff => 'لوکیشن بند ہے';
+
+  @override
+  String get findingYou => 'آپ کو تلاش کیا جا رہا ہے…';
+
+  @override
+  String get yourDriver => 'آپ کا ڈرائیور';
+
+  @override
+  String get enRouteToYou => 'آپ کی طرف آ رہا ہے';
+
+  @override
+  String get callDriver => 'ڈرائیور کو کال کریں';
+
+  @override
+  String get loadingYourRides => 'آپ کی سواریاں لوڈ ہو رہی ہیں';
+
+  @override
+  String get cancelledByPatient => 'مریض نے منسوخ کیا';
 }

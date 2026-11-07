@@ -83,8 +83,10 @@ class _PortalSwitch extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    const patient = GlassSegment(value: 'patient', label: 'Patient');
-    const driver = GlassSegment(value: 'driver', label: 'Driver');
+    final patient =
+        GlassSegment(value: 'patient', label: context.l10n.patientWord);
+    final driver =
+        GlassSegment(value: 'driver', label: context.l10n.driverWord);
     return GlassSegmentedControl<String>(
       // Your own portal comes first.
       segments: portal == 'driver' ? [driver, patient] : [patient, driver],
