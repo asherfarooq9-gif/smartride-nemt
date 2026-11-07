@@ -107,7 +107,7 @@ jobs:
           pytest -v --tb=short --cov=app --cov-report=term-missing --cov-report=json --cov-fail-under=60
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: backend-coverage
           path: backend/coverage.json
@@ -157,14 +157,14 @@ jobs:
           flutter build apk --debug --no-pub
 
       - name: Upload SmartRide coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: smartride-coverage
           path: apps/patient_app/coverage/lcov.info
           retention-days: 7
 
       - name: Upload SmartRide APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: smartride-debug
           path: apps/patient_app/build/app/outputs/flutter-apk/app-debug.apk
@@ -272,7 +272,7 @@ jobs:
 
       - name: Upload Playwright report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: |
