@@ -1,5 +1,6 @@
 """Fares, commission and the wallet ledger."""
 
+import uuid
 from decimal import Decimal
 
 from sqlalchemy import func, select, update
@@ -116,7 +117,7 @@ async def test_wallet_balance_always_equals_the_ledger(
     top_up = await client.post(
         f"/api/v1/drivers/{driver.id}/wallet/topup",
         json={"amount_pkr": 700, "payment_method": "jazzcash"},
-        headers=_auth(admin_token),
+        headers={**_auth(admin_token), "Idempotency-Key": uuid.uuid4().hex},
     )
     assert top_up.status_code == 200, top_up.text
     for _ in range(2):

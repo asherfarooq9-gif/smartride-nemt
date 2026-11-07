@@ -21,6 +21,10 @@ export function downloadCsv(filename: string, csv: string) {
   const link = document.createElement('a')
   link.href = url
   link.download = filename
+  // Attached while clicked (some browsers ignore a detached link), and the URL is
+  // released later: revoking it straight after click() can cancel the download.
+  document.body.appendChild(link)
   link.click()
-  URL.revokeObjectURL(url)
+  link.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }

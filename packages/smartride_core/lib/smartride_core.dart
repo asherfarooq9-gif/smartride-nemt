@@ -8,6 +8,7 @@ export 'src/widgets/empty_state.dart';
 
 export 'src/models/user.dart';
 export 'src/models/patient.dart';
+export 'src/models/demand.dart';
 export 'src/models/driver.dart';
 export 'src/models/hospital.dart';
 export 'src/models/ride.dart';

@@ -87,6 +87,7 @@ test('admin can edit a hospital and toggle it inactive and active again', async 
   await expect(row.getByText('0/120')).toBeVisible()
 
   await dialog.getByRole('button', { name: 'Deactivate' }).click()
+  await page.getByRole('dialog', { name: 'Deactivate hospital' }).getByRole('button', { name: 'Yes, deactivate' }).click()
   await expect(row.getByText('Inactive')).toBeVisible()
   await dialog.getByRole('button', { name: 'Activate' }).click()
   await expect(row.getByText('Active', { exact: true })).toBeVisible()
@@ -108,7 +109,7 @@ test('rides can be exported as a quoted CSV', async ({ page }) => {
   await page.goto('/rides')
   await expect(page.getByText(RIDE_ADDRESS)).toBeVisible()
   const downloadPromise = page.waitForEvent('download')
-  await page.getByRole('button', { name: 'Export CSV' }).click()
+  await page.getByRole('button', { name: 'Export this page (CSV)' }).click()
   const download = await downloadPromise
   const text = await fs.readFile(await download.path(), 'utf8')
   expect(text).toContain('"ID","Type","Status","Pickup","Requested","Completed"')

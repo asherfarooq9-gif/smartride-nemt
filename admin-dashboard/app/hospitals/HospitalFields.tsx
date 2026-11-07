@@ -1,4 +1,4 @@
-import type { HospitalInput } from '@/lib/api'
+import type { HospitalFormState } from './hospitalForm'
 
 export const ALL_SPECIALTIES = [
   'cardiology', 'neurology', 'orthopedics', 'obstetrics', 'pediatrics',
@@ -25,14 +25,14 @@ const PHONE_FIELDS: { key: TextKey; label: string }[] = [
 ]
 
 const INPUT_CLASS =
-  'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400'
-const LABEL_CLASS = 'block text-xs font-medium text-gray-500 mb-1'
+  'w-full border border-edge rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-steel/40 focus:border-steel'
+const LABEL_CLASS = 'block text-xs font-medium text-ink-dim mb-1'
 
 interface Props {
   /** Prefix for the input ids, so two forms on one page never collide. */
   idPrefix: string
-  value: HospitalInput
-  onChange: (next: HospitalInput) => void
+  value: HospitalFormState
+  onChange: (next: HospitalFormState) => void
 }
 
 export function toggleSpecialty(list: string[], specialty: string): string[] {
@@ -60,17 +60,18 @@ export default function HospitalFields({ idPrefix, value, onChange }: Props) {
           <label htmlFor={`${idPrefix}-${f.key}`} className={LABEL_CLASS}>{f.label}</label>
           <input
             id={`${idPrefix}-${f.key}`}
-            type="number"
-            step="any"
+            type="text"
+            inputMode={f.key === 'ed_capacity' ? 'numeric' : 'decimal'}
+            autoComplete="off"
             value={value[f.key]}
-            onChange={e => onChange({ ...value, [f.key]: parseFloat(e.target.value) || 0 })}
+            onChange={e => onChange({ ...value, [f.key]: e.target.value })}
             className={INPUT_CLASS}
           />
         </div>
       ))}
       {PHONE_FIELDS.map(f => textInput(f.key, f.label))}
       <fieldset className="col-span-2">
-        <legend className="block text-xs font-medium text-gray-500 mb-2">Specialties</legend>
+        <legend className="block text-xs font-medium text-ink-dim mb-2">Specialties</legend>
         <div className="flex flex-wrap gap-2">
           {ALL_SPECIALTIES.map(s => {
             const isSelected = value.specialties.includes(s)
@@ -80,7 +81,7 @@ export default function HospitalFields({ idPrefix, value, onChange }: Props) {
                 type="button"
                 aria-pressed={isSelected}
                 onClick={() => onChange({ ...value, specialties: toggleSpecialty(value.specialties, s) })}
-                className={`text-xs px-3 py-1 rounded-full border transition ${isSelected ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 text-gray-600 hover:border-blue-300'}`}
+                className={`text-xs px-3 py-1 rounded-full border transition ${isSelected ? 'bg-accent text-white border-steel' : 'border-edge text-ink-dim hover:border-edge-strong'}`}
               >
                 {s.replace(/_/g, ' ')}
               </button>

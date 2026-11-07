@@ -3,11 +3,26 @@ import { useCallback, useState } from 'react'
 import { api, errorMessage } from '@/lib/api'
 import { useApiData } from '@/lib/useApiData'
 import ErrorBanner from '@/components/ui/ErrorBanner'
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, Legend
-} from 'recharts'
+import dynamic from 'next/dynamic'
 import { RefreshCw, Download, BarChart2, TrendingUp, Database } from 'lucide-react'
+import { CHART_HEIGHT } from './chartHeight'
+
+// recharts is large and only needed once there is data to draw, so it is not part
+// of this page's first JavaScript. The placeholder has the chart's height, so the
+// page does not jump when it arrives.
+const ForecastCharts = dynamic(() => import('./ForecastCharts'), {
+  ssr: false,
+  loading: () => (
+    <div
+      className="flex items-center justify-center text-ink-dim animate-pulse"
+      style={{ height: CHART_HEIGHT }}
+      role="status"
+      aria-label="Loading chart"
+    >
+      <RefreshCw size={24} className="animate-spin" />
+    </div>
+  ),
+})
 
 const CITIES = ['Islamabad', 'Rawalpindi']
 const DEFAULT_CITY = CITIES[0]
@@ -47,17 +62,17 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-2xl font-bold text-blue-900">Analytics</h1>
+        <h1 className="title text-3xl">Analytics</h1>
         <div className="flex items-center gap-2 flex-wrap">
           {/* City toggle */}
-          <div className="flex bg-blue-100/60 rounded-xl p-1 gap-1">
+          <div className="flex bg-edge/60 rounded-md p-1 gap-1">
             {CITIES.map(c => (
               <button
                 key={c}
                 type="button"
                 aria-pressed={city === c}
                 onClick={() => setCity(c)}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition ${city === c ? 'bg-white shadow text-gray-900' : 'text-gray-700 hover:text-gray-900'}`}
+                className={`px-4 py-1.5 rounded text-sm font-medium transition ${city === c ? 'bg-panel-raised shadow text-ink' : 'text-ink hover:text-ink'}`}
               >
                 {c}
               </button>
@@ -67,7 +82,7 @@ export default function AnalyticsPage() {
             type="button"
             onClick={reload}
             disabled={loading || refreshing}
-            className="flex items-center gap-2 text-sm bg-white border border-gray-200 hover:border-gray-300 px-4 py-2 rounded-xl shadow-sm transition disabled:opacity-50"
+            className="flex items-center gap-2 text-sm bg-panel-raised border border-edge hover:border-edge-strong px-4 py-2 rounded-md  transition disabled:opacity-50"
           >
             <RefreshCw size={14} className={loading || refreshing ? 'animate-spin' : ''} aria-hidden="true" />
             Refresh
@@ -75,7 +90,7 @@ export default function AnalyticsPage() {
           <button
             type="button"
             onClick={writeSnapshot}
-            className="flex items-center gap-2 text-sm bg-slate-700 hover:bg-slate-800 text-white px-4 py-2 rounded-xl transition"
+            className="flex items-center gap-2 text-sm bg-accent hover:bg-navy text-white px-4 py-2 rounded-md transition"
           >
             <Database size={14} />
             Write Snapshot
@@ -84,24 +99,24 @@ export default function AnalyticsPage() {
       </div>
 
       {snapshotMsg && (
-        <div role="status" className="bg-green-50 border border-green-200 text-green-700 rounded-xl px-4 py-3 text-sm">{snapshotMsg}</div>
+        <div role="status" className="bg-lamp-green/10 border border-lamp-green/40 text-lamp-green rounded-md px-4 py-3 text-sm">{snapshotMsg}</div>
       )}
       <ErrorBanner message={error ?? snapshotError} />
 
       {/* KPI bar */}
       {forecast && (
         <div className="grid grid-cols-3 gap-4">
-          <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4">
-            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">City</p>
-            <p className="text-xl font-bold text-gray-900 mt-1">{forecast.city}</p>
+          <div className="bg-panel-raised rounded-md border border-edge  p-4">
+            <p className="text-xs text-ink-dim font-medium legend">City</p>
+            <p className="text-xl font-bold text-ink mt-1">{forecast.city}</p>
           </div>
-          <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4">
-            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Method</p>
-            <p className="text-xl font-bold text-gray-900 mt-1 capitalize">{forecast.method}</p>
+          <div className="bg-panel-raised rounded-md border border-edge  p-4">
+            <p className="text-xs text-ink-dim font-medium legend">Method</p>
+            <p className="text-xl font-bold text-ink mt-1 capitalize">{forecast.method}</p>
           </div>
-          <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4">
-            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Peak Predicted</p>
-            <p className="text-xl font-bold text-gray-900 mt-1">
+          <div className="bg-panel-raised rounded-md border border-edge  p-4">
+            <p className="text-xs text-ink-dim font-medium legend">Peak Predicted</p>
+            <p className="text-xl font-bold text-ink mt-1">
               {chartData.length > 0 ? Math.max(...chartData.map(d => d.rides)) : '—'} rides/hr
             </p>
           </div>
@@ -109,14 +124,14 @@ export default function AnalyticsPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-blue-100/60 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 bg-edge/60 rounded-md p-1 w-fit">
         {tabs.map(t => (
           <button
             key={t.id}
             type="button"
             aria-pressed={activeTab === t.id}
             onClick={() => setActiveTab(t.id as 'forecast' | 'volume')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${activeTab === t.id ? 'bg-white shadow text-gray-900' : 'text-gray-700 hover:text-gray-900'}`}
+            className={`flex items-center gap-2 px-4 py-2 rounded text-sm font-medium transition ${activeTab === t.id ? 'bg-panel-raised shadow text-ink' : 'text-ink hover:text-ink'}`}
           >
             <t.icon size={14} />
             {t.label}
@@ -125,49 +140,27 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Chart */}
-      <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-6">
+      <div className="bg-panel-raised rounded-md border border-edge  p-6">
         {loading ? (
-          <div className="h-64 flex items-center justify-center text-gray-500 animate-pulse">
+          <div className="h-64 flex items-center justify-center text-ink-dim animate-pulse">
             <RefreshCw size={24} className="animate-spin" />
           </div>
         ) : chartData.length === 0 ? (
-          <div className="h-64 flex flex-col items-center justify-center text-gray-500 gap-3">
+          <div className="h-64 flex flex-col items-center justify-center text-ink-dim gap-3">
             <BarChart2 size={36} className="opacity-30" />
             <p className="text-sm">No data yet — write a snapshot first</p>
             <button type="button" onClick={writeSnapshot}
-              className="text-sm bg-slate-700 text-white px-4 py-2 rounded-xl hover:bg-slate-800 transition flex items-center gap-2">
+              className="text-sm bg-accent text-white px-4 py-2 rounded-md hover:bg-navy transition flex items-center gap-2">
               <Database size={14} /> Write Snapshot
             </button>
           </div>
-        ) : activeTab === 'forecast' ? (
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="time" tick={{ fontSize: 11, fill: '#9ca3af' }} />
-              <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} />
-              <Tooltip
-                contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', fontSize: 12 }}
-                formatter={(v: number) => [`${v} rides`, 'Predicted']}
-              />
-              <Bar dataKey="rides" fill="#3b82f6" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
         ) : (
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="time" tick={{ fontSize: 11, fill: '#9ca3af' }} />
-              <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} />
-              <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', fontSize: 12 }} />
-              <Legend />
-              <Line type="monotone" dataKey="rides" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} name="Predicted rides" />
-            </LineChart>
-          </ResponsiveContainer>
+          <ForecastCharts data={chartData} variant={activeTab} />
         )}
       </div>
 
       {forecast && (
-        <p className="text-xs text-gray-600">
+        <p className="text-xs text-ink-dim">
           Generated: {new Date(forecast.generated_at).toLocaleString()}
         </p>
       )}

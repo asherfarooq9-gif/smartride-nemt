@@ -32,13 +32,13 @@ test('unauthenticated visit never renders protected UI or calls the API', async 
   // The server-rendered HTML itself carries no protected markup either.
   const html = await (await request.get('/rides')).text()
   expect(html).not.toContain('NEMT Admin')
-  expect(html).not.toContain('Total Rides')
+  expect(html).not.toContain('Active rides')
 })
 
 test('wrong password shows an error and stays on the login page', async ({ page }) => {
   await page.goto('/login')
   await page.getByLabel('Phone').fill(ADMIN.phone)
-  await page.getByLabel('Password').fill('not-the-password')
+  await page.getByLabel('Password', { exact: true }).fill('not-the-password')
   await page.getByRole('button', { name: 'Sign in' }).click()
   await expect(page.locator('form [role=alert]')).toBeVisible()
   await expect(page).toHaveURL(/\/login$/)
@@ -47,7 +47,7 @@ test('wrong password shows an error and stays on the login page', async ({ page 
 test('a non-admin account is rejected', async ({ page }) => {
   await page.goto('/login')
   await page.getByLabel('Phone').fill(TEST_PATIENT.phone)
-  await page.getByLabel('Password').fill(TEST_PATIENT.password)
+  await page.getByLabel('Password', { exact: true }).fill(TEST_PATIENT.password)
   await page.getByRole('button', { name: 'Sign in' }).click()
   await expect(page.locator('form [role=alert]')).toContainText('Admin access only')
   expect(await page.evaluate(() => localStorage.getItem('sr_token'))).toBeNull()
@@ -56,7 +56,7 @@ test('a non-admin account is rejected', async ({ page }) => {
 test('admin can sign in and reach the dashboard', async ({ page }) => {
   await page.goto('/login')
   await page.getByLabel('Phone').fill(ADMIN.phone)
-  await page.getByLabel('Password').fill(ADMIN.password)
+  await page.getByLabel('Password', { exact: true }).fill(ADMIN.password)
   await page.getByRole('button', { name: 'Sign in' }).click()
   await expect(page).toHaveURL(/\/$/)
   await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()

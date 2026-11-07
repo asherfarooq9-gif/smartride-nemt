@@ -1,75 +1,80 @@
 'use client'
 import Link from 'next/link'
 import { useState } from 'react'
-import { LogOut, Menu, X } from 'lucide-react'
-import { api, clearToken } from '@/lib/api'
+import { HeartPulse, LogOut, PanelLeftOpen, PanelLeftClose } from 'lucide-react'
+import { signOut } from '@/lib/session'
 import { NAV, isActive } from '@/components/nav'
 
-async function signOut() {
-  try {
-    await api.logout()
-  } catch {
-    // Intentional: sign-out is best effort. If the server cannot revoke the token
-    // (offline, already expired) the user must still be signed out locally.
-  }
-  // AppShell sees the token disappear and navigates to /login.
-  clearToken()
+/** The mark is a blue app-icon tile with a heartbeat line: care plus movement, no logo file needed. */
+export function Mark({ size = 36 }: { size?: number }) {
+  return (
+    <span
+      aria-hidden="true"
+      style={{ width: size, height: size }}
+      className="grid shrink-0 place-items-center rounded-[28%] bg-accent text-white shadow-sm"
+    >
+      <HeartPulse size={Math.round(size * 0.55)} strokeWidth={2.2} />
+    </span>
+  )
 }
 
 export default function Sidebar({ pathname }: { pathname: string }) {
-  const [collapsed, setCollapsed] = useState(true)
+  const [collapsed, setCollapsed] = useState(false)
   const labelClass = collapsed ? 'sr-only' : ''
+  const item =
+    'press flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors'
 
   return (
     <aside
-      className={`${collapsed ? 'w-16' : 'w-64'} bg-gradient-to-b from-blue-700 to-blue-900 text-white flex flex-col shrink-0 transition-all duration-300`}
+      className={`${collapsed ? 'w-16' : 'w-56'} hidden shrink-0 flex-col border-r border-edge bg-panel-raised/80 text-ink backdrop-blur-xl transition-[width] duration-300 ease-[var(--spring)] md:flex`}
     >
-      <div className={`flex items-center ${collapsed ? 'justify-center px-3' : 'justify-between px-4'} py-4 border-b border-white/20`}>
+      <div className={`flex h-14 items-center ${collapsed ? 'justify-center' : 'gap-3 px-4'}`}>
+        <Mark />
         {!collapsed && (
-          <div>
-            <p className="font-bold text-base leading-tight text-white">SmartRide</p>
-            <p className="text-blue-200 text-xs">NEMT Admin</p>
+          <div className="min-w-0 leading-tight">
+            <p className="title text-base">SmartRide</p>
+            <p className="text-xs text-ink-dim">Dispatch</p>
           </div>
         )}
+      </div>
+
+      <nav id="sidebar-nav" aria-label="Main" className="flex-1 space-y-1 p-2">
+        {NAV.map(({ href, label, icon: Icon }) => {
+          const active = isActive(pathname, href)
+          return (
+            <Link
+              key={href}
+              href={href}
+              title={collapsed ? label : undefined}
+              aria-current={active ? 'page' : undefined}
+              className={`${item} ${active ? 'bg-steel/10 text-steel' : 'text-ink-dim hover:bg-panel-inset hover:text-ink'}`}
+            >
+              <Icon size={19} className="shrink-0" aria-hidden="true" />
+              <span className={labelClass}>{label}</span>
+            </Link>
+          )
+        })}
+      </nav>
+
+      <div className="space-y-1 border-t border-edge p-2">
         <button
           type="button"
           onClick={() => setCollapsed(c => !c)}
-          className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition"
-          aria-label="Toggle sidebar"
+          className={`${item} text-ink-dim hover:bg-panel-inset hover:text-ink`}
+          aria-label="Collapse sidebar"
           aria-expanded={!collapsed}
           aria-controls="sidebar-nav"
         >
-          {collapsed ? <Menu size={18} /> : <X size={18} />}
+          {collapsed ? <PanelLeftOpen size={19} aria-hidden="true" /> : <PanelLeftClose size={19} aria-hidden="true" />}
+          <span className={labelClass}>Collapse</span>
         </button>
-      </div>
-
-      <nav id="sidebar-nav" aria-label="Main" className="flex-1 py-4 space-y-0.5 px-2">
-        {NAV.map(({ href, label, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            title={collapsed ? label : undefined}
-            aria-current={isActive(pathname, href) ? 'page' : undefined}
-            className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-              isActive(pathname, href)
-                ? 'bg-white/20 text-white shadow-sm'
-                : 'text-white/70 hover:bg-white/10 hover:text-white'
-            }`}
-          >
-            <Icon size={18} className="shrink-0" aria-hidden="true" />
-            <span className={labelClass}>{label}</span>
-          </Link>
-        ))}
-      </nav>
-
-      <div className="p-3 border-t border-white/20">
         <button
           type="button"
           onClick={signOut}
           title={collapsed ? 'Sign out' : undefined}
-          className="flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-sm font-medium text-white/60 hover:bg-white/10 hover:text-white transition"
+          className={`${item} text-ink-dim hover:bg-panel-inset hover:text-ink`}
         >
-          <LogOut size={18} className="shrink-0" aria-hidden="true" />
+          <LogOut size={19} className="shrink-0" aria-hidden="true" />
           <span className={labelClass}>Sign out</span>
         </button>
       </div>

@@ -22,9 +22,10 @@ from app.schemas.drivers import (
     WalletTransaction,
     EarningsResponse,
     EarningsRide,
+    DemandForecastResponse,
 )
 from app.models.models import Ride, RideStatus, WalletEntry
-from app.services import driver_service
+from app.services import demand_forecast, driver_service
 from sqlalchemy import select, func, and_
 
 router = APIRouter()
@@ -49,6 +50,7 @@ def _to_response(driver: Driver, user: User) -> DriverResponse:
         current_lat=driver.current_lat,
         current_lng=driver.current_lng,
         last_seen_at=driver.last_seen_at,
+        payment_methods=list(driver.payment_methods or []),
         created_at=driver.created_at,
     )
 
@@ -171,6 +173,23 @@ async def get_earnings(
     )
 
 
+# ── Demand forecast ───────────────────────────────────────────────────────────
+
+
+@router.get("/demand-forecast", response_model=DemandForecastResponse)
+@limiter.limit("60/minute")
+async def get_demand_forecast(
+    request: Request,
+    hours_ahead: int = Query(6, ge=1, le=24),
+    _driver: User = Depends(require_driver),
+    db: AsyncSession = Depends(get_db),
+):
+    """Busy hours ahead: average ride requests per hour. Counts only, no patient data."""
+    return await demand_forecast.hourly_demand(
+        db, datetime.now(timezone.utc), hours_ahead
+    )
+
+
 # ── Wallet ────────────────────────────────────────────────────────────────────
 
 _PLANS = {
@@ -256,14 +275,15 @@ def _topup_amount(body: WalletTopUpRequest) -> Decimal:
 async def topup_wallet(
     driver_id: UUID,
     body: WalletTopUpRequest,
-    idempotency_key: Optional[str] = Header(default=None, min_length=1, max_length=128),
+    idempotency_key: str = Header(min_length=1, max_length=128),
     admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """Admin credits a driver's wallet (manual JazzCash/EasyPaisa settlement).
 
-    Send an Idempotency-Key header to make retries safe: a replay returns the
-    current driver without crediting again.
+    The Idempotency-Key header is required: a replay returns the current driver
+    without crediting again. A NULL key would never conflict, so a keyless
+    retry would credit twice.
     """
     amount = _topup_amount(body)
     driver, user = await driver_service.get_driver_by_id(driver_id, db)

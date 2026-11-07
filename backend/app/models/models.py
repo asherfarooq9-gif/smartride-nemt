@@ -98,6 +98,11 @@ class User(Base):
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     fcm_token: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # Bumped to sign the user out everywhere: tokens issued under an older
+    # version are rejected.
+    token_version: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -200,6 +205,11 @@ class Driver(Base):
     current_lat: Mapped[Optional[float]] = mapped_column(DOUBLE_PRECISION)
     current_lng: Mapped[Optional[float]] = mapped_column(DOUBLE_PRECISION)
     last_seen_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    # How this driver says they take payment (cash, easypaisa, ...). The app only
+    # shows it to the patient; it never handles the money.
+    payment_methods: Mapped[list] = mapped_column(
+        JSON, nullable=False, default=list, server_default=text("'[]'::json")
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -217,7 +227,11 @@ class Driver(Base):
     )
 
     user: Mapped["User"] = relationship("User", back_populates="driver")
-    rides: Mapped[List["Ride"]] = relationship("Ride", back_populates="driver")
+    # Rides this driver is driving. claimed_driver_id is a second link to drivers,
+    # so the relationship has to say which one it follows.
+    rides: Mapped[List["Ride"]] = relationship(
+        "Ride", back_populates="driver", foreign_keys="Ride.driver_id"
+    )
 
 
 # ─── HOSPITAL ─────────────────────────────────────────────────────────────────
@@ -364,11 +378,30 @@ class Ride(Base):
     final_fare_pkr: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2))
     patient_rating: Mapped[Optional[Decimal]] = mapped_column(Numeric(2, 1))
     rating_comment: Mapped[Optional[str]] = mapped_column(Text)
+    # A driver who reserved this booked ride ahead of time. The ride stays
+    # pending and hidden from other drivers; dispatch hands it to this driver
+    # when its pickup window opens.
+    claimed_driver_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("drivers.id", ondelete="RESTRICT")
+    )
+    claimed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    # Rides booked together by one repeat booking share this id.
+    series_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
 
     __table_args__ = (
+        Index(
+            "ix_rides_series_id",
+            "series_id",
+            postgresql_where=text("series_id IS NOT NULL"),
+        ),
+        Index(
+            "ix_rides_claimed_driver_id",
+            "claimed_driver_id",
+            postgresql_where=text("claimed_driver_id IS NOT NULL"),
+        ),
         Index("ix_rides_status", "status"),
         Index("ix_rides_ride_type", "ride_type"),
         Index("ix_rides_requested_at", "requested_at"),
@@ -407,7 +440,7 @@ class Ride(Base):
         "Patient", back_populates="rides", lazy="noload"
     )
     driver: Mapped[Optional["Driver"]] = relationship(
-        "Driver", back_populates="rides", lazy="noload"
+        "Driver", back_populates="rides", lazy="noload", foreign_keys=[driver_id]
     )
     hospital: Mapped[Optional["Hospital"]] = relationship(
         "Hospital", foreign_keys=[hospital_id], lazy="noload"
@@ -415,6 +448,34 @@ class Ride(Base):
     triage_events: Mapped[List["TriageEvent"]] = relationship(
         "TriageEvent", back_populates="ride"
     )
+
+
+# ─── RIDE IDEMPOTENCY KEY ─────────────────────────────────────────────────────
+
+
+class RideIdempotencyKey(Base):
+    """Which ride an Idempotency-Key produced, written in the ride's transaction.
+
+    The database is the source of truth, so a retry (or a racing duplicate) gets
+    the same ride even when Redis is down. Rows older than a day are purged.
+    """
+
+    __tablename__ = "ride_idempotency_keys"
+
+    patient_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("patients.id"), primary_key=True
+    )
+    scope: Mapped[str] = mapped_column(Text, primary_key=True)  # scheduled | emergency
+    key: Mapped[str] = mapped_column(Text, primary_key=True)
+    fingerprint: Mapped[str] = mapped_column(Text, nullable=False)
+    ride_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("rides.id", ondelete="CASCADE"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    __table_args__ = (Index("ix_ride_idempotency_keys_created_at", "created_at"),)
 
 
 # ─── TRIAGE EVENT ─────────────────────────────────────────────────────────────

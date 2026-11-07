@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:smartride_core/smartride_core.dart';
 
@@ -53,12 +54,16 @@ class _PaymentMethod {
 
 const _paymentMethods = [
   _PaymentMethod(label: 'JazzCash', icon: Icons.phone_android),
-  _PaymentMethod(label: 'EasyPaisa', icon: Icons.account_balance_wallet_outlined),
+  _PaymentMethod(
+      label: 'EasyPaisa', icon: Icons.account_balance_wallet_outlined),
   _PaymentMethod(label: 'Bank Transfer', icon: Icons.account_balance_outlined),
   _PaymentMethod(label: 'Card', icon: Icons.credit_card_outlined),
 ];
 
 const _quickAmounts = [500, 1000, 2000, 5000];
+
+// Same address as the Contact screen; wallet top-ups are confirmed by hand.
+const _supportEmail = 'support@smartride.pk';
 
 class TopUpScreen extends StatefulWidget {
   const TopUpScreen({super.key});
@@ -79,16 +84,16 @@ class _TopUpScreenState extends State<TopUpScreen> {
     super.dispose();
   }
 
-  String get _confirmLabel {
+  String _confirmLabel(AppLocalizations l) {
     if (_isCustom) {
       final amt = _customAmount.text.trim();
-      return amt.isEmpty ? 'Enter an amount' : 'Continue · PKR $amt';
+      return amt.isEmpty ? l.enterAnAmount : l.continueAmount(amt);
     }
     if (_selectedPlan != null) {
       final plan = _plans[_selectedPlan!];
-      return 'Continue · ${plan.name} · PKR ${plan.price}';
+      return l.continuePlan(plan.name, plan.price.toString());
     }
-    return 'Select a plan or amount';
+    return l.selectPlanOrAmount;
   }
 
   bool get _canConfirm {
@@ -109,11 +114,10 @@ class _TopUpScreenState extends State<TopUpScreen> {
         : _plans[_selectedPlan!].price.toString();
     showDialog<void>(
       context: context,
-      builder: (_) => _SuccessDialog(
-        title: 'Almost done',
-        message: 'Send PKR $amount by $_paymentMethod, then send the receipt '
-            'to SmartRide support. Your wallet is credited once an admin '
-            'confirms the payment.',
+      builder: (_) => _InstructionsDialog(
+        title: context.l10n.howToTopUp,
+        message: context.l10n
+            .topUpInstructions(amount, _paymentMethod, _supportEmail),
         onDone: () {
           Navigator.of(context).pop();
           Navigator.of(context).pop();
@@ -129,15 +133,15 @@ class _TopUpScreenState extends State<TopUpScreen> {
       appBar: AppBar(
         backgroundColor: kBlue600,
         foregroundColor: Colors.white,
-        title: const Text('Top Up & Plans'),
+        title: Text(context.l10n.topUpPlans),
         leading: const BackButton(),
       ),
       body: ListView(
         padding: const EdgeInsets.all(kSpaceLG),
         children: [
-          const Text(
-            'Choose a plan',
-            style: TextStyle(
+          Text(
+            context.l10n.choosePlan,
+            style: const TextStyle(
               fontSize: kFontSubhead,
               fontWeight: FontWeight.w700,
               color: kText900,
@@ -167,9 +171,9 @@ class _TopUpScreenState extends State<TopUpScreen> {
             onAmountChanged: () => setState(() {}),
           ),
           const SizedBox(height: kSpaceXL),
-          const Text(
-            'Pay From',
-            style: TextStyle(
+          Text(
+            context.l10n.payFrom,
+            style: const TextStyle(
               fontSize: kFontSubhead,
               fontWeight: FontWeight.w700,
               color: kText900,
@@ -196,7 +200,7 @@ class _TopUpScreenState extends State<TopUpScreen> {
           ),
           const SizedBox(height: kSpaceXXL),
           PrimaryButton(
-            label: _confirmLabel,
+            label: _confirmLabel(context.l10n),
             onPressed: _canConfirm ? () => _showInstructions(context) : null,
             color: kBlue600,
             height: kButtonHeight,
@@ -258,15 +262,15 @@ class _PlanCard extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: kTeal600.withValues(alpha: 0.12),
+                            color: kDriverPrimary.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(kRadiusPill),
                           ),
-                          child: const Text(
-                            'Most Popular',
-                            style: TextStyle(
+                          child: Text(
+                            context.l10n.mostPopular,
+                            style: const TextStyle(
                               fontSize: kFontCaption,
                               fontWeight: FontWeight.w700,
-                              color: kTeal600,
+                              color: kDriverPrimary,
                             ),
                           ),
                         ),
@@ -373,9 +377,9 @@ class _CustomAmountTile extends StatelessWidget {
                     ),
                   ),
                 ),
-                const Text(
-                  'Custom amount',
-                  style: TextStyle(
+                Text(
+                  context.l10n.customAmount,
+                  style: const TextStyle(
                     fontSize: kFontBody,
                     fontWeight: FontWeight.w600,
                     color: kText900,
@@ -390,10 +394,10 @@ class _CustomAmountTile extends StatelessWidget {
               controller: controller,
               keyboardType: TextInputType.number,
               onChanged: (_) => onAmountChanged(),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 prefixText: 'PKR  ',
-                hintText: 'Enter amount',
-                border: OutlineInputBorder(),
+                hintText: context.l10n.enterAmount,
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: kSpaceMD),
@@ -408,9 +412,7 @@ class _CustomAmountTile extends StatelessWidget {
                       },
                       child: Chip(
                         label: Text(
-                          amt >= 1000
-                              ? '${amt ~/ 1000},000'
-                              : amt.toString(),
+                          amt >= 1000 ? '${amt ~/ 1000},000' : amt.toString(),
                         ),
                         backgroundColor: kCanvas,
                         side: const BorderSide(color: kBorder),
@@ -496,12 +498,15 @@ class _PaymentMethodRow extends StatelessWidget {
   }
 }
 
-class _SuccessDialog extends StatelessWidget {
+/// Explains a manual step. It is not a confirmation, so it must not look like one:
+/// an earlier version showed "Almost done" with a green check, and a driver could
+/// reasonably believe a payment had been taken.
+class _InstructionsDialog extends StatelessWidget {
   final String title;
   final String message;
   final VoidCallback onDone;
 
-  const _SuccessDialog({
+  const _InstructionsDialog({
     required this.title,
     required this.message,
     required this.onDone,
@@ -522,12 +527,12 @@ class _SuccessDialog extends StatelessWidget {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: kOnlineGreen.withValues(alpha: 0.10),
+                color: kBlue600.withValues(alpha: 0.10),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
-                Icons.check_circle_outline,
-                color: kOnlineGreen,
+                Icons.info_outline,
+                color: kBlue600,
                 size: 40,
               ),
             ),
@@ -548,7 +553,7 @@ class _SuccessDialog extends StatelessWidget {
             ),
             const SizedBox(height: kSpaceXXL),
             PrimaryButton(
-              label: 'Done',
+              label: context.l10n.done,
               onPressed: onDone,
               color: kBlue600,
               height: kButtonHeight,

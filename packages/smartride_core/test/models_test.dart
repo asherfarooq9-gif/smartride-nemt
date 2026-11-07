@@ -84,5 +84,24 @@ void main() {
       expect(json['pickup_lng'], 73.0);
       expect(json['scheduled_for'], '2030-01-02T09:00:00.000Z');
     });
+
+    test('sends the hospital the patient picked, and omits it when none', () {
+      final withHospital = ScheduledRideRequest(
+        pickupAddress: 'Home',
+        scheduledFor: DateTime.utc(2030, 1, 2, 9),
+        pickupLat: 33.7,
+        pickupLng: 73.0,
+        hospitalId: 'h-1',
+      ).toJson();
+      final without = ScheduledRideRequest(
+        pickupAddress: 'Home',
+        scheduledFor: DateTime.utc(2030, 1, 2, 9),
+        pickupLat: 33.7,
+        pickupLng: 73.0,
+      ).toJson();
+
+      expect(withHospital['hospital_id'], 'h-1');
+      expect(without.containsKey('hospital_id'), isFalse);
+    });
   });
 }

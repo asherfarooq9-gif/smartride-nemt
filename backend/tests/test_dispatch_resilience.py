@@ -1,5 +1,6 @@
 """Dispatch must fail loudly, never lose a ride, and never act on unchecked triage."""
 
+import uuid
 import asyncio
 import logging
 import sys
@@ -33,6 +34,7 @@ from app.services.dispatch_loop import (
     _symptoms,
     retry_pending_dispatches,
 )
+from app.services.triage_keywords import compute_severity
 from app.services.emergency_dispatch import (
     call_triage_service,
     dispatch_emergency,
@@ -708,8 +710,11 @@ async def test_retry_order_is_severity_first_then_longest_waiting(db):
     with patch.object(dispatch_loop, "dispatch_emergency", record):
         await retry_pending_dispatches()
 
-    # unknown severity is treated as the worst; ties go to whoever waited longest
-    assert order == [untriaged, sev5_old, sev5_recent, sev4, sev3]
+    # Unknown severity is treated as the worst. A level runs together, so rides of
+    # one severity may start in either order; levels never overlap or swap.
+    assert order[0] == untriaged
+    assert set(order[1:3]) == {sev5_old, sev5_recent}
+    assert order[3:] == [sev4, sev3]
 
 
 # ── 7. a requeued ride gets a fresh window ───────────────────────────────────
@@ -769,7 +774,9 @@ async def test_pending_list_only_contains_rides_within_the_search_radius(db):
         .values(pickup_lat=PATIENT_LAT + 5)  # roughly 550 km away
     )
     await db.commit()
-    driver = SimpleNamespace(current_lat=PATIENT_LAT, current_lng=PATIENT_LNG)
+    driver = SimpleNamespace(
+        id=uuid.uuid4(), current_lat=PATIENT_LAT, current_lng=PATIENT_LNG
+    )
 
     ids = {r.id for r in await ride_service.get_pending_rides(driver, db)}
 
@@ -838,7 +845,9 @@ async def test_every_severity_is_stored_and_acted_on_end_to_end(db, severity):
     ride, driver, _ = await _seed(db)
     ride_id = ride.id
     await _only_these_drivers(db, [driver.id])
-    # benign text so the life-threat rules cannot lift the service's own severity
+    # Benign text so the life-threat rules cannot force a 5. The local rules still
+    # set a floor, so the stored value is the higher of the two.
+    expected = str(max(int(severity), int(compute_severity("sore knee")[0])))
     service = AsyncMock(return_value={**TRIAGE_RESPONSE, "severity": severity})
 
     with patch("app.services.emergency_dispatch.call_triage_service", new=service):
@@ -850,6 +859,6 @@ async def test_every_severity_is_stored_and_acted_on_end_to_end(db, severity):
             {"r": ride_id},
         )
     ).scalar_one()
-    assert raw == severity
-    assert result["severity"] == severity
-    assert (await load_stored_triage(db, ride_id))["severity"] == severity
+    assert raw == expected
+    assert result["severity"] == expected
+    assert (await load_stored_triage(db, ride_id))["severity"] == expected

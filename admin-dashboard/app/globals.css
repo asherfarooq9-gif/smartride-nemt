@@ -1,3 +1,200 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Apple-style light theme, same palette as the patient app: white cards on a soft grey canvas. */
+:root {
+  color-scheme: light;
+  --c-panel: 248 249 251; --c-raised: 255 255 255; --c-inset: 242 243 245;
+  --c-edge: 229 229 234; --c-edge-strong: 209 209 214;
+  --c-ink: 28 28 30; --c-dim: 99 99 102;
+  --c-red: 198 40 40; --c-amber: 179 71 0; --c-green: 46 125 50;
+  --c-steel: 0 102 204; --c-accent: 0 102 204; --c-accent-hover: 0 76 153;
+  --glass: rgb(255 255 255 / 0.72); --shadow: 28 28 30;
+}
+/* Dark follows the system unless the toggle chose a side. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+  --c-panel: 10 10 12; --c-raised: 28 28 30; --c-inset: 44 44 46;
+  --c-edge: 58 58 60; --c-edge-strong: 84 84 88;
+  --c-ink: 242 242 247; --c-dim: 174 174 178;
+  --c-red: 255 105 97; --c-amber: 255 159 67; --c-green: 76 195 138;
+  --c-steel: 77 163 255; --c-accent: 10 111 224; --c-accent-hover: 41 128 235;
+  --glass: rgb(28 28 30 / 0.72); --shadow: 0 0 0;
+  color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --c-panel: 10 10 12; --c-raised: 28 28 30; --c-inset: 44 44 46;
+  --c-edge: 58 58 60; --c-edge-strong: 84 84 88;
+  --c-ink: 242 242 247; --c-dim: 174 174 178;
+  --c-red: 255 105 97; --c-amber: 255 159 67; --c-green: 76 195 138;
+  --c-steel: 77 163 255; --c-accent: 10 111 224; --c-accent-hover: 41 128 235;
+  --glass: rgb(28 28 30 / 0.72); --shadow: 0 0 0;
+  color-scheme: dark;
+}
+
+@layer base {
+  html {
+    background: rgb(var(--c-panel));
+  }
+  body {
+    @apply bg-panel text-ink font-sans antialiased;
+    font-variant-numeric: tabular-nums;
+  }
+  /* Native controls carry the design too: fields, selection, caret, scrollbars, focus. */
+  input,
+  select,
+  textarea {
+    @apply bg-panel-inset text-ink border-edge placeholder:text-ink-dim;
+    caret-color: rgb(var(--c-steel));
+  }
+  ::selection {
+    background: rgb(var(--c-steel) / 0.25);
+    color: rgb(var(--c-ink));
+  }
+  :focus-visible {
+    outline: 2px solid rgb(var(--c-steel));
+    outline-offset: 2px;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--c-edge-strong)) transparent;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+}
+
+@layer components {
+  /* Small secondary label: sentence case, medium weight, like an iOS caption. */
+  .legend {
+    @apply font-legend tracking-legend text-ink-dim text-xs;
+    font-weight: 500;
+  }
+  .panel-card {
+    @apply bg-panel-raised border border-edge rounded-2xl;
+    box-shadow: 0 1px 2px rgb(var(--shadow) / 0.04), 0 8px 24px rgb(var(--shadow) / 0.05);
+  }
+  /* Headings: plain sentence case in the same family, so the page reads like a page. */
+  .title {
+    @apply font-legend text-ink;
+    font-weight: 600;
+    letter-spacing: -0.011em;
+  }
+}
+
+/* A changed ride holds its marker until it is acknowledged; the step is instant, not eased. */
+@keyframes lamp-attn {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+.lamp-attn {
+  animation: lamp-attn 1.6s steps(2, jump-none) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ── Apple-style feel ───────────────────────────────────────────────────────── */
+
+/* A spring, drawn as a curve: damping about 0.85, response about 0.3s. CSS transitions retarget
+   from the live value, so grabbing or reversing mid-motion never jumps. Older browsers get the
+   plain ease-out below. */
+:root {
+  --spring: cubic-bezier(0.22, 1, 0.36, 1);
+}
+@supports (transition-timing-function: linear(0, 1)) {
+  :root {
+    --spring: linear(0, 0.2 5%, 0.55 11%, 0.84 18%, 1.03 26%, 1.06 32%, 1.03 40%, 1 52%, 1);
+  }
+}
+
+/* Feedback starts on pointer-down, not on release. */
+.press {
+  transition-property: transform, border-color, background-color, box-shadow;
+}
+.press:active {
+  transform: scale(0.985);
+  transition-duration: 80ms;
+}
+button:not(:disabled):active {
+  transition-duration: 80ms;
+}
+
+/* Translucent layers: content scrolls under them. */
+.glass {
+  background: var(--glass);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    background: rgb(var(--c-raised));
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* A ring that breathes outward until someone acknowledges the change. */
+@keyframes tile-flash-red {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(var(--c-red) / 0.4); }
+  50% { box-shadow: 0 0 0 7px rgb(var(--c-red) / 0); }
+}
+@keyframes tile-flash-amber {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(var(--c-amber) / 0.4); }
+  50% { box-shadow: 0 0 0 7px rgb(var(--c-amber) / 0); }
+}
+.tile-flash-red { animation: tile-flash-red 1.6s ease-in-out infinite; }
+.tile-flash-amber { animation: tile-flash-amber 1.6s ease-in-out infinite; }
+
+/* Type: large text tightens, small text opens up. */
+h1.title {
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+
+/* Reduced motion keeps the information and drops the movement: panels cross-fade. */
+@media (prefers-reduced-motion: reduce) {
+  .side-panel {
+    transform: none !important;
+    transition: opacity 150ms ease !important;
+  }
+  .tile-flash-red,
+  .tile-flash-amber {
+    animation: none;
+    outline: 2px solid currentColor;
+  }
+  .press:active {
+    transform: none;
+  }
+}
+
+/* Street map: pin colours come from the theme; dark mode inverts the light tiles. */
+.pin-emergency { fill: rgb(var(--c-red)); stroke: rgb(var(--c-raised)); }
+.pin-ride { fill: rgb(var(--c-amber)); stroke: rgb(var(--c-raised)); }
+.pin-available { fill: rgb(var(--c-green)); stroke: rgb(var(--c-raised)); }
+.pin-busy { fill: rgb(var(--c-steel)); stroke: rgb(var(--c-raised)); }
+:root[data-theme='dark'] .street-map .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.88);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .street-map .leaflet-tile-pane {
+    filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.88);
+  }
+}
+.street-map .leaflet-container { font-family: inherit; }

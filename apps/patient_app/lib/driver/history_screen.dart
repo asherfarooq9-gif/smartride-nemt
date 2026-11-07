@@ -1,6 +1,8 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smartride_core/smartride_core.dart';
+import 'package:patient_app/driver/money_format.dart';
 
 final _historyProvider = FutureProvider.autoDispose<Map<String, dynamic>>(
   (_) => getDriverEarnings(),
@@ -16,7 +18,7 @@ class DriverHistoryScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: kBlue600,
         foregroundColor: Colors.white,
-        title: const Text('Trip History'),
+        title: Text(context.l10n.tripHistory),
         leading: const BackButton(),
       ),
       body: ref.watch(_historyProvider).when(
@@ -24,14 +26,15 @@ class DriverHistoryScreen extends ConsumerWidget {
               child: CircularProgressIndicator(color: kBlue600),
             ),
             error: (e, _) => ErrorState(
-              message: e is AppError ? e.message : 'Failed to load trip history',
+              message:
+                  e is AppError ? e.message : context.l10n.failedLoadHistory,
               onRetry: () => ref.invalidate(_historyProvider),
             ),
             data: (data) {
               final rides = data['rides'] as List<dynamic>? ?? [];
               if (rides.isEmpty) {
-                return const EmptyState(
-                  message: 'No completed trips yet.\nAccept a ride to get started.',
+                return EmptyState(
+                  message: context.l10n.noCompletedTrips,
                   icon: Icons.directions_car_outlined,
                 );
               }
@@ -66,17 +69,10 @@ class _TripCard extends StatelessWidget {
     final completedAt = ride['completed_at'] as String?;
 
     final isEmergency = rideType == 'emergency';
-    final fareFormatted = fareRaw
-        .toInt()
-        .toString()
-        .replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (m) => '${m[1]},',
-        );
+    final fareFormatted = formatPkr(fareRaw);
     final dateLabel = _formatDate(completedAt);
-    final routeLabel = hospitalName != null
-        ? '$pickupAddress → $hospitalName'
-        : pickupAddress;
+    final routeLabel =
+        hospitalName != null ? '$pickupAddress → $hospitalName' : pickupAddress;
 
     return Container(
       margin: const EdgeInsets.only(bottom: kSpaceMD),
@@ -98,9 +94,7 @@ class _TripCard extends StatelessWidget {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: isEmergency
-                        ? kRed50
-                        : kBlue100,
+                    color: isEmergency ? kRed50 : kBlue100,
                     borderRadius: BorderRadius.circular(kRadiusSM),
                   ),
                   child: Icon(
@@ -137,7 +131,7 @@ class _TripCard extends StatelessWidget {
                 ),
                 const SizedBox(width: kSpaceSM),
                 Text(
-                  '+PKR $fareFormatted',
+                  fareFormatted == 'PKR 0' ? fareFormatted : '+$fareFormatted',
                   style: const TextStyle(
                     fontSize: kFontBody,
                     fontWeight: FontWeight.w800,
@@ -183,8 +177,18 @@ class _TripCard extends StatelessWidget {
     if (isYesterday) return 'Yesterday, $timeStr';
 
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[local.month - 1]} ${local.day}, $timeStr';
   }
@@ -198,15 +202,14 @@ class _TypeBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     if (isEmergency) {
       return Container(
-        padding: const EdgeInsets.symmetric(
-            horizontal: kSpaceSM, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: kSpaceSM, vertical: 2),
         decoration: BoxDecoration(
           color: kRed50,
           borderRadius: BorderRadius.circular(kRadiusSM),
         ),
-        child: const Text(
-          'Emergency',
-          style: TextStyle(
+        child: Text(
+          context.l10n.emergencyWord,
+          style: const TextStyle(
             fontSize: kFontCaption,
             fontWeight: FontWeight.w700,
             color: kRed600,
@@ -214,9 +217,9 @@ class _TypeBadge extends StatelessWidget {
         ),
       );
     }
-    return const Text(
-      'Scheduled',
-      style: TextStyle(
+    return Text(
+      context.l10n.scheduled,
+      style: const TextStyle(
         fontSize: kFontCaption,
         fontWeight: FontWeight.w600,
         color: kText400,

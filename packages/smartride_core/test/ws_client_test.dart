@@ -202,4 +202,77 @@ void main() {
     expect(h.events, eventsAtDisconnect);
     expect(h.client.isConnected, isFalse);
   });
+
+  group('token for reconnects', () {
+    WsClient clientWith(
+      Future<String?> Function() tokenProvider,
+      List<_FakeSocket> sockets,
+      List<String> events,
+    ) =>
+        WsClient(
+          onMessage: (_) {},
+          onConnected: () => events.add('connected'),
+          onDisconnected: () => events.add('disconnected'),
+          tokenProvider: tokenProvider,
+          maxRetries: 3,
+          baseDelay: const Duration(milliseconds: 2),
+          maxDelay: const Duration(milliseconds: 8),
+          channelFactory: (_) {
+            final socket = _FakeSocket();
+            sockets.add(socket);
+            return socket;
+          },
+        );
+
+    String tokenSentOn(_FakeSocket socket) =>
+        (jsonDecode(socket.sent.first as String) as Map)['token'] as String;
+
+    test('a reconnect authenticates with the current token, not the first one',
+        () async {
+      // A ride can outlast the JWT. The REST client renews it in secure storage;
+      // reconnecting with the original would be refused.
+      var current = 'first';
+      final sockets = <_FakeSocket>[];
+      final events = <String>[];
+      final client = clientWith(() async => current, sockets, events);
+      await client.connect(Uri.parse('ws://test/ws'), 'first');
+      expect(tokenSentOn(sockets.first), 'first');
+
+      current = 'renewed';
+      await sockets.first.incoming.close();
+      await settle();
+
+      expect(sockets, hasLength(2));
+      expect(tokenSentOn(sockets.last), 'renewed');
+      await client.disconnect();
+    });
+
+    test('signing out stops the reconnecting instead of retrying forever',
+        () async {
+      String? current = 'first';
+      final sockets = <_FakeSocket>[];
+      final events = <String>[];
+      final client = clientWith(() async => current, sockets, events);
+      await client.connect(Uri.parse('ws://test/ws'), 'first');
+
+      current = null; // the user signed out
+      await sockets.first.incoming.close();
+      await settle();
+
+      expect(sockets, hasLength(1));
+      expect(client.isConnected, isFalse);
+      await client.disconnect();
+    });
+
+    test('without a provider the token given to connect is reused', () async {
+      final h = _Harness();
+      await h.start();
+
+      await h.sockets.single.incoming.close();
+      await settle();
+
+      expect(jsonDecode(h.sockets.last.sent.first as String), {'token': 'tok'});
+      await h.client.disconnect();
+    });
+  });
 }

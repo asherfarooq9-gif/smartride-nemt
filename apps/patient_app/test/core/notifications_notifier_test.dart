@@ -17,8 +17,8 @@ AppNotification _notif(String id, {bool isRead = false}) => AppNotification(
 void main() {
   group('NotificationsNotifier', () {
     test('starts empty — no demo seed data', () {
-      final notifier = NotificationsNotifier('patient',
-          incoming: const Stream.empty());
+      final notifier =
+          NotificationsNotifier('patient', incoming: const Stream.empty());
       addTearDown(notifier.dispose);
 
       expect(notifier.state, isEmpty);

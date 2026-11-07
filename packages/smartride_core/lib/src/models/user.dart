@@ -36,44 +36,6 @@ class TokenResponse {
   }
 }
 
-/// Mirrors GET /auth/me.
-class MeResponse {
-  const MeResponse({
-    required this.userId,
-    required this.phone,
-    required this.roles,
-    required this.activeRole,
-    required this.hasPatientProfile,
-    required this.hasDriverProfile,
-    required this.driverVerified,
-  });
-
-  final String userId;
-  final String phone;
-  final List<String> roles;
-  final String activeRole;
-  final bool hasPatientProfile;
-  final bool hasDriverProfile;
-  final bool driverVerified;
-
-  bool get hasPatient => roles.contains('patient');
-  bool get hasDriver => roles.contains('driver');
-  bool get hasBoth => hasPatient && hasDriver;
-
-  factory MeResponse.fromJson(Map<String, dynamic> json) {
-    final rawRoles = json['roles'];
-    return MeResponse(
-      userId: json['user_id'].toString(),
-      phone: json['phone'] as String? ?? '',
-      roles: rawRoles is List ? rawRoles.map((e) => e.toString()).toList() : <String>[],
-      activeRole: (json['active_role'] ?? '').toString(),
-      hasPatientProfile: json['has_patient_profile'] as bool? ?? false,
-      hasDriverProfile: json['has_driver_profile'] as bool? ?? false,
-      driverVerified: json['driver_verified'] as bool? ?? false,
-    );
-  }
-}
-
 class RegisterRequest {
   const RegisterRequest({
     required this.phone,

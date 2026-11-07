@@ -11,9 +11,9 @@
 # Restore the newest with: ./scripts/db_restore.sh
 set -eu
 
-DB_URL="${DATABASE_URL:-postgresql://smartride:password@localhost:5432/smartride}"
-# pg_dump wants a libpq URL — strip any SQLAlchemy +asyncpg driver suffix.
-DB_URL="$(printf '%s' "$DB_URL" | sed 's#+asyncpg##; s#postgresql+psycopg2#postgresql#')"
+# Splits DATABASE_URL into PG* variables so the password is not on the command line.
+. "$(dirname "$0")/_pgenv.sh"
+load_database_url
 
 BACKUP_DIR="${BACKUP_DIR:-./backups}"
 KEEP="${KEEP:-7}"
@@ -22,8 +22,8 @@ OUT="${BACKUP_DIR}/smartride_${STAMP}.dump"
 
 mkdir -p "$BACKUP_DIR"
 
-echo "[backup] dumping to ${OUT}"
-pg_dump --format=custom --no-owner --no-privileges --dbname="$DB_URL" --file="$OUT"
+echo "[backup] dumping ${DB_DISPLAY} to ${OUT}"
+pg_dump --format=custom --no-owner --no-privileges --dbname="$DB_NAME" --file="$OUT"
 
 SIZE="$(wc -c <"$OUT")"
 if [ "$SIZE" -lt 100 ]; then

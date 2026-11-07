@@ -1,12 +1,14 @@
-from typing import Optional, List
+from typing import List, Literal, Optional
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timedelta
 from pydantic import BaseModel, Field, field_validator, model_serializer
 from app.models.models import RideType, RideStatus
 
 # Free text from clients is bounded so one request cannot store megabytes.
 MAX_ADDRESS_LENGTH = 500
 MAX_REASON_LENGTH = 500
+# Booking further ahead than this is almost certainly a mistake or abuse.
+MAX_DAYS_AHEAD = 90
 
 
 class EmergencyRideRequest(BaseModel):
@@ -21,6 +23,8 @@ class ScheduledRideRequest(BaseModel):
     pickup_lng: float = Field(ge=-180, le=180)
     pickup_address: Optional[str] = Field(default=None, max_length=MAX_ADDRESS_LENGTH)
     scheduled_for: datetime
+    # The destination the patient chose; optional, a trip may be booked without.
+    hospital_id: Optional[UUID] = None
 
     @field_validator("scheduled_for")
     @classmethod
@@ -33,7 +37,18 @@ class ScheduledRideRequest(BaseModel):
 
         if v <= dt.now(timezone.utc):
             raise ValueError("scheduled_for must be a future date")
+        if v > dt.now(timezone.utc) + timedelta(days=MAX_DAYS_AHEAD):
+            raise ValueError(f"scheduled_for must be within {MAX_DAYS_AHEAD} days")
         return v
+
+
+class ScheduledSeriesRequest(ScheduledRideRequest):
+    """A repeat booking: the same trip every day or every week."""
+
+    repeat: Literal["daily", "weekly"]
+    # At least two (one is an ordinary booking); twelve covers a quarter of
+    # weekly dialysis without letting one request flood the dispatch queue.
+    occurrences: int = Field(ge=2, le=12)
 
 
 class RideStatusUpdate(BaseModel):
@@ -77,7 +92,8 @@ class RideResponse(BaseModel):
 
 class RidePatientInfo(BaseModel):
     full_name: str
-    phone: str
+    # None once the ride is over and the viewer is the driver (see _patient_info).
+    phone: Optional[str] = None
     mobility_needs: Optional[str] = None
 
 
@@ -86,12 +102,16 @@ class RideDriverInfo(BaseModel):
     phone: str
     vehicle_plate: str
     vehicle_type: str
+    # How the driver says they take payment, so the patient can have it ready.
+    payment_methods: list[str] = []
 
 
 class RideHospitalInfo(BaseModel):
     name: str
     address: str
     city: str
+    lat: float
+    lng: float
 
 
 class RideTriageInfo(BaseModel):

@@ -34,6 +34,8 @@ class MatchResult:
     fhir_endpoint: Optional[str]
     has_fhir: bool
     coordinator_phone: Optional[str]
+    # True when every in-range ED reported itself full and this one was picked anyway.
+    ed_full: bool = False
 
 
 def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
@@ -89,6 +91,14 @@ def match_hospitals(
             if d <= max_radius_km and h.ed_current_load < h.ed_capacity
         ]
 
+    ed_full = False
+    if not filtered:
+        # Last resort: a patient with no hospital is worse than a crowded ED. The
+        # load figure is entered by hand, so it may be stale. Take whatever is in
+        # range and let the pre-alert say the ED reported full.
+        filtered = [(h, d) for h, d in all_with_dist if d <= max_radius_km]
+        ed_full = True
+
     if not filtered:
         return []
 
@@ -103,7 +113,7 @@ def match_hospitals(
     # ── NORMALISE ED WAIT (0% full = 1.0, 100% full = 0.0) ───────────────────
     def ed_score(h: HospitalCandidate) -> float:
         occupancy = h.ed_current_load / max(h.ed_capacity, 1)
-        return 1.0 - occupancy
+        return max(0.0, 1.0 - occupancy)
 
     # ── SPECIALTY SCORE ───────────────────────────────────────────────────────
     def specialty_score(h: HospitalCandidate) -> float:
@@ -130,6 +140,7 @@ def match_hospitals(
                 fhir_endpoint=h.fhir_endpoint,
                 has_fhir=bool(h.fhir_endpoint),
                 coordinator_phone=h.coordinator_phone,
+                ed_full=ed_full,
             )
         )
 

@@ -22,9 +22,10 @@ import 'package:patient_app/features/support/support_screen.dart';
 // Driver portal
 import 'package:patient_app/driver/dashboard_screen.dart';
 import 'package:patient_app/driver/active_ride_screen.dart';
+import 'package:patient_app/driver/demand_forecast_screen.dart';
 import 'package:patient_app/driver/earnings_screen.dart';
+import 'package:patient_app/driver/scheduled_screen.dart';
 import 'package:patient_app/driver/profile_screen.dart';
-import 'package:patient_app/driver/settings_screen.dart';
 import 'package:patient_app/driver/wallet_screen.dart';
 import 'package:patient_app/driver/top_up_screen.dart';
 import 'package:patient_app/driver/history_screen.dart';
@@ -118,6 +119,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       // ── Driver portal ─────────────────────────────────────────────────────
       GoRoute(path: '/driver', builder: (_, __) => const DashboardScreen()),
       GoRoute(path: '/driver/earnings', builder: (_, __) => const EarningsScreen()),
+      GoRoute(path: '/driver/scheduled', builder: (_, __) => const DriverScheduledScreen()),
+      GoRoute(path: '/driver/demand', builder: (_, __) => const DemandForecastScreen()),
       GoRoute(path: '/driver/wallet', builder: (_, __) => const WalletScreen()),
       GoRoute(path: '/driver/top-up', builder: (_, __) => const TopUpScreen()),
       GoRoute(path: '/driver/notifications', builder: (_, __) => const NotificationsScreen(portal: 'driver')),
@@ -131,7 +134,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/driver/settings',
-        builder: (_, __) => const DriverSettingsScreen(),
+        builder: (_, __) => const SettingsScreen(isDriver: true),
       ),
       GoRoute(
         path: '/driver/history',

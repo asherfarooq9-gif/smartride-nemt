@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 import 'package:patient_app/core/location.dart';
 import 'package:patient_app/core/notifications.dart';
+import 'package:patient_app/driver/ride_events.dart';
 
 // ── Role state (drives which portal is shown) ──────────────────────────────────
 
@@ -17,8 +18,7 @@ final activeRoleProvider = StateProvider<String>((ref) => 'patient');
 
 // ── Auth ───────────────────────────────────────────────────────────────────────
 
-final authProvider =
-    StateNotifierProvider<AuthNotifier, AsyncValue<String?>>(
+final authProvider = StateNotifierProvider<AuthNotifier, AsyncValue<String?>>(
   (ref) => AuthNotifier(ref),
 );
 
@@ -99,7 +99,8 @@ class AuthNotifier extends StateNotifier<AsyncValue<String?>> {
     unawaited(registerPushToken());
   }
 
-  Future<void> signIn(String phone, String password, {String? activeRole}) async {
+  Future<void> signIn(String phone, String password,
+      {String? activeRole}) async {
     state = const AsyncValue.loading();
     try {
       final res = await core.login(phone, password, activeRole: activeRole);
@@ -145,6 +146,27 @@ class AuthNotifier extends StateNotifier<AsyncValue<String?>> {
     if (token != null) unawaited(_logoutOnServer(token));
   }
 
+  /// Ends every session on every device. The server is told first: if that
+  /// fails this throws [core.AppError] and the user stays signed in, because
+  /// claiming "signed out everywhere" when it did not happen would be unsafe.
+  Future<void> signOutEverywhere() async {
+    await core.logoutAll();
+    await core.SecureStorage.instance.clear();
+    unawaited(forgetPushToken());
+    _resetSession();
+  }
+
+  /// Anonymizes the account on the server, then clears this device. Throws
+  /// [core.AppError] (wrong password, active ride) without touching local
+  /// state, so the user stays signed in and can try again.
+  Future<void> deleteAccount(String password) async {
+    await core.deleteAccount(password);
+    // The server already ended every session, so there is no logout to send.
+    await core.SecureStorage.instance.clear();
+    unawaited(forgetPushToken());
+    _resetSession();
+  }
+
   Future<void> _logoutOnServer(String token) async {
     try {
       await core.logout(token: token);
@@ -158,19 +180,25 @@ class AuthNotifier extends StateNotifier<AsyncValue<String?>> {
 
 const _kThemeModeKey = 'app_theme_mode';
 
-final themeModeProvider =
-    StateNotifierProvider<ThemeModeNotifier, ThemeMode>(
+final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>(
   (ref) => ThemeModeNotifier(),
 );
 
+/// The theme the app actually shows. Sign up and login are always light; the
+/// user's saved choice (light unless they switched to dark in Settings) only
+/// applies once they are signed in.
+final effectiveThemeModeProvider = Provider<ThemeMode>((ref) {
+  final isSignedIn = ref.watch(sessionTokenProvider) != null;
+  return isSignedIn ? ref.watch(themeModeProvider) : ThemeMode.light;
+});
+
 class ThemeModeNotifier extends StateNotifier<ThemeMode> {
-  ThemeModeNotifier() : super(ThemeMode.system) {
+  ThemeModeNotifier() : super(ThemeMode.light) {
     _load();
   }
 
   Future<void> _load() async {
-    final val =
-        await core.SecureStorage.instance.readValue(_kThemeModeKey);
+    final val = await core.SecureStorage.instance.readValue(_kThemeModeKey);
     if (val == 'dark') state = ThemeMode.dark;
     if (val == 'light') state = ThemeMode.light;
   }
@@ -181,10 +209,6 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
         .saveValue(_kThemeModeKey, isDark ? 'dark' : 'light');
   }
 }
-
-// ── City (driver portal) ───────────────────────────────────────────────────────
-
-final cityProvider = StateProvider<String>((ref) => 'Islamabad');
 
 // ── Saved Places ──────────────────────────────────────────────────────────────
 
@@ -233,8 +257,7 @@ class SavedPlacesNotifier extends StateNotifier<List<SavedPlace>> {
   }
 
   Future<void> _load() async {
-    final raw =
-        await core.SecureStorage.instance.readValue(_kSavedPlacesKey);
+    final raw = await core.SecureStorage.instance.readValue(_kSavedPlacesKey);
     if (!mounted || raw == null || raw.isEmpty) return;
     try {
       final list = jsonDecode(raw) as List<dynamic>;
@@ -289,8 +312,7 @@ class AppNotification {
   final bool isRead;
 
   AppNotification withRead() => AppNotification(
-        id: id, title: title, body: body,
-        time: time, icon: icon, isRead: true);
+      id: id, title: title, body: body, time: time, icon: icon, isRead: true);
 }
 
 final notificationsProvider = StateNotifierProvider.family<
@@ -360,16 +382,32 @@ extension GpsStreamStatusX on GpsStreamStatus {
   bool get isActive => this != GpsStreamStatus.idle;
 }
 
-enum GpsStartResult { started, alreadyStreaming, permissionDenied, notSignedIn, cancelled }
+enum GpsStartResult {
+  started,
+  alreadyStreaming,
+  permissionDenied,
+  notSignedIn,
+  cancelled
+}
+
+/// Set to the ride id when the server tells the driver's GPS socket that the ride
+/// has ended, so the active ride screen can leave it. Cleared by the screen.
+final rideEndedByServerProvider = StateProvider<String?>((ref) => null);
 
 final gpsStreamProvider =
     StateNotifierProvider<GpsStreamNotifier, GpsStreamStatus>((ref) {
   ref.watch(sessionTokenProvider);
-  return GpsStreamNotifier();
+  return GpsStreamNotifier(
+    onRideEnded: (rideId) =>
+        ref.read(rideEndedByServerProvider.notifier).state = rideId,
+  );
 });
 
 class GpsStreamNotifier extends StateNotifier<GpsStreamStatus> {
-  GpsStreamNotifier() : super(GpsStreamStatus.idle);
+  GpsStreamNotifier({this.onRideEnded}) : super(GpsStreamStatus.idle);
+
+  final void Function(String rideId)? onRideEnded;
+  String? _rideId;
 
   static const _restInterval = Duration(seconds: 5);
 
@@ -393,9 +431,12 @@ class GpsStreamNotifier extends StateNotifier<GpsStreamStatus> {
     }
     if (state != GpsStreamStatus.starting) return GpsStartResult.cancelled;
 
-    final uri = Uri.parse('${core.ApiClient.instance.wsBaseUrl}/ws/driver/$rideId');
+    _rideId = rideId;
+    final uri =
+        Uri.parse('${core.ApiClient.instance.wsBaseUrl}/ws/driver/$rideId');
     final ws = core.WsClient(
-      onMessage: (_) {},
+      onMessage: _onSocketMessage,
+      tokenProvider: core.SecureStorage.instance.readToken,
       onConnected: () => _setIfActive(GpsStreamStatus.live),
       onDisconnected: () => _setIfActive(GpsStreamStatus.degraded),
       onError: _onSocketError,
@@ -421,9 +462,21 @@ class GpsStreamNotifier extends StateNotifier<GpsStreamStatus> {
     if (mounted && state.isActive) state = next;
   }
 
+  /// The server ends the stream with {"event": "ride_ended"} when the ride is
+  /// cancelled or completed. Ignoring it left the driver streaming location for a
+  /// ride that no longer existed, and the dashboard heartbeat paused for it.
+  void _onSocketMessage(Map<String, dynamic> message) {
+    if (!isRideEndedMessage(message)) return;
+    final rideId = _rideId;
+    unawaited(stopStreaming());
+    if (rideId != null) onRideEnded?.call(rideId);
+  }
+
   void _onSocketError(Object error) {
     if (error is FormatException) return; // bad frame; the link itself is fine
-    if (state == GpsStreamStatus.starting) _setIfActive(GpsStreamStatus.degraded);
+    if (state == GpsStreamStatus.starting) {
+      _setIfActive(GpsStreamStatus.degraded);
+    }
   }
 
   void _onPositionError(Object error, StackTrace stack) {
@@ -462,6 +515,7 @@ class GpsStreamNotifier extends StateNotifier<GpsStreamStatus> {
     _posSub = null;
     _ws = null;
     _lastRest = null;
+    _rideId = null;
     _isRestFailing = false;
     await sub?.cancel();
     await ws?.disconnect();

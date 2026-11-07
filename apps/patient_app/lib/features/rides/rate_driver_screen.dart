@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
@@ -28,15 +29,19 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
       await core.rateRide(
         widget.rideId,
         _rating,
-        comment: _commentCtrl.text.trim().isEmpty ? null : _commentCtrl.text.trim(),
+        comment:
+            _commentCtrl.text.trim().isEmpty ? null : _commentCtrl.text.trim(),
       );
       if (!mounted) return;
-      setState(() { _submitting = false; _submitted = true; });
+      setState(() {
+        _submitting = false;
+        _submitted = true;
+      });
     } on core.AppError catch (e) {
       _failed(e.message);
     } on Exception catch (e, st) {
       core.ErrorReporter.report('Submitting a rating failed', e, st);
-      _failed('Could not submit your rating. Please try again.');
+      _failed(context.l10n.couldNotSubmitRating);
     }
   }
 
@@ -53,17 +58,19 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Rate Your Driver'),
+        title: Text(context.l10n.rateYourDriverTitle),
         automaticallyImplyLeading: false,
       ),
-      body: _submitted ? _SuccessView(onDone: () => context.go('/')) : _RatingForm(
-        rating: _rating,
-        commentCtrl: _commentCtrl,
-        submitting: _submitting,
-        onRatingChanged: (v) => setState(() => _rating = v),
-        onSubmit: _submit,
-        onSkip: () => context.go('/'),
-      ),
+      body: _submitted
+          ? _SuccessView(onDone: () => context.go('/'))
+          : _RatingForm(
+              rating: _rating,
+              commentCtrl: _commentCtrl,
+              submitting: _submitting,
+              onRatingChanged: (v) => setState(() => _rating = v),
+              onSubmit: _submit,
+              onSkip: () => context.go('/'),
+            ),
     );
   }
 }
@@ -85,7 +92,13 @@ class _RatingForm extends StatelessWidget {
   final VoidCallback onSubmit;
   final VoidCallback onSkip;
 
-  static const _labels = ['Terrible', 'Poor', 'Okay', 'Good', 'Excellent'];
+  List<String> _labels(AppLocalizations l) => [
+        l.ratingTerrible,
+        l.ratingPoor,
+        l.ratingOkay,
+        l.ratingGood,
+        l.ratingExcellent,
+      ];
 
   @override
   Widget build(BuildContext context) {
@@ -96,18 +109,25 @@ class _RatingForm extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: core.kSpaceXL),
-          const Icon(Icons.directions_car, size: 72, color: core.kPatientPrimary),
+          const Icon(Icons.directions_car,
+              size: 72, color: core.kPatientPrimary),
           const SizedBox(height: core.kSpaceLG),
           Text(
-            'How was your ride?',
+            context.l10n.howWasRide,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(context)
+                .textTheme
+                .headlineSmall
+                ?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: core.kSpaceSM),
           Text(
-            _labels[ratingInt - 1],
+            _labels(context.l10n)[ratingInt - 1],
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: core.kTextSecondary),
+            style: Theme.of(context)
+                .textTheme
+                .bodyLarge
+                ?.copyWith(color: core.kTextSecondary),
           ),
           const SizedBox(height: core.kSpaceXL),
           Row(
@@ -122,7 +142,9 @@ class _RatingForm extends StatelessWidget {
                     minWidth: core.kMinTapTarget,
                     minHeight: core.kMinTapTarget),
                 icon: Icon(
-                  star <= ratingInt ? Icons.star_rounded : Icons.star_outline_rounded,
+                  star <= ratingInt
+                      ? Icons.star_rounded
+                      : Icons.star_outline_rounded,
                   size: 40,
                   color: star <= ratingInt ? Colors.amber : core.kBorder,
                 ),
@@ -134,15 +156,15 @@ class _RatingForm extends StatelessWidget {
             controller: commentCtrl,
             maxLines: 3,
             maxLength: 500,
-            decoration: const InputDecoration(
-              hintText: 'Any comments? (optional)',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              hintText: context.l10n.anyComments,
+              border: const OutlineInputBorder(),
               alignLabelWithHint: true,
             ),
           ),
           const SizedBox(height: core.kSpaceXL),
           core.PrimaryButton(
-            label: 'Submit Rating',
+            label: context.l10n.submitRating,
             onPressed: submitting ? null : onSubmit,
             isLoading: submitting,
             color: core.kPatientPrimary,
@@ -151,7 +173,7 @@ class _RatingForm extends StatelessWidget {
           const SizedBox(height: core.kSpaceMD),
           TextButton(
             onPressed: submitting ? null : onSkip,
-            child: const Text('Skip'),
+            child: Text(context.l10n.skip),
           ),
         ],
       ),
@@ -171,21 +193,25 @@ class _SuccessView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.check_circle_outline, size: 80, color: core.kPatientPrimary),
+            const Icon(Icons.check_circle_outline,
+                size: 80, color: core.kPatientPrimary),
             const SizedBox(height: core.kSpaceLG),
             Text(
-              'Thank you!',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+              context.l10n.thankYou,
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: core.kSpaceSM),
-            const Text(
-              'Your feedback helps us improve the service.',
+            Text(
+              context.l10n.feedbackHelps,
               textAlign: TextAlign.center,
-              style: TextStyle(color: core.kTextSecondary),
+              style: const TextStyle(color: core.kTextSecondary),
             ),
             const SizedBox(height: core.kSpaceXXL),
             core.PrimaryButton(
-              label: 'Back to Home',
+              label: context.l10n.backToHome,
               onPressed: onDone,
               color: core.kPatientPrimary,
               height: core.kButtonHeight,

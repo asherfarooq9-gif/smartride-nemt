@@ -4,8 +4,12 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, FlutterError;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:patient_app/shared/offline_banner.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:patient_app/core/locale_provider.dart';
+import 'package:patient_app/l10n/app_localizations.dart';
 import 'package:patient_app/core/router.dart';
 import 'package:patient_app/core/error_reporting.dart';
 import 'package:patient_app/core/providers.dart';
@@ -152,10 +156,43 @@ class _SmartRideAppState extends ConsumerState<SmartRideApp> {
     return MaterialApp.router(
       title: 'SmartRide',
       theme: isDriver ? AppTheme.driver() : AppTheme.patient(),
-      darkTheme: isDriver ? AppTheme.driver(dark: true) : AppTheme.patient(dark: true),
-      themeMode: ref.watch(themeModeProvider),
+      darkTheme:
+          isDriver ? AppTheme.driver(dark: true) : AppTheme.patient(dark: true),
+      themeMode: ref.watch(effectiveThemeModeProvider),
       routerConfig: router,
+      locale: ref.watch(localeProvider),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       debugShowCheckedModeBanner: false,
+      // Native-feeling rubber-band scrolling on every platform.
+      scrollBehavior: const _BouncyScrollBehavior(),
+      // Follow the user's text size, but cap it so layouts do not break.
+      builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+        // Default status bar icons for the theme; a screen with its own dark
+        // header (app bar, welcome) overrides this for its own area. Without it
+        // the icons stayed light after leaving such a screen and vanished on
+        // light screens.
+        value: Theme.of(context).brightness == Brightness.dark
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
+        child: MediaQuery.withClampedTextScaling(
+          maxScaleFactor: 1.4,
+          child: OfflineBanner(child: child ?? const SizedBox.shrink()),
+        ),
+      ),
     );
   }
+}
+
+class _BouncyScrollBehavior extends MaterialScrollBehavior {
+  const _BouncyScrollBehavior();
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) =>
+      const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics());
+
+  @override
+  Widget buildOverscrollIndicator(
+          BuildContext context, Widget child, ScrollableDetails details) =>
+      child;
 }

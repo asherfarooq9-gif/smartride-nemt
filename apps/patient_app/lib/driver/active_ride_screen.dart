@@ -1,10 +1,21 @@
+import 'package:patient_app/core/ride_status_label.dart';
+import 'package:patient_app/l10n/l10n.dart';
+import 'dart:async';
+
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
+import 'package:url_launcher/url_launcher.dart';
+import 'package:patient_app/shared/english_map_tiles.dart';
+import 'package:patient_app/core/location.dart';
 import 'package:patient_app/core/providers.dart';
+import 'package:patient_app/driver/dashboard_notifier.dart';
+import 'package:patient_app/driver/navigation_links.dart';
+import 'package:patient_app/driver/ride_events.dart';
 
 final _rideDetailProvider =
     FutureProvider.autoDispose.family<core.RideDetailResponse, String>(
@@ -24,31 +35,141 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
   final MapController _mapController = MapController();
   LatLng? _myPos;
   bool _cancelling = false;
+  // One status change at a time: a double tap used to send two PATCHes.
+  bool _busy = false;
+  bool _left = false;
+  Timer? _refetch;
+  Timer? _positionTimer;
+
+  // The GPS socket tells the driver when a ride ends, but it can be down exactly
+  // when the patient cancels. Reading the ride again every so often is the backstop.
+  static const _refetchEvery = Duration(seconds: 20);
+
+  @override
+  void initState() {
+    super.initState();
+    _refetch = Timer.periodic(_refetchEvery, (_) {
+      if (mounted) ref.invalidate(_rideDetailProvider(widget.rideId));
+    });
+    // Show the driver where they are on the map, not only where the patient is.
+    _positionTimer =
+        Timer.periodic(const Duration(seconds: 5), (_) => _updateMyPosition());
+    Future.microtask(_updateMyPosition);
+    // Accepting starts location sharing; resuming after a restart does not, so
+    // make sure it is running (a no-op when it already is).
+    Future.microtask(() {
+      if (mounted) {
+        ref.read(gpsStreamProvider.notifier).startStreaming(widget.rideId);
+      }
+    });
+  }
 
   @override
   void dispose() {
+    _refetch?.cancel();
+    _positionTimer?.cancel();
     _mapController.dispose();
     super.dispose();
   }
 
+  Future<void> _updateMyPosition() async {
+    final position = await ref.read(locationReaderProvider)();
+    if (!mounted || position == null) return;
+    setState(() => _myPos = LatLng(position.latitude, position.longitude));
+  }
+
+  /// Leaves the ride screen once, saying why, and stops sharing location.
+  Future<void> _leave(String message) async {
+    if (_left || !mounted) return;
+    _left = true;
+    final messenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.of(context);
+    await ref.read(gpsStreamProvider.notifier).stopStreaming();
+    ref.read(dashboardProvider.notifier).refresh();
+    messenger.showSnackBar(SnackBar(content: Text(message)));
+    router.go('/driver');
+  }
+
+  /// 403 or 404 on a ride this driver was working on means it moved away.
+  bool _isNoLongerYours(core.AppError e) =>
+      e.statusCode == 403 || e.statusCode == 404;
+
   Future<void> _advance(core.RideStatus next) async {
+    if (_busy) return;
+    final reassignedMessage = context.l10n.rideReassigned;
+    setState(() => _busy = true);
     try {
       await core.updateRideStatus(widget.rideId, next);
-      ref.invalidate(_rideDetailProvider(widget.rideId));
       if (next == core.RideStatus.completed ||
           next == core.RideStatus.cancelled) {
         await ref.read(gpsStreamProvider.notifier).stopStreaming();
+        _left = true;
+        // Drop the "ride in progress" banner now instead of at the next poll.
+        ref.read(dashboardProvider.notifier).refresh();
         if (mounted) context.go('/driver');
       }
-    } catch (e) {
-      if (mounted) {
+    } catch (e, st) {
+      // A server refusal carries its own words; anything else is a bug to report.
+      if (e is! core.AppError) {
+        core.ErrorReporter.report('Driver ride status update failed', e, st);
+      }
+      if (e is core.AppError && _isNoLongerYours(e)) {
+        // The server gave the ride to someone else (for example the driver did
+        // not set off in time). Say so and go home instead of a bare "Forbidden".
+        await _leave(reassignedMessage);
+      } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e is core.AppError ? e.message : 'Update failed'),
+            content: Text(
+                e is core.AppError ? e.message : context.l10n.updateFailed),
             backgroundColor: core.kError,
           ),
         );
       }
+    } finally {
+      // Success or failure, read the ride again: after a timeout or a refusal
+      // (the 409 'call dispatch') the screen must show what the server holds.
+      if (mounted) {
+        ref.invalidate(_rideDetailProvider(widget.rideId));
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  /// Hands the next stop to a maps app. On iOS the driver picks which one.
+  Future<void> _navigate(NavigationTarget target) async {
+    final options = navigationOptions(
+      target.lat,
+      target.lng,
+      platform: defaultTargetPlatform,
+    );
+    final choice = options.length == 1
+        ? options.single
+        : await showModalBottomSheet<NavigationOption>(
+            context: context,
+            builder: (_) => SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final option in options)
+                    ListTile(
+                      leading: const Icon(Icons.navigation_outlined),
+                      title: Text(option.label),
+                      onTap: () => Navigator.pop(context, option),
+                    ),
+                ],
+              ),
+            ),
+          );
+    if (choice == null) return;
+    final opened = await launchUrl(
+      choice.uri,
+      mode: LaunchMode.externalApplication,
+    );
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.noMapsApp)),
+      );
     }
   }
 
@@ -56,17 +177,17 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Cancel Ride'),
-        content: const Text('Are you sure you want to cancel this ride?'),
+        title: Text(context.l10n.cancelRide),
+        content: Text(context.l10n.cancelRideConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('No'),
+            child: Text(context.l10n.no),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: core.kError),
-            child: const Text('Yes, Cancel'),
+            child: Text(context.l10n.yesCancel),
           ),
         ],
       ),
@@ -83,12 +204,26 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
     final rideAsync = ref.watch(_rideDetailProvider(widget.rideId));
     final gpsStatus = ref.watch(gpsStreamProvider);
 
+    ref.listen<String?>(rideEndedByServerProvider, (_, endedId) {
+      if (endedId != widget.rideId) return;
+      ref.read(rideEndedByServerProvider.notifier).state = null;
+      _leave(context.l10n.rideEnded);
+    });
+    ref.listen(_rideDetailProvider(widget.rideId), (_, next) {
+      final ride = next.valueOrNull;
+      if (ride != null && rideLeftThisDriver(ride.status)) {
+        _leave(rideHasEnded(ride.status)
+            ? context.l10n.rideEnded
+            : context.l10n.rideNoLongerAssigned);
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: rideAsync.whenOrNull(
-              data: (r) => Text(r.status.displayLabel),
+              data: (r) => Text(rideStatusLabel(context.l10n, r.status)),
             ) ??
-            const Text('Active Ride'),
+            Text(context.l10n.activeRide),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: core.kSpaceLG),
@@ -99,7 +234,9 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
       body: rideAsync.when(
         loading: () => const core.LoadingState(),
         error: (e, _) => core.ErrorState(
-          message: e is core.AppError ? e.message : 'Failed to load ride',
+          message: e is core.AppError
+              ? (_isNoLongerYours(e) ? context.l10n.rideReassigned : e.message)
+              : context.l10n.failedLoadRide,
           onRetry: () => ref.invalidate(_rideDetailProvider(widget.rideId)),
         ),
         data: (ride) {
@@ -114,16 +251,11 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
                 child: FlutterMap(
                   mapController: _mapController,
                   options: MapOptions(
-                    initialCenter:
-                        pickupPos ?? _myPos ?? const LatLng(0, 0),
+                    initialCenter: pickupPos ?? _myPos ?? const LatLng(0, 0),
                     initialZoom: 14,
                   ),
                   children: [
-                    TileLayer(
-                      urlTemplate:
-                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.smartride.driver',
-                    ),
+                    ...englishTileLayers(),
                     MarkerLayer(
                       markers: [
                         if (pickupPos != null)
@@ -131,12 +263,30 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
                             point: pickupPos,
                             width: 40,
                             height: 40,
-                            child: const Tooltip(
-                              message: 'Patient pickup',
-                              child: Icon(
+                            child: Tooltip(
+                              message: context.l10n.patientPickup,
+                              child: const Icon(
                                 Icons.location_on,
                                 color: core.kEmergencyRed,
                                 size: 40,
+                              ),
+                            ),
+                          ),
+                        if (_myPos != null)
+                          Marker(
+                            point: _myPos!,
+                            width: 24,
+                            height: 24,
+                            child: Tooltip(
+                              message: context.l10n.youAreHere,
+                              child: const DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: core.kPatientPrimary,
+                                  shape: BoxShape.circle,
+                                  border: Border.fromBorderSide(
+                                    BorderSide(color: Colors.white, width: 3),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -148,8 +298,10 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
               _ActionPanel(
                 ride: ride,
                 cancelling: _cancelling,
+                busy: _busy,
                 onAdvance: _advance,
                 onCancel: _cancel,
+                onNavigate: _navigate,
               ),
             ],
           );
@@ -174,7 +326,7 @@ class _StatusBanner extends StatelessWidget {
       ),
       color: Theme.of(context).colorScheme.primaryContainer,
       child: Text(
-        status.displayLabel,
+        rideStatusLabel(context.l10n, status),
         textAlign: TextAlign.center,
         style: const TextStyle(fontWeight: FontWeight.w600),
       ),
@@ -186,14 +338,18 @@ class _ActionPanel extends StatelessWidget {
   const _ActionPanel({
     required this.ride,
     required this.cancelling,
+    required this.busy,
     required this.onAdvance,
     required this.onCancel,
+    required this.onNavigate,
   });
 
   final core.RideDetailResponse ride;
   final bool cancelling;
+  final bool busy;
   final Future<void> Function(core.RideStatus) onAdvance;
   final Future<void> Function() onCancel;
+  final Future<void> Function(NavigationTarget) onNavigate;
 
   core.RideStatus? get _nextStatus {
     switch (ride.status) {
@@ -210,18 +366,18 @@ class _ActionPanel extends StatelessWidget {
     }
   }
 
-  String get _nextLabel {
+  String _nextLabel(AppLocalizations l) {
     switch (ride.status) {
       case core.RideStatus.driverAssigned:
-        return 'Start Driving';
+        return l.startDriving;
       case core.RideStatus.driverEnRoute:
-        return 'Patient Picked Up';
+        return l.patientPickedUp;
       case core.RideStatus.patientPickedUp:
-        return 'Arrived at Hospital';
+        return l.arrivedAtHospital;
       case core.RideStatus.arrivedAtHospital:
-        return 'Complete Ride';
+        return l.completeRide;
       default:
-        return 'Next';
+        return l.nextStep;
     }
   }
 
@@ -232,6 +388,7 @@ class _ActionPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final next = _nextStatus;
+    final target = navigationTarget(ride);
     return Container(
       padding: const EdgeInsets.all(core.kSpaceLG),
       decoration: BoxDecoration(
@@ -247,9 +404,23 @@ class _ActionPanel extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (target != null) ...[
+            SizedBox(
+              width: double.infinity,
+              height: core.kMinTapTarget,
+              child: OutlinedButton.icon(
+                key: const ValueKey('navigate-button'),
+                onPressed: () => onNavigate(target),
+                icon: const Icon(Icons.navigation_outlined),
+                label: Text(target.label),
+              ),
+            ),
+            const SizedBox(height: core.kSpaceSM),
+          ],
           if (next != null)
             core.PrimaryButton(
-              label: _nextLabel,
+              label: _nextLabel(context.l10n),
+              isLoading: busy,
               onPressed: () => onAdvance(next),
               height: core.kMinTapTarget,
             ),
@@ -259,7 +430,7 @@ class _ActionPanel extends StatelessWidget {
               width: double.infinity,
               height: core.kMinTapTarget,
               child: OutlinedButton(
-                onPressed: cancelling ? null : onCancel,
+                onPressed: (cancelling || busy) ? null : onCancel,
                 style: OutlinedButton.styleFrom(
                   foregroundColor: core.kError,
                   side: const BorderSide(color: core.kError),
@@ -273,7 +444,7 @@ class _ActionPanel extends StatelessWidget {
                           color: core.kError,
                         ),
                       )
-                    : const Text('Cancel Ride'),
+                    : Text(context.l10n.cancelRide),
               ),
             ),
           ],
@@ -293,18 +464,19 @@ class _GpsStatusIcon extends StatelessWidget {
     final (icon, color, message) = switch (status) {
       GpsStreamStatus.live => (
           Icons.gps_fixed,
-          core.kOnlineGreen,
-          'Sharing your location with the patient',
+          // This icon sits on the blue app bar, where green was hard to see.
+          Colors.white,
+          context.l10n.gpsSharing,
         ),
       GpsStreamStatus.starting || GpsStreamStatus.degraded => (
           Icons.gps_not_fixed,
           core.kAmberWarning,
-          'Location sharing interrupted, reconnecting',
+          context.l10n.gpsReconnecting,
         ),
       GpsStreamStatus.idle => (
           Icons.gps_off,
-          core.kError,
-          'Location sharing is off. The patient cannot see you.',
+          const Color(0xFFFFB4AB),
+          context.l10n.gpsOff,
         ),
     };
     return Tooltip(

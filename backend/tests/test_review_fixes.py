@@ -50,7 +50,7 @@ async def test_admin_topup_credits_target_driver(client: AsyncClient, admin_toke
     r = await client.post(
         f"/api/v1/drivers/{driver_id}/wallet/topup",
         json={"amount_pkr": 500, "payment_method": "jazzcash"},
-        headers=_auth(admin_token),
+        headers={**_auth(admin_token), "Idempotency-Key": uuid.uuid4().hex},
     )
     assert r.status_code == 200, r.text
     assert r.json()["id"] == driver_id

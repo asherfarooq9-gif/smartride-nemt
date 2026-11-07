@@ -175,6 +175,30 @@ def test_top_n_limits_results():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Full EDs are a last resort, not a reason to leave the patient without a hospital
+# ─────────────────────────────────────────────────────────────────────────────
+def test_all_full_falls_back_to_nearest_and_flags_it():
+    near = make_h("N", 33.7220, 73.0440, capacity=50, load=50)
+    far = make_h("M", 33.7800, 73.1000, capacity=50, load=60)  # over capacity
+    results = match_hospitals(PATIENT_LAT, PATIENT_LNG, "cardiology", [far, near])
+    assert [r.hospital_id for r in results] == ["N", "M"]
+    assert all(r.ed_full for r in results)
+
+
+def test_hospital_with_room_is_not_flagged_full():
+    ok = make_h("G", 33.7250, 73.0450, capacity=50, load=10)
+    results = match_hospitals(PATIENT_LAT, PATIENT_LNG, "cardiology", [ok])
+    assert results[0].ed_full is False
+
+
+def test_full_ed_still_loses_to_one_with_room():
+    full = make_h("F", 33.7200, 73.0400, capacity=50, load=50)
+    ok = make_h("G", 33.7500, 73.0700, capacity=50, load=10)
+    results = match_hospitals(PATIENT_LAT, PATIENT_LNG, "cardiology", [full, ok])
+    assert [r.hospital_id for r in results] == ["G"]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Case 9: all candidates out of radius → empty list
 # ─────────────────────────────────────────────────────────────────────────────
 def test_empty_when_all_out_of_radius():

@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -70,7 +71,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       initialDate: _dobDate ?? DateTime(now.year - 30),
       firstDate: DateTime(1920),
       lastDate: now,
-      helpText: 'Date of Birth',
+      helpText: context.l10n.dateOfBirth,
     );
     if (picked != null) {
       setState(() {
@@ -102,14 +103,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           if (i == 0) context.go('/');
           if (i == 1) context.go('/rides');
         },
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.history_outlined), selectedIcon: Icon(Icons.history), label: 'My Rides'),
-          NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
+        destinations: [
+          NavigationDestination(
+              icon: const Icon(Icons.home_outlined),
+              selectedIcon: const Icon(Icons.home),
+              label: context.l10n.navHome),
+          NavigationDestination(
+              icon: const Icon(Icons.history_outlined),
+              selectedIcon: const Icon(Icons.history),
+              label: context.l10n.navMyRides),
+          NavigationDestination(
+              icon: const Icon(Icons.person_outline),
+              selectedIcon: const Icon(Icons.person),
+              label: context.l10n.navProfile),
         ],
       ),
       appBar: AppBar(
-        title: const Text('My Profile'),
+        title: Text(context.l10n.myProfile),
         actions: [
           if (!_editing)
             TextButton(
@@ -118,19 +128,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 if (p != null) _populate(p);
                 setState(() => _editing = true);
               },
-              child: const Text('Edit'),
+              // White: the default blue text vanished on the blue app bar.
+              style: TextButton.styleFrom(foregroundColor: Colors.white),
+              child: Text(context.l10n.edit),
             )
           else
             TextButton(
               onPressed: () => setState(() => _editing = false),
-              child: const Text('Cancel'),
+              style: TextButton.styleFrom(foregroundColor: Colors.white),
+              child: Text(context.l10n.cancel),
             ),
         ],
       ),
       body: profileAsync.when(
         loading: () => const core.LoadingState(),
         error: (e, _) => core.ErrorState(
-          message: e is core.AppError ? e.message : 'Failed to load profile',
+          message:
+              e is core.AppError ? e.message : context.l10n.failedLoadProfile,
           onRetry: () => ref.refresh(_profileProvider),
         ),
         data: (profile) => SingleChildScrollView(
@@ -149,7 +163,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   onCancel: () => setState(() => _editing = false),
                 )
               : _ViewMode(profile: profile),
-
         ),
       ),
     );
@@ -180,11 +193,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       setState(() => _editing = false);
       ref.invalidate(_profileProvider);
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Profile updated')));
+          .showSnackBar(SnackBar(content: Text(context.l10n.profileUpdated)));
     } else {
       final err = ref.read(_updateProvider).error;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(err is core.AppError ? err.message : 'Update failed'),
+        content: Text(
+            err is core.AppError ? err.message : context.l10n.updateFailed),
         backgroundColor: core.kError,
       ));
     }
@@ -230,20 +244,27 @@ class _ViewMode extends StatelessWidget {
               ?.copyWith(color: core.kTextSecondary),
         ),
         const SizedBox(height: core.kSpaceXL),
-        _InfoCard(title: 'Personal Information', rows: [
-          _InfoRow(label: 'Full Name', value: profile.fullName ?? '—'),
-          _InfoRow(label: 'Phone', value: profile.phone),
+        _InfoCard(title: context.l10n.personalInfo, rows: [
+          _InfoRow(
+              label: context.l10n.fullNameTitle,
+              value: profile.fullName ?? '—'),
+          _InfoRow(label: context.l10n.phoneTitle, value: profile.phone),
           if (profile.dateOfBirth != null)
-            _InfoRow(label: 'Date of Birth', value: profile.dateOfBirth!),
+            _InfoRow(
+                label: context.l10n.dateOfBirth, value: profile.dateOfBirth!),
           if (profile.mobilityNeeds != null)
-            _InfoRow(label: 'Mobility Needs', value: profile.mobilityNeeds!),
+            _InfoRow(
+                label: context.l10n.mobilityNeeds,
+                value: profile.mobilityNeeds!),
         ]),
         const SizedBox(height: core.kSpaceLG),
-        _InfoCard(title: 'Emergency Contact', rows: [
+        _InfoCard(title: context.l10n.emergencyContact, rows: [
           _InfoRow(
-              label: 'Name', value: profile.emergencyContactName ?? '—'),
+              label: context.l10n.nameTitle,
+              value: profile.emergencyContactName ?? '—'),
           _InfoRow(
-              label: 'Phone', value: profile.emergencyContactPhone ?? '—'),
+              label: context.l10n.phoneTitle,
+              value: profile.emergencyContactPhone ?? '—'),
         ]),
         const SizedBox(height: core.kSpaceLG),
         const _QuickLinksCard(),
@@ -269,7 +290,7 @@ class _QuickLinksCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
             child: Text(
-              'Quick Links',
+              context.l10n.quickLinks,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: core.kTextSecondary,
                     fontWeight: FontWeight.bold,
@@ -279,19 +300,19 @@ class _QuickLinksCard extends StatelessWidget {
           const Divider(height: 1),
           _NavRow(
             icon: Icons.notifications_outlined,
-            label: 'Notifications',
+            label: context.l10n.notificationsTitle,
             onTap: () => context.push('/notifications'),
           ),
           const Divider(height: 1),
           _NavRow(
             icon: Icons.place_outlined,
-            label: 'Saved Places',
+            label: context.l10n.savedPlaces,
             onTap: () => context.push('/saved-places'),
           ),
           const Divider(height: 1),
           _NavRow(
             icon: Icons.settings_outlined,
-            label: 'Settings',
+            label: context.l10n.settingsTitle,
             onTap: () => context.push('/settings'),
           ),
         ],
@@ -334,7 +355,8 @@ class _NavRow extends StatelessWidget {
                     ?.copyWith(fontWeight: FontWeight.w500),
               ),
             ),
-            const Icon(Icons.chevron_right, size: 20, color: core.kTextSecondary),
+            const Icon(Icons.chevron_right,
+                size: 20, color: core.kTextSecondary),
           ],
         ),
       ),
@@ -416,7 +438,10 @@ class _InfoRow extends StatelessWidget {
 
 class _EditForm extends StatelessWidget {
   final GlobalKey<FormState> formKey;
-  final TextEditingController nameCtrl, dobCtrl, mobilityCtrl, ecNameCtrl,
+  final TextEditingController nameCtrl,
+      dobCtrl,
+      mobilityCtrl,
+      ecNameCtrl,
       ecPhoneCtrl;
   final bool isUpdating;
   final VoidCallback onPickDate;
@@ -445,8 +470,9 @@ class _EditForm extends StatelessWidget {
         children: [
           TextFormField(
             controller: nameCtrl,
-            decoration: const InputDecoration(
-                labelText: 'Full Name', prefixIcon: Icon(Icons.person)),
+            decoration: InputDecoration(
+                labelText: context.l10n.fullNameTitle,
+                prefixIcon: const Icon(Icons.person)),
             validator: (v) => core.Validators.required(v, field: 'Full name'),
           ),
           const SizedBox(height: core.kSpaceLG),
@@ -454,23 +480,23 @@ class _EditForm extends StatelessWidget {
             controller: dobCtrl,
             readOnly: true,
             onTap: onPickDate,
-            decoration: const InputDecoration(
-              labelText: 'Date of Birth',
-              prefixIcon: Icon(Icons.cake),
-              suffixIcon: Icon(Icons.calendar_today_outlined, size: 18),
+            decoration: InputDecoration(
+              labelText: context.l10n.dateOfBirth,
+              prefixIcon: const Icon(Icons.cake),
+              suffixIcon: const Icon(Icons.calendar_today_outlined, size: 18),
             ),
           ),
           const SizedBox(height: core.kSpaceLG),
           TextFormField(
             controller: mobilityCtrl,
             maxLines: 2,
-            decoration: const InputDecoration(
-                labelText: 'Mobility Needs (optional)',
-                prefixIcon: Icon(Icons.accessible),
+            decoration: InputDecoration(
+                labelText: context.l10n.mobilityNeedsOptional,
+                prefixIcon: const Icon(Icons.accessible),
                 alignLabelWithHint: true),
           ),
           const SizedBox(height: core.kSpaceXL),
-          Text('Emergency Contact',
+          Text(context.l10n.emergencyContact,
               style: Theme.of(context)
                   .textTheme
                   .titleSmall
@@ -478,27 +504,29 @@ class _EditForm extends StatelessWidget {
           const SizedBox(height: core.kSpaceSM),
           TextFormField(
             controller: ecNameCtrl,
-            decoration: const InputDecoration(
-                labelText: 'Contact Name', prefixIcon: Icon(Icons.contacts)),
+            decoration: InputDecoration(
+                labelText: context.l10n.contactName,
+                prefixIcon: const Icon(Icons.contacts)),
           ),
           const SizedBox(height: core.kSpaceLG),
           TextFormField(
             controller: ecPhoneCtrl,
             keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(
-                labelText: 'Contact Phone', prefixIcon: Icon(Icons.phone)),
+            decoration: InputDecoration(
+                labelText: context.l10n.contactPhone,
+                prefixIcon: const Icon(Icons.phone)),
           ),
           const SizedBox(height: core.kSpaceXXL),
           Row(
             children: [
               Expanded(
                 child: OutlinedButton(
-                    onPressed: onCancel, child: const Text('Cancel')),
+                    onPressed: onCancel, child: Text(context.l10n.cancel)),
               ),
               const SizedBox(width: core.kSpaceLG),
               Expanded(
                 child: core.PrimaryButton(
-                  label: 'Save Changes',
+                  label: context.l10n.saveChanges,
                   onPressed: isUpdating ? null : onSave,
                   isLoading: isUpdating,
                   height: core.kMinTapTarget,

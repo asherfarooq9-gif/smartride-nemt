@@ -1,4 +1,6 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smartride_core/smartride_core.dart';
@@ -8,6 +10,17 @@ class WelcomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The top of this screen is dark blue, so the clock and battery must be
+    // light, but only while it is showing: a covered route's style still wins
+    // over the screen on top of it, which made the clock vanish on login.
+    final isShowing = ModalRoute.of(context)?.isCurrent ?? true;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: isShowing ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+      child: _buildScaffold(context),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     return Scaffold(
       body: Stack(
         fit: StackFit.expand,
@@ -58,7 +71,7 @@ class WelcomeScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: kSpaceSM),
                         Text(
-                          'Medical transport, always nearby.',
+                          context.l10n.brandTagline,
                           textAlign: TextAlign.center,
                           style: GoogleFonts.dmSans(
                             fontSize: kFontBody,
@@ -75,13 +88,13 @@ class WelcomeScreen extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(kRadiusPill),
-                            border: Border.all(color: kTeal600),
+                            border: Border.all(color: kPatient600),
                           ),
                           child: Text(
-                            'Islamabad · Rawalpindi',
+                            context.l10n.cityBadge,
                             style: GoogleFonts.dmSans(
                               fontSize: kFontSmall,
-                              color: kTeal600,
+                              color: kPatient600,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -112,7 +125,7 @@ class WelcomeScreen extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Get started',
+                        context.l10n.getStarted,
                         style: GoogleFonts.dmSans(
                           fontSize: kFontHeading,
                           fontWeight: FontWeight.bold,
@@ -121,7 +134,7 @@ class WelcomeScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: kSpaceSM),
                       Text(
-                        'Trusted medical transport for you and your family.',
+                        context.l10n.getStartedSub,
                         style: GoogleFonts.dmSans(
                           fontSize: kFontSmall,
                           color: kText600,
@@ -133,7 +146,7 @@ class WelcomeScreen extends StatelessWidget {
                         child: ElevatedButton(
                           onPressed: () => context.push('/signup'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: kTeal600,
+                            backgroundColor: kPatient600,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(kRadiusLG),
@@ -142,12 +155,12 @@ class WelcomeScreen extends StatelessWidget {
                             shadowColor: Colors.transparent,
                           ).copyWith(
                             shadowColor: WidgetStateProperty.all(
-                              kTeal600.withValues(alpha: 0.40),
+                              kPatient600.withValues(alpha: 0.40),
                             ),
                             elevation: WidgetStateProperty.all(8),
                           ),
                           child: Text(
-                            "Sign Up — It's Free",
+                            context.l10n.signUpFree,
                             style: GoogleFonts.dmSans(
                               fontSize: kFontBody,
                               fontWeight: FontWeight.bold,
@@ -162,18 +175,18 @@ class WelcomeScreen extends StatelessWidget {
                         child: OutlinedButton(
                           onPressed: () => context.push('/login'),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: kTeal600,
-                            side: const BorderSide(color: kTeal600),
+                            foregroundColor: kPatient600,
+                            side: const BorderSide(color: kPatient600),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(kRadiusLG),
                             ),
                           ),
                           child: Text(
-                            'Log In',
+                            context.l10n.logIn,
                             style: GoogleFonts.dmSans(
                               fontSize: kFontBody,
                               fontWeight: FontWeight.w600,
-                              color: kTeal600,
+                              color: kPatient600,
                             ),
                           ),
                         ),
@@ -183,7 +196,7 @@ class WelcomeScreen extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            'In an emergency, call ',
+                            context.l10n.emergencyCallPrefix,
                             style: GoogleFonts.dmSans(
                               fontSize: 12,
                               color: kText400,

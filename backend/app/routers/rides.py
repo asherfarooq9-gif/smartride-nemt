@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import metrics
+from app.core import metrics, phi_audit
 from app.core.database import get_db
 from app.core.ratelimit import make_limiter
 from app.core.security import (
@@ -28,6 +28,7 @@ from app.models.models import Ride, User, RideStatus, RideType
 from app.schemas.rides import (
     EmergencyRideRequest,
     ScheduledRideRequest,
+    ScheduledSeriesRequest,
     RideStatusUpdate,
     RateRideRequest,
     RideResponse,
@@ -39,6 +40,10 @@ from app.schemas.rides import (
     RideTriageInfo,
 )
 from app.services import idempotency, ride_service
+from app.services.emergency_dispatch import (
+    notify_patient_and_family_of_accepted_ride,
+    prealert_hospital_for_accepted_ride,
+)
 from app.services.ride_export import rides_csv_chunks
 
 router = APIRouter()
@@ -237,13 +242,60 @@ async def create_scheduled_ride(
             response.status_code = 200
             return _to_response(replayed)
 
-    ride = await ride_service.create_scheduled_ride(patient, body, db)
-    metrics.rides_created_total.labels(ride_type="scheduled").inc()
+    # Redis above is only a fast path. The database decides, so a retry or a
+    # racing duplicate gets the first ride even when Redis is down.
+    ride, is_new = await ride_service.create_scheduled_ride(
+        patient, body, db, key=key, fingerprint=body_fingerprint if key else None
+    )
+    if is_new:
+        metrics.rides_created_total.labels(ride_type="scheduled").inc()
+    else:
+        response.status_code = 200
     if key:
         await idempotency.remember(
             _SCHEDULED_IDEMPOTENCY_SCOPE, patient_id, key, ride.id, body_fingerprint
         )
     return _to_response(ride)
+
+
+@router.post(
+    "/scheduled/series",
+    response_model=RideListResponse,
+    status_code=201,
+    responses={
+        200: {
+            "description": (
+                "The same Idempotency-Key already booked this run: the same rides "
+                "are returned and nothing new is booked."
+            ),
+            "model": RideListResponse,
+        }
+    },
+)
+@limiter.limit("5/minute")
+async def create_scheduled_series(
+    request: Request,
+    response: Response,
+    body: ScheduledSeriesRequest,
+    idempotency_key: Optional[str] = Header(default=None, alias="Idempotency-Key"),
+    current_user: User = Depends(require_patient),
+    db: AsyncSession = Depends(get_db),
+):
+    """Book the same trip every day or every week, in one request."""
+    key = idempotency.validate_key(idempotency_key)
+    patient = await ride_service.get_patient_by_user(current_user, db)
+    rides, is_new = await ride_service.create_scheduled_series(
+        patient,
+        body,
+        db,
+        key=key,
+        fingerprint=idempotency.fingerprint(body) if key else None,
+    )
+    if is_new:
+        metrics.rides_created_total.labels(ride_type="scheduled").inc(len(rides))
+    else:
+        response.status_code = 200
+    return RideListResponse(items=[_to_response(r) for r in rides], total=len(rides))
 
 
 @router.get("/mine", response_model=RideListResponse)
@@ -279,10 +331,14 @@ async def _authorize_ride_access(ride: Ride, user: User, db: AsyncSession) -> st
     raise HTTPException(403, "Forbidden")
 
 
-def _patient_info(ride: Ride) -> Optional[RidePatientInfo]:
+def _patient_info(ride: Ride, authorized_as: str) -> Optional[RidePatientInfo]:
     if not ride.patient:
         return None
     p = ride.patient
+    # The driver needs the patient's number and mobility needs to complete the
+    # ride, not afterwards: once it is over, minimum necessary applies.
+    if authorized_as == "driver" and ride.status in ride_service.TERMINAL_STATUSES:
+        return RidePatientInfo(full_name=p.full_name)
     return RidePatientInfo(
         full_name=p.full_name, phone=p.user.phone, mobility_needs=p.mobility_needs
     )
@@ -297,6 +353,7 @@ def _driver_info(ride: Ride) -> Optional[RideDriverInfo]:
         phone=d.user.phone,
         vehicle_plate=d.vehicle_plate,
         vehicle_type=d.vehicle_type,
+        payment_methods=list(d.payment_methods or []),
     )
 
 
@@ -304,7 +361,9 @@ def _hospital_info(ride: Ride) -> Optional[RideHospitalInfo]:
     h = ride.hospital
     if not h:
         return None
-    return RideHospitalInfo(name=h.name, address=h.address, city=h.city)
+    return RideHospitalInfo(
+        name=h.name, address=h.address, city=h.city, lat=h.lat, lng=h.lng
+    )
 
 
 def _triage_info(triage, authorized_as: str) -> Optional[RideTriageInfo]:
@@ -332,12 +391,28 @@ async def get_ride_detail(
     authorized_as = await _authorize_ride_access(ride, current_user, db)
     triage = await ride_service.get_triage_for_ride(ride_id, db)
 
+    patient_info = _patient_info(ride, authorized_as)
+    triage_info = _triage_info(triage, authorized_as)
+    disclosed = [
+        name
+        for name, value in (
+            ("patient_phone", patient_info and patient_info.phone),
+            ("mobility_needs", patient_info and patient_info.mobility_needs),
+            ("symptom_text", triage_info and triage_info.symptom_text),
+        )
+        if value
+    ]
+    if disclosed:
+        phi_audit.record_phi_access(
+            current_user.id, authorized_as, ride_id, ride.patient_id, disclosed
+        )
+
     return RideDetailResponse(
         **_to_response(ride).model_dump(),
-        patient=_patient_info(ride),
+        patient=patient_info,
         driver=_driver_info(ride),
         hospital=_hospital_info(ride),
-        triage=_triage_info(triage, authorized_as),
+        triage=triage_info,
     )
 
 
@@ -358,17 +433,81 @@ async def pending_rides(
     return RideListResponse(items=[_to_response(r) for r in rides], total=len(rides))
 
 
+async def _verified_driver(current_user: User, db: AsyncSession):
+    driver = await ride_service.get_driver_by_user(current_user, db)
+    if not driver.is_verified:
+        raise HTTPException(403, "Driver not verified")
+    return driver
+
+
+@router.get("/scheduled/open", response_model=RideListResponse)
+async def open_scheduled_rides(
+    current_user: User = Depends(require_driver),
+    db: AsyncSession = Depends(get_db),
+):
+    """Booked rides near the driver that nobody has reserved yet, soonest first."""
+    driver = await _verified_driver(current_user, db)
+    rides = await ride_service.list_open_scheduled(driver, db)
+    return RideListResponse(items=[_to_response(r) for r in rides], total=len(rides))
+
+
+@router.get("/scheduled/claimed", response_model=RideListResponse)
+async def my_claimed_rides(
+    current_user: User = Depends(require_driver),
+    db: AsyncSession = Depends(get_db),
+):
+    """The booked rides this driver reserved, soonest first."""
+    driver = await _verified_driver(current_user, db)
+    rides = await ride_service.list_my_claims(driver, db)
+    return RideListResponse(items=[_to_response(r) for r in rides], total=len(rides))
+
+
+@router.post("/{ride_id}/claim", response_model=RideResponse)
+@limiter.limit("30/minute")
+async def claim_ride(
+    request: Request,
+    ride_id: UUID,
+    current_user: User = Depends(require_driver),
+    db: AsyncSession = Depends(get_db),
+):
+    """Reserve a booked ride ahead of time; 409 if someone else got it first."""
+    driver = await _verified_driver(current_user, db)
+    ride = await ride_service.claim_scheduled_ride(ride_id, driver, db)
+    metrics.rides_claimed_total.inc()
+    return _to_response(ride)
+
+
+@router.post("/{ride_id}/release", response_model=RideResponse)
+@limiter.limit("30/minute")
+async def release_ride(
+    request: Request,
+    ride_id: UUID,
+    current_user: User = Depends(require_driver),
+    db: AsyncSession = Depends(get_db),
+):
+    """Give a reserved ride back, while there is still time to find another driver."""
+    driver = await _verified_driver(current_user, db)
+    ride = await ride_service.release_scheduled_claim(ride_id, driver, db)
+    return _to_response(ride)
+
+
 @router.post("/{ride_id}/accept", response_model=RideResponse)
 async def accept_ride(
     ride_id: UUID,
+    background: BackgroundTasks,
     current_user: User = Depends(require_driver),
     db: AsyncSession = Depends(get_db),
 ):
     driver = await ride_service.get_driver_by_user(current_user, db)
     if not driver.is_verified:
         raise HTTPException(403, "Driver not verified")
-    ride = await ride_service.accept_ride(ride_id, driver, db)
+    ride, hospital_chosen = await ride_service.accept_ride(ride_id, driver, db)
     metrics.rides_accepted_total.inc()
+    # Dispatch did not place this ride, so it never told the patient or family.
+    background.add_task(notify_patient_and_family_of_accepted_ride, str(ride.id))
+    if hospital_chosen:
+        # Dispatch did not place this ride, so it never pre-alerted the hospital.
+        background.add_task(prealert_hospital_for_accepted_ride, str(ride.id))
     return _to_response(ride)
 
 

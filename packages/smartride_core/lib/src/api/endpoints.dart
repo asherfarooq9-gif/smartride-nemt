@@ -1,5 +1,6 @@
-﻿import '../models/user.dart';
+import '../models/user.dart';
 import '../models/patient.dart';
+import '../models/demand.dart';
 import '../models/driver.dart';
 import '../models/hospital.dart';
 import '../models/ride.dart';
@@ -7,7 +8,8 @@ import 'api_client.dart';
 
 final _c = ApiClient.instance;
 
-Future<TokenResponse> login(String phone, String password, {String? activeRole}) async {
+Future<TokenResponse> login(String phone, String password,
+    {String? activeRole}) async {
   final data = await _c.post(
     '/api/v1/auth/login',
     {
@@ -24,15 +26,10 @@ Future<TokenResponse> register(RegisterRequest req) async {
   return TokenResponse.fromJson(data);
 }
 
-/// GET /auth/me — which roles + profiles this account holds.
-Future<MeResponse> getMe() async {
-  final data = await _c.get('/api/v1/auth/me');
-  return MeResponse.fromJson(data);
-}
-
 /// POST /auth/switch-role — flip the active portal; returns a fresh token.
 Future<TokenResponse> switchRole(String activeRole) async {
-  final data = await _c.post('/api/v1/auth/switch-role', {'active_role': activeRole});
+  final data =
+      await _c.post('/api/v1/auth/switch-role', {'active_role': activeRole});
   return TokenResponse.fromJson(data);
 }
 
@@ -51,6 +48,19 @@ Future<void> logout({String? token}) async {
     {},
     headers: token == null ? null : {'Authorization': 'Bearer $token'},
   );
+}
+
+/// POST /auth/logout-all — ends every session of this account on every device.
+/// Throws [AppError].
+Future<void> logoutAll() async {
+  await _c.post('/api/v1/auth/logout-all', {});
+}
+
+/// POST /auth/delete-account — anonymizes the signed-in account and ends every
+/// session. Throws [AppError]: 403 for a wrong password, 409 while a ride is
+/// still active.
+Future<void> deleteAccount(String password) async {
+  await _c.post('/api/v1/auth/delete-account', {'password': password});
 }
 
 Future<PatientResponse> getPatientMe() async {
@@ -134,7 +144,8 @@ Future<void> acceptRide(String rideId) async {
   await _c.post('/api/v1/rides/$rideId/accept', {});
 }
 
-Future<RideResponse> rateRide(String rideId, double rating, {String? comment}) async {
+Future<RideResponse> rateRide(String rideId, double rating,
+    {String? comment}) async {
   final data = await _c.post('/api/v1/rides/$rideId/rate', {
     'rating': rating,
     if (comment != null && comment.isNotEmpty) 'comment': comment,
@@ -142,15 +153,70 @@ Future<RideResponse> rateRide(String rideId, double rating, {String? comment}) a
   return RideResponse.fromJson(data);
 }
 
-Future<RideResponse> createScheduledRide(ScheduledRideRequest req) async {
-  final data = await _c.post('/api/v1/rides/scheduled', req.toJson());
+/// [idempotencyKey] makes a retry (double tap, timeout) return the first
+/// booking instead of creating a second one.
+Future<RideResponse> createScheduledRide(
+  ScheduledRideRequest req, {
+  String? idempotencyKey,
+}) async {
+  final data = await _c.post(
+    '/api/v1/rides/scheduled',
+    req.toJson(),
+    headers:
+        idempotencyKey == null ? null : {'Idempotency-Key': idempotencyKey},
+  );
   return RideResponse.fromJson(data);
+}
+
+/// Booked rides near the driver that nobody has reserved yet, soonest first.
+Future<List<RideResponse>> getOpenScheduledRides() async {
+  final data = await _c.get('/api/v1/rides/scheduled/open');
+  return RideListResponse.fromJson(data).items;
+}
+
+/// The booked rides this driver reserved, soonest first.
+Future<List<RideResponse>> getClaimedRides() async {
+  final data = await _c.get('/api/v1/rides/scheduled/claimed');
+  return RideListResponse.fromJson(data).items;
+}
+
+/// Reserves a booked ride. Throws [AppError] (409) if another driver got it
+/// first or the driver is at the limit; the message says which.
+Future<RideResponse> claimRide(String rideId) async {
+  final data = await _c.post('/api/v1/rides/$rideId/claim', {});
+  return RideResponse.fromJson(data);
+}
+
+/// Gives a reserved ride back. Throws [AppError] (409) when pickup is too close.
+Future<RideResponse> releaseRide(String rideId) async {
+  final data = await _c.post('/api/v1/rides/$rideId/release', {});
+  return RideResponse.fromJson(data);
+}
+
+/// Books the same trip every day ("daily") or week ("weekly"), [occurrences]
+/// times (2-12), in one request. [idempotencyKey] makes a retry return the same
+/// run instead of booking it twice. Returns the rides, soonest first.
+Future<List<RideResponse>> createScheduledSeries(
+  ScheduledRideRequest req, {
+  required String repeat,
+  required int occurrences,
+  String? idempotencyKey,
+}) async {
+  final data = await _c.post(
+    '/api/v1/rides/scheduled/series',
+    {...req.toJson(), 'repeat': repeat, 'occurrences': occurrences},
+    headers:
+        idempotencyKey == null ? null : {'Idempotency-Key': idempotencyKey},
+  );
+  return RideListResponse.fromJson(data).items;
 }
 
 Future<List<HospitalResponse>> getHospitals() async {
   final data = await _c.get('/api/v1/hospitals');
   final items = data['items'] as List<dynamic>? ?? [];
-  return items.map((e) => HospitalResponse.fromJson(e as Map<String, dynamic>)).toList();
+  return items
+      .map((e) => HospitalResponse.fromJson(e as Map<String, dynamic>))
+      .toList();
 }
 
 Future<Map<String, dynamic>> getDriverEarnings() async {
@@ -166,3 +232,11 @@ Future<Map<String, dynamic>> getDriverWallet() async {
   return _c.get('/api/v1/drivers/wallet');
 }
 
+/// Busy hours ahead for a driver (GET /drivers/demand-forecast).
+Future<DemandForecast> getDemandForecast({int hoursAhead = 6}) async {
+  final data = await _c.get(
+    '/api/v1/drivers/demand-forecast',
+    queryParams: {'hours_ahead': hoursAhead},
+  );
+  return DemandForecast.fromJson(data);
+}

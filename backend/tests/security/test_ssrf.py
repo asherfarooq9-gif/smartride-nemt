@@ -137,7 +137,10 @@ class RecordingClient:
 
 def _hospital(endpoint, phone=None):
     return SimpleNamespace(
-        has_fhir=True, fhir_endpoint=endpoint, coordinator_phone=phone
+        has_fhir=True,
+        fhir_endpoint=endpoint,
+        coordinator_phone=phone,
+        ed_full=False,
     )
 
 
@@ -202,7 +205,10 @@ async def test_alert_reports_undelivered_when_nothing_worked(monkeypatch, caplog
 async def test_alert_reports_undelivered_when_sms_fails(monkeypatch, caplog):
     monkeypatch.setattr(notifications, "_send_sms", lambda to, body: False)
     hospital = SimpleNamespace(
-        has_fhir=False, fhir_endpoint=None, coordinator_phone="+923001112222"
+        has_fhir=False,
+        fhir_endpoint=None,
+        coordinator_phone="+923001112222",
+        ed_full=False,
     )
     with caplog.at_level(logging.ERROR, logger="smartride.notifications"):
         ok = await notifications.send_hospital_alert(

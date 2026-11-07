@@ -1,8 +1,9 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { api, setToken } from '@/lib/api'
-import { Phone, Lock, AlertCircle } from 'lucide-react'
+import { api, setToken, takeSessionExpired } from '@/lib/api'
+import { Phone, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react'
+import { Mark } from '@/components/Sidebar'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -10,6 +11,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
+  // Read once, when the page mounts after the redirect from an expired session.
+  const [sessionExpired] = useState(takeSessionExpired)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -18,6 +23,8 @@ export default function LoginPage() {
     try {
       const data = await api.login(phone, password)
       if (data.role !== 'admin') {
+        // The server has now opened a session for this account; close it.
+        await api.logoutWithToken(data.access_token)
         setError('Admin access only.')
         return
       }
@@ -31,41 +38,39 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-blue-700 via-blue-800 to-blue-950">
-      {/* Background blobs */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/20 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-80 h-80 bg-blue-400/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl pointer-events-none" />
+    <div className="grid min-h-screen place-items-center bg-panel px-4">
+      <div className="w-full max-w-sm">
+        <div className="mb-6 flex items-center gap-3">
+          <Mark size={44} />
+          <div className="leading-tight">
+            <p className="title text-base">SmartRide</p>
+            <p className="text-sm text-ink-dim">Dispatch console</p>
+          </div>
+        </div>
 
-      <div className="relative w-full max-w-md mx-4">
-        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-          {/* Card header */}
-          <div className="bg-gradient-to-br from-blue-700 to-blue-900 px-8 py-8 text-white">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">
-                <div className="w-5 h-5 bg-blue-700 rounded-md" />
-              </div>
-              <div>
-                <p className="font-bold text-lg leading-tight">SmartRide</p>
-                <p className="text-blue-200 text-xs">NEMT Admin Portal</p>
-              </div>
-            </div>
-            <h1 className="text-2xl font-bold">Welcome back</h1>
-            <p className="text-blue-200 text-sm mt-1">Sign in to your admin account</p>
+        <div className="panel-card">
+          <div className="border-b border-edge px-6 py-4">
+            <h1 className="title text-2xl">Sign in</h1>
+            <p className="mt-1 text-sm text-ink-dim">Admin accounts only.</p>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="px-8 py-7 space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5 px-6 py-6">
+            {sessionExpired && !error && (
+              <div role="status" className="rounded-xl border border-lamp-amber/40 bg-lamp-amber/10 px-4 py-3 text-sm text-lamp-amber">
+                Your session expired. Please sign in again.
+              </div>
+            )}
             {error && (
-              <div role="alert" className="flex items-center gap-2 text-red-700 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm">
-                <AlertCircle size={15} className="shrink-0" />
+              <div role="alert" className="flex items-center gap-2 rounded-xl border border-lamp-red/40 bg-lamp-red/10 px-4 py-3 text-sm text-lamp-red">
+                <AlertCircle size={15} className="shrink-0" aria-hidden="true" />
                 {error}
               </div>
             )}
 
             <div>
-              <label htmlFor="phone" className="block text-sm font-semibold text-blue-900 mb-1.5">Phone</label>
+              <label htmlFor="phone" className="mb-1.5 block text-sm font-medium">Phone</label>
               <div className="relative">
-                <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-400" />
+                <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-dim" aria-hidden="true" />
                 <input
                   id="phone"
                   name="phone"
@@ -74,36 +79,63 @@ export default function LoginPage() {
                   value={phone}
                   onChange={e => setPhone(e.target.value)}
                   required
-                  className="w-full pl-9 pr-3 py-2.5 border border-blue-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                  className="w-full rounded-lg border py-2.5 pl-9 pr-3 text-sm focus:border-steel focus:outline-none focus:ring-2 focus:ring-steel/40"
                   placeholder="+923001234567"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-semibold text-blue-900 mb-1.5">Password</label>
+              <label htmlFor="password" className="mb-1.5 block text-sm font-medium">Password</label>
               <div className="relative">
-                <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-400" />
+                <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-dim" aria-hidden="true" />
                 <input
                   id="password"
                   name="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required
-                  className="w-full pl-9 pr-3 py-2.5 border border-blue-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                  className="w-full rounded-lg border py-2.5 pl-9 pr-11 text-sm focus:border-steel focus:outline-none focus:ring-2 focus:ring-steel/40"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
+                  className="press absolute right-1.5 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-md text-ink-dim hover:bg-panel-inset hover:text-ink"
+                >
+                  {showPassword ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
+                </button>
               </div>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-800 hover:to-blue-900 text-white font-semibold py-2.5 rounded-xl transition disabled:opacity-50 shadow-sm"
+              className="press w-full rounded-lg bg-accent py-2.5 text-sm font-semibold text-white transition-colors hover:bg-navy disabled:opacity-50"
             >
               {loading ? 'Signing in…' : 'Sign in'}
             </button>
+
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => setShowHelp(v => !v)}
+                aria-expanded={showHelp}
+                aria-controls="forgot-help"
+                className="text-sm text-steel hover:underline"
+              >
+                Forgot password?
+              </button>
+              {showHelp && (
+                <p id="forgot-help" className="mt-2 rounded-xl bg-panel-inset px-4 py-3 text-left text-sm text-ink-dim">
+                  Admin passwords are reset by the system operator, not by email or SMS. Ask them to reset your
+                  password, then sign in with the new one.
+                </p>
+              )}
+            </div>
           </form>
         </div>
       </div>

@@ -73,7 +73,8 @@ void main() {
   });
 
   test('string detail from a 4xx is shown as is', () async {
-    final e = await _errorFrom((_) async => _json({'detail': 'No access'}, 403));
+    final e =
+        await _errorFrom((_) async => _json({'detail': 'No access'}, 403));
     expect(e.message, 'No access');
     expect(e.isPermanent, isTrue);
   });
@@ -145,6 +146,39 @@ void main() {
           'http://10.0.2.2:8000');
       expect(resolveApiBaseUrl(envUrl: null, isRelease: false, isWeb: true),
           'http://localhost:8000');
+    });
+  });
+
+  group('reachability', () {
+    test(
+        'a failed connection marks the server unreachable, a reply restores it',
+        () async {
+      var offline = true;
+      final api = _clientAnswering((o) async {
+        if (offline) {
+          throw DioException(
+            requestOptions: o,
+            type: DioExceptionType.connectionError,
+          );
+        }
+        return _json({'ok': true}, 200);
+      }).client;
+
+      await expectLater(api.get('/x'), throwsA(isA<AppError>()));
+      expect(ApiClient.isReachable.value, isFalse);
+
+      offline = false;
+      await api.get('/x');
+      expect(ApiClient.isReachable.value, isTrue);
+    });
+
+    test('a server error reply still counts as reachable', () async {
+      final api =
+          _clientAnswering((_) async => _json({'detail': 'x'}, 500)).client;
+
+      await expectLater(api.get('/x'), throwsA(isA<AppError>()));
+
+      expect(ApiClient.isReachable.value, isTrue);
     });
   });
 }

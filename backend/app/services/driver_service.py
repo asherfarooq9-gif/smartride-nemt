@@ -8,6 +8,7 @@ from sqlalchemy import select, func, and_, or_, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.search import contains
 from app.models.models import (
     Driver,
@@ -109,10 +110,25 @@ async def update_driver_profile(
     return driver
 
 
+def ensure_within_debt_limit(driver: Driver) -> None:
+    """402 when the wallet owes more than DRIVER_DEBT_LIMIT_PKR.
+
+    Only stops new work: a ride already in progress is always finished.
+    """
+    balance = driver.wallet_balance_pkr or Decimal(0)
+    if balance < -settings.DRIVER_DEBT_LIMIT_PKR:
+        raise HTTPException(
+            402,
+            f"Your wallet is at PKR {balance:.0f}. "
+            "Top up to receive ride requests again.",
+        )
+
+
 async def update_driver_status(
     driver: Driver, body: DriverStatusUpdate, db: AsyncSession
 ) -> Driver:
     if body.status == DriverStatus.available:
+        ensure_within_debt_limit(driver)
         # Going available mid-ride would let dispatch assign a second ride.
         on_ride = await db.execute(
             select(Ride.id)

@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
@@ -25,8 +26,7 @@ class BookingConfirmedScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: const Color(0xFFE8F5E9),
                     shape: BoxShape.circle,
-                    border: Border.all(
-                        color: core.kDriverPrimary, width: 2),
+                    border: Border.all(color: core.kDriverPrimary, width: 2),
                   ),
                   child: const Icon(
                     Icons.check,
@@ -36,19 +36,19 @@ class BookingConfirmedScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: core.kSpaceXL),
-              const Text(
-                'Ride Booked!',
+              Text(
+                context.l10n.rideBooked,
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: core.kSpaceXS),
-              const Text(
-                'Your trip has been scheduled.\nWe\'ll send a reminder before pickup.',
+              Text(
+                context.l10n.bookingBody,
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: core.kFontSM,
                   color: core.kTextSecondary,
                   height: 1.5,
@@ -66,14 +66,16 @@ class BookingConfirmedScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     _DetailRow(
-                        label: 'Booking ID',
-                        value:
-                            '#SR-${rideId.substring(0, 6).toUpperCase()}'),
+                        label: context.l10n.bookingId,
+                        value: '#SR-${rideId.substring(0, 6).toUpperCase()}'),
                     const Divider(height: core.kSpaceXL),
-                    const _DetailRow(
-                        label: 'Pickup', value: 'Current location'),
+                    _DetailRow(
+                        label: context.l10n.pickupTitle,
+                        value: context.l10n.currentLocation),
                     const Divider(height: core.kSpaceXL),
-                    const _DetailRow(label: 'Ride type', value: 'Standard'),
+                    _DetailRow(
+                        label: context.l10n.rideTypeLabel,
+                        value: context.l10n.standardLabel),
                   ],
                 ),
               ),
@@ -82,9 +84,9 @@ class BookingConfirmedScreen extends StatelessWidget {
                 height: core.kMinTapTarget,
                 child: ElevatedButton(
                   onPressed: () => context.go('/rides'),
-                  child: const Text(
-                    'View My Rides',
-                    style: TextStyle(
+                  child: Text(
+                    context.l10n.viewMyRides,
+                    style: const TextStyle(
                       fontSize: core.kFontMD,
                       fontWeight: FontWeight.bold,
                     ),
@@ -94,9 +96,9 @@ class BookingConfirmedScreen extends StatelessWidget {
               const SizedBox(height: core.kSpaceMD),
               TextButton(
                 onPressed: () => context.go('/'),
-                child: const Text(
-                  'Back to Home',
-                  style: TextStyle(fontSize: core.kFontMD),
+                child: Text(
+                  context.l10n.backToHome,
+                  style: const TextStyle(fontSize: core.kFontMD),
                 ),
               ),
               const SizedBox(height: core.kSpaceLG),
@@ -119,12 +121,10 @@ class _DetailRow extends StatelessWidget {
         children: [
           Text(label,
               style: const TextStyle(
-                  color: core.kTextSecondary,
-                  fontSize: core.kFontSM)),
+                  color: core.kTextSecondary, fontSize: core.kFontSM)),
           Text(value,
               style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: core.kFontSM)),
+                  fontWeight: FontWeight.w600, fontSize: core.kFontSM)),
         ],
       );
 }

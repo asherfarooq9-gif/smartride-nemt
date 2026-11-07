@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import Annotated, Optional, List
+from typing import Annotated, Literal, Optional, List
 from datetime import datetime
 from pydantic import BaseModel, Field, PlainSerializer, condecimal, field_validator
 from app.models.models import DriverStatus
@@ -7,6 +7,10 @@ from app.models.models import DriverStatus
 # Money stays Decimal in Python and is only turned into a JSON number at the edge,
 # so arithmetic never goes through binary floats.
 Money = Annotated[Decimal, PlainSerializer(float, return_type=float, when_used="json")]
+
+
+# The ways a driver can say they accept payment, in the order the app lists them.
+PAYMENT_METHODS = ("cash", "easypaisa", "jazzcash", "bank_transfer")
 
 
 class DriverResponse(BaseModel):
@@ -22,6 +26,7 @@ class DriverResponse(BaseModel):
     current_lat: Optional[float] = None
     current_lng: Optional[float] = None
     last_seen_at: Optional[datetime] = None
+    payment_methods: list[str] = []
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -57,6 +62,20 @@ class EarningsResponse(BaseModel):
     rides: List[EarningsRide]
 
 
+class DemandHour(BaseModel):
+    hour: datetime  # start of the hour, UTC
+    predicted_rides: float
+    level: Literal["low", "medium", "high"]
+
+
+class DemandForecastResponse(BaseModel):
+    generated_at: datetime
+    method: str
+    # False while there are no past rides to learn from; every hour is then low.
+    has_data: bool
+    forecast: List[DemandHour]
+
+
 class WalletTransaction(BaseModel):
     id: str
     type: str  # topup | commission_deduction
@@ -78,6 +97,18 @@ class WalletResponse(BaseModel):
 class DriverUpdate(BaseModel):
     full_name: Optional[str] = Field(default=None, max_length=100)
     vehicle_type: Optional[str] = Field(default=None, max_length=50)
+    payment_methods: Optional[list[str]] = None
+
+    @field_validator("payment_methods")
+    @classmethod
+    def known_methods(cls, v):
+        if v is None:
+            raise ValueError("cannot be null")
+        unknown = [m for m in v if m not in PAYMENT_METHODS]
+        if unknown:
+            raise ValueError(f"unknown payment method: {unknown[0]}")
+        # Drop repeats but keep the order the driver chose.
+        return list(dict.fromkeys(v))
 
     @field_validator("full_name", "vehicle_type")
     @classmethod

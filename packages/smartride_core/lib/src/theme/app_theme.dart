@@ -27,6 +27,19 @@ class AppTheme {
       onSurface: dark ? kDarkText1 : kOnSurface,
       surfaceContainerHighest: dark ? kDarkSurface2 : kSurface2,
       outline: dark ? kDarkBorder : kBorder,
+      // No Material tint over cards and sheets; elevation is shown with shadows.
+      surfaceTint: Colors.transparent,
+      // Tinted cards (Book a Ride, active ride), secondary text and grouped
+      // rows, so screens never reach for light-only constants.
+      primaryContainer: isDriver
+          ? (dark ? kDarkBlueContainer : kBlue100)
+          : (dark ? kDarkPatientContainer : kPatient100),
+      onPrimaryContainer: isDriver
+          ? (dark ? kDarkOnBlueContainer : kBlue800)
+          : (dark ? kDarkOnPatientContainer : kPatient800),
+      onSurfaceVariant: dark ? kDarkText2 : kText600,
+      surfaceContainerLow: dark ? kDarkSurface2 : kCanvas,
+      outlineVariant: dark ? kDarkBorder : kBorder,
     );
 
     final baseTextTheme =
@@ -75,10 +88,16 @@ class AppTheme {
       colorScheme: colorScheme,
       textTheme: textTheme,
       scaffoldBackgroundColor: dark ? kDarkBg : kCanvas,
+      // iOS-style swipe-back on every platform.
+      pageTransitionsTheme: PageTransitionsTheme(builders: {
+        for (final platform in TargetPlatform.values)
+          platform: const CupertinoPageTransitionsBuilder(),
+      }),
       appBarTheme: AppBarTheme(
         backgroundColor: primary,
         foregroundColor: kOnPrimary,
         elevation: 0,
+        scrolledUnderElevation: 0,
         centerTitle: false,
         titleTextStyle: GoogleFonts.dmSans(
           color: kOnPrimary,
@@ -118,6 +137,7 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: primary,
+          minimumSize: const Size(kMinTapTarget, kMinTapTarget),
           textStyle: GoogleFonts.dmSans(
             fontSize: kFontSmall,
             fontWeight: FontWeight.w600,
@@ -183,7 +203,33 @@ class AppTheme {
           ),
         ),
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
       ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: dark ? kDarkSurface : kSurface,
+        surfaceTintColor: Colors.transparent,
+        showDragHandle: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(kRadiusSheet),
+          ),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: dark ? kDarkSurface : kSurface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(kRadiusXXL),
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(kRadiusLG),
+        ),
+      ),
+      materialTapTargetSize: MaterialTapTargetSize.padded,
+      listTileTheme: const ListTileThemeData(minVerticalPadding: 12),
       chipTheme: ChipThemeData(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(kRadiusLG),

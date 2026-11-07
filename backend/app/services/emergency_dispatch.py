@@ -61,7 +61,6 @@ CANDIDATE_LIMIT = 200
 # A driver whose last location report is older than this is treated as gone
 # (app killed, no signal): dispatching to them wastes the patient's minutes.
 DRIVER_FRESH_SECONDS = 120
-TRIAGE_TIMEOUT_SECONDS = 10.0
 # Unusable severity is escalated, never downgraded: over-triage costs a faster
 # ambulance, under-triage costs a life.
 FAIL_SAFE_SEVERITY = SeverityLevel.five.value
@@ -147,17 +146,50 @@ def fallback_triage(symptom_text: str) -> dict:
     }
 
 
+class _TriageBreaker:
+    """Counts consecutive failures; while open, the service is not called at all."""
+
+    failures = 0
+    open_until = 0.0
+
+
+_breaker = _TriageBreaker()
+
+
+def reset_triage_breaker() -> None:
+    _breaker.failures = 0
+    _breaker.open_until = 0.0
+
+
 async def call_triage_service(symptom_text: str, ride_id=None) -> dict:
-    """Call the AI triage microservice; fall back to local rules if it is unusable."""
+    """Call the AI triage microservice; fall back to local rules if it is unusable.
+
+    A hung service would otherwise spend its whole timeout on every emergency, out
+    of a 60 second budget. After TRIAGE_BREAKER_FAILURES failures in a row it is
+    skipped for TRIAGE_BREAKER_SECONDS; then one call probes it again.
+    """
+    if _breaker.open_until > time.monotonic():
+        metrics.dispatch_failures_total.labels(reason="triage_circuit_open").inc()
+        return fallback_triage(symptom_text)
     try:
-        async with httpx.AsyncClient(timeout=TRIAGE_TIMEOUT_SECONDS) as client:
+        async with httpx.AsyncClient(timeout=settings.TRIAGE_TIMEOUT_SECONDS) as client:
             resp = await client.post(
                 f"{settings.TRIAGE_SERVICE_URL}/triage",
                 json={"text": symptom_text},
             )
             resp.raise_for_status()
-            return TriageServiceResponse.model_validate(resp.json()).model_dump()
+            answer = TriageServiceResponse.model_validate(resp.json()).model_dump()
+        _breaker.failures = 0
+        return answer
     except (httpx.HTTPError, ValueError) as exc:  # ValueError covers bad JSON/shape
+        _breaker.failures += 1
+        if _breaker.failures >= settings.TRIAGE_BREAKER_FAILURES:
+            _breaker.open_until = time.monotonic() + settings.TRIAGE_BREAKER_SECONDS
+            log.error(
+                "triage service failed %d times in a row; using local rules for %ds",
+                _breaker.failures,
+                settings.TRIAGE_BREAKER_SECONDS,
+            )
         # Exception type only: the message text can echo the symptom text (PHI).
         log.warning(
             "triage service unusable ride_id=%s (%s); using local rules",
@@ -176,6 +208,20 @@ def _clamp_confidence(value) -> float:
     return confidence if 0.0 <= confidence <= 1.0 else 0.0
 
 
+def _note_keyword_mismatch(model_version) -> None:
+    """The service stamps its keyword hash into model_version. If it differs from
+    ours the two are scoring with different rules; the vendored copy is only
+    compared in CI, so say so at runtime too."""
+    if not isinstance(model_version, str) or not model_version.startswith("rules-v"):
+        return
+    if model_version.rsplit("-", 1)[-1] != KEYWORDS_VERSION[:8]:
+        metrics.dispatch_failures_total.labels(reason="triage_keywords_mismatch").inc()
+        log.warning(
+            "triage service keyword version differs from the backend copy (%s)",
+            model_version,
+        )
+
+
 def normalise_triage(raw: dict, symptom_text: str) -> dict:
     """The one place triage output is made safe; everything downstream uses this."""
     severity = str(raw.get("severity", "")).strip()
@@ -185,8 +231,14 @@ def normalise_triage(raw: dict, symptom_text: str) -> dict:
     if not isinstance(specialty, str) or specialty not in _VALID_SPECIALTIES:
         specialty = FAIL_SAFE_SPECIALTY
     rule_override = bool(raw.get("rule_override"))
+    # The service may only raise severity. A stale, buggy or tampered one that says
+    # "2" for a text our own rules score higher must not lower it.
+    local_severity, _ = compute_severity(symptom_text)
+    if int(local_severity) > int(severity):
+        severity = local_severity
     if detect_severity_override(symptom_text):
         severity, rule_override = FAIL_SAFE_SEVERITY, True
+    _note_keyword_mismatch(raw.get("model_version"))
     inference_ms = raw.get("inference_ms")
     return {
         "specialty": specialty,
@@ -275,6 +327,7 @@ async def find_available_drivers_by_distance(
         .where(
             Driver.status == DriverStatus.available,
             Driver.is_verified == True,  # noqa: E712 — SQLAlchemy column comparison, not a bool test
+            Driver.wallet_balance_pkr >= -settings.DRIVER_DEBT_LIMIT_PKR,
             Driver.last_seen_at >= fresh_since,  # NULL (never reported) is excluded too
             Driver.current_lat.between(patient_lat - dlat, patient_lat + dlat),
             Driver.current_lng.between(patient_lng - dlng, patient_lng + dlng),
@@ -289,13 +342,6 @@ async def find_available_drivers_by_distance(
     ]
     drivers_with_dist.sort(key=lambda x: x[1])
     return [d for d, _ in drivers_with_dist]
-
-
-async def find_nearest_available_driver(
-    db: AsyncSession, patient_lat: float, patient_lng: float
-) -> Optional[Driver]:
-    drivers = await find_available_drivers_by_distance(db, patient_lat, patient_lng)
-    return drivers[0] if drivers else None
 
 
 async def claim_driver(db: AsyncSession, candidates: list[Driver]) -> Optional[Driver]:
@@ -424,20 +470,7 @@ async def _load_context(
 ) -> tuple[Optional[dict], list[HospitalCandidate], PatientInfo]:
     """Read everything the pipeline needs, then end the transaction."""
     stored_triage = await load_stored_triage(db, ride.id)
-    hospitals = [
-        HospitalCandidate(
-            id=str(h.id),
-            name=h.name,
-            lat=h.lat,
-            lng=h.lng,
-            specialties=h.specialties,
-            ed_capacity=h.ed_capacity,
-            ed_current_load=h.ed_current_load,
-            fhir_endpoint=h.fhir_endpoint,
-            coordinator_phone=h.coordinator_phone,
-        )
-        for h in await load_active_hospitals(db)
-    ]
+    hospitals = await load_hospital_candidates(db)
     row = await load_patient(db, ride.patient_id)
     patient = PatientInfo(
         id=row.id,
@@ -509,6 +542,174 @@ async def load_active_hospitals(db: AsyncSession):
     return result.scalars().all()
 
 
+async def load_hospital_candidates(db: AsyncSession) -> list[HospitalCandidate]:
+    return [
+        HospitalCandidate(
+            id=str(h.id),
+            name=h.name,
+            lat=h.lat,
+            lng=h.lng,
+            specialties=h.specialties,
+            ed_capacity=h.ed_capacity,
+            ed_current_load=h.ed_current_load,
+            fhir_endpoint=h.fhir_endpoint,
+            coordinator_phone=h.coordinator_phone,
+        )
+        for h in await load_active_hospitals(db)
+    ]
+
+
+async def match_hospital_for_ride(
+    db: AsyncSession, ride_id, pickup_lat: float, pickup_lng: float, symptom_text: str
+) -> Optional[MatchResult]:
+    """Best hospital for a ride that dispatch did not place (a driver accepted it).
+
+    Uses the stored triage result when there is one, otherwise the local rules:
+    the driver is waiting on this call, so it never makes a network request.
+    """
+    triage = await load_stored_triage(db, ride_id) or normalise_triage(
+        fallback_triage(symptom_text), symptom_text
+    )
+    matches = match_hospitals(
+        patient_lat=pickup_lat,
+        patient_lng=pickup_lng,
+        required_specialty=triage["specialty"],
+        candidates=await load_hospital_candidates(db),
+    )
+    return matches[0] if matches else None
+
+
 async def load_patient(db: AsyncSession, patient_id):
     result = await db.execute(select(Patient).where(Patient.id == patient_id))
     return result.scalar_one()
+
+
+async def prealert_hospital_for_accepted_ride(ride_id: str) -> bool:
+    """Pre-alert the hospital of a ride a driver accepted by hand. Never raises.
+
+    Runs after the accept response, in its own session. True when the hospital
+    was told; a False is logged and counted like a failed dispatch pre-alert.
+    """
+    from app.core.database import AsyncSessionLocal
+
+    try:
+        async with AsyncSessionLocal() as db:
+            ride = (
+                await db.execute(select(Ride).where(Ride.id == ride_id))
+            ).scalar_one_or_none()
+            if ride is None or ride.hospital_id is None or not ride.symptom_text:
+                return False
+            hospital = (
+                await db.execute(
+                    select(Hospital).where(Hospital.id == ride.hospital_id)
+                )
+            ).scalar_one()
+            row = await load_patient(db, ride.patient_id)
+            triage = await load_stored_triage(db, ride.id) or normalise_triage(
+                fallback_triage(ride.symptom_text), ride.symptom_text
+            )
+            info = _snapshot_ride(ride, ride.symptom_text)
+            patient = PatientInfo(
+                id=row.id,
+                user_id=row.user_id,
+                full_name=row.full_name,
+                emergency_contact_phone=row.emergency_contact_phone,
+            )
+            match = MatchResult(
+                hospital_id=str(hospital.id),
+                hospital_name=hospital.name,
+                score=0.0,
+                distance_km=haversine_km(
+                    info.pickup_lat, info.pickup_lng, hospital.lat, hospital.lng
+                ),
+                ed_occupancy_pct=100.0
+                * hospital.ed_current_load
+                / max(hospital.ed_capacity, 1),
+                fhir_endpoint=hospital.fhir_endpoint,
+                has_fhir=bool(hospital.fhir_endpoint),
+                coordinator_phone=hospital.coordinator_phone,
+                ed_full=hospital.ed_current_load >= hospital.ed_capacity,
+            )
+            await db.commit()  # end the transaction before any network call
+        prealerted = await send_hospital_alert(
+            ride=info, triage=triage, hospital=match, patient=patient
+        )
+    except Exception as exc:
+        log.error(
+            "hospital pre-alert crashed after manual accept ride_id=%s (%s)",
+            ride_id,
+            type(exc).__name__,
+        )
+        prealerted = False
+    if not prealerted:
+        metrics.dispatch_failures_total.labels(reason="hospital_not_prealerted").inc()
+        log.error("hospital NOT pre-alerted after manual accept ride_id=%s", ride_id)
+    return prealerted
+
+
+async def notify_patient_and_family_of_accepted_ride(ride_id: str) -> None:
+    """Tell the patient and the family contact that a driver took the ride by hand.
+
+    Dispatch does this itself for rides it places, so it only runs after a manual
+    accept, where nobody else would. Runs after the accept response, in its own
+    session, and never raises. A message that cannot be delivered is logged and
+    counted; the accept stands.
+    """
+    from app.core.database import AsyncSessionLocal
+
+    try:
+        async with AsyncSessionLocal() as db:
+            ride = (
+                await db.execute(select(Ride).where(Ride.id == ride_id))
+            ).scalar_one_or_none()
+            if ride is None or ride.driver_id is None:
+                return
+            driver_row = (
+                await db.execute(select(Driver).where(Driver.id == ride.driver_id))
+            ).scalar_one()
+            hospital_name = None
+            if ride.hospital_id is not None:
+                hospital_name = (
+                    await db.execute(
+                        select(Hospital.name).where(Hospital.id == ride.hospital_id)
+                    )
+                ).scalar_one_or_none()
+            row = await load_patient(db, ride.patient_id)
+            patient = PatientInfo(
+                id=row.id,
+                user_id=row.user_id,
+                full_name=row.full_name,
+                emergency_contact_phone=row.emergency_contact_phone,
+            )
+            driver = DriverInfo(
+                id=driver_row.id,
+                user_id=driver_row.user_id,
+                full_name=driver_row.full_name,
+                vehicle_plate=driver_row.vehicle_plate,
+            )
+            pushed = await notify_user(
+                db,
+                patient_id=ride.patient_id,
+                title="Driver Assigned",
+                body=f"{driver.full_name} ({driver.vehicle_plate}) is on the way!",
+                data={"ride_id": str(ride.id)},
+            )
+            await db.commit()  # end the transaction before the SMS call
+        texted = await send_family_sms(
+            patient=patient,
+            ride=ride,
+            driver=driver,
+            hospital_name=hospital_name or "hospital",
+        )
+    except Exception as exc:
+        log.error(
+            "accept notifications crashed ride_id=%s (%s)", ride_id, type(exc).__name__
+        )
+        metrics.dispatch_failures_total.labels(reason="patient_not_notified").inc()
+        return
+    if not pushed:
+        metrics.dispatch_failures_total.labels(reason="patient_not_notified").inc()
+        log.warning("patient NOT notified of manual accept ride_id=%s", ride_id)
+    if patient.emergency_contact_phone and not texted:
+        metrics.dispatch_failures_total.labels(reason="family_not_notified").inc()
+        log.warning("family NOT notified of manual accept ride_id=%s", ride_id)

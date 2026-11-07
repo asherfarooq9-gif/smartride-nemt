@@ -36,23 +36,23 @@ export default function DataTable<T>({
   onPageChange,
 }: DataTableProps<T>) {
   return (
-    <div className="bg-white border border-blue-100 rounded-2xl shadow-sm overflow-hidden">
+    <div className="bg-panel-raised border border-edge rounded-md  overflow-hidden">
       <div className="relative overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-blue-50 text-blue-700 text-xs uppercase tracking-wider">
+          <thead className="bg-panel-inset">
             <tr>
               {columns.map(col => (
                 <th
                   key={col.key}
                   scope="col"
-                  className={`px-4 py-3 text-left font-semibold ${col.className ?? ''}`}
+                  className={`legend px-4 py-3 text-left text-[0.72rem] ${col.className ?? ''}`}
                 >
                   <span className={col.hideHeader ? 'sr-only' : undefined}>{col.header}</span>
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-blue-50">
+          <tbody className="divide-y divide-edge">
             {loading ? (
               <LoadingRows cols={loadingCols ?? columns.length} />
             ) : rows.length === 0 ? (
@@ -65,7 +65,7 @@ export default function DataTable<T>({
               rows.map(row => (
                 <tr
                   key={keyFn(row)}
-                  className="hover:bg-blue-50/40 transition-colors"
+                  className="hover:bg-panel-inset transition-colors"
                 >
                   {columns.map(col => (
                     <td
@@ -83,7 +83,7 @@ export default function DataTable<T>({
       </div>
 
       {totalPages > 1 && (
-        <nav aria-label="Pagination" className="flex items-center justify-between px-4 py-3 border-t border-blue-50 text-sm text-gray-500">
+        <nav aria-label="Pagination" className="flex items-center justify-between px-4 py-3 border-t border-edge text-sm text-ink-dim">
           <span aria-live="polite">Page {page} of {totalPages}</span>
           <div className="flex gap-2">
             <button
@@ -91,7 +91,7 @@ export default function DataTable<T>({
               onClick={() => onPageChange(page - 1)}
               disabled={page <= 1}
               aria-label="Previous page"
-              className="p-1.5 rounded-lg hover:bg-blue-50 disabled:opacity-30 disabled:cursor-not-allowed transition"
+              className="p-1.5 rounded hover:bg-panel-inset disabled:opacity-30 disabled:cursor-not-allowed transition"
             >
               <ChevronLeft size={16} aria-hidden="true" />
             </button>
@@ -100,7 +100,7 @@ export default function DataTable<T>({
               onClick={() => onPageChange(page + 1)}
               disabled={page >= totalPages}
               aria-label="Next page"
-              className="p-1.5 rounded-lg hover:bg-blue-50 disabled:opacity-30 disabled:cursor-not-allowed transition"
+              className="p-1.5 rounded hover:bg-panel-inset disabled:opacity-30 disabled:cursor-not-allowed transition"
             >
               <ChevronRight size={16} aria-hidden="true" />
             </button>

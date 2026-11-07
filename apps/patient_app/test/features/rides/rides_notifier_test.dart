@@ -60,7 +60,8 @@ void main() {
       addTearDown(container.dispose);
 
       // Initially loading
-      expect(container.read(ridesProvider), const AsyncValue<core.RideListResponse>.loading());
+      expect(container.read(ridesProvider),
+          const AsyncValue<core.RideListResponse>.loading());
 
       final result = await container.read(ridesProvider.future);
       expect(result.items, hasLength(1));

@@ -10,7 +10,9 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_
 
+from app.core.config import settings
 from app.core.database import get_db
+from app.core.redis_client import get_cached
 from app.core.security import require_admin
 from app.models.models import (
     Ride,
@@ -37,11 +39,22 @@ ACTIVE_STATUSES = [
 # ── Live dashboard summary ────────────────────────────────────────────────────
 
 
+SUMMARY_CACHE_KEY = "analytics:summary"
+
+
 @router.get("/summary")
 async def dashboard_summary(
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
+    ttl = settings.SUMMARY_CACHE_SECONDS
+    if ttl <= 0:
+        return await _load_summary(db)
+    # Shared by every admin and every open tab; snapshot_at says how fresh it is.
+    return await get_cached(SUMMARY_CACHE_KEY, ttl, lambda: _load_summary(db))
+
+
+async def _load_summary(db: AsyncSession) -> dict:
     now = datetime.now(timezone.utc)
     day_ago = now - timedelta(hours=24)
 

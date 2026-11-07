@@ -1,3 +1,4 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -71,7 +72,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     if (auth.hasError) {
       final err = auth.error;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(err is AppError ? err.message : 'Sign up failed'),
+        content:
+            Text(err is AppError ? err.message : context.l10n.signupFailed),
         backgroundColor: kError,
       ));
     }
@@ -82,7 +84,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     final isLoading = ref.watch(authProvider) is AsyncLoading;
 
     return Scaffold(
-      backgroundColor: kAuthDarkBg,
+      backgroundColor: kAuthLightBg,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: kSpaceXL),
@@ -97,50 +99,53 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   icon: const Icon(
                     Icons.arrow_back_ios,
                     size: 16,
-                    color: kAuthTeal,
+                    color: kAuthAccent,
                   ),
                   label: Text(
-                    'Back',
-                    style: GoogleFonts.dmSans(color: kAuthTeal),
+                    context.l10n.back,
+                    style: GoogleFonts.dmSans(color: kAuthAccent),
                   ),
                   style: TextButton.styleFrom(alignment: Alignment.centerLeft),
                 ),
                 const SizedBox(height: kSpaceXL),
                 Text(
-                  'Create Account',
+                  context.l10n.createAccount,
                   style: GoogleFonts.dmSans(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: kAuthText,
                   ),
                 ),
                 const SizedBox(height: kSpaceXXL),
-                DarkField(
+                AuthField(
                   controller: _nameCtrl,
-                  label: 'FULL NAME',
-                  hint: 'Your full name',
+                  label: context.l10n.fullNameLabel,
+                  hint: context.l10n.fullNameHint,
                   validator: (v) => Validators.required(v, field: 'Full name'),
                 ),
                 const SizedBox(height: kSpaceLG),
-                DarkField(
+                AuthField(
                   controller: _phoneCtrl,
-                  label: 'PHONE NUMBER',
+                  label: context.l10n.phoneNumberLabel,
                   hint: '+92 3XX XXX XXXX',
                   keyboardType: TextInputType.phone,
                   validator: Validators.phone,
                 ),
                 const SizedBox(height: kSpaceLG),
-                DarkField(
+                AuthField(
                   controller: _passCtrl,
-                  label: 'PASSWORD',
-                  hint: 'Min. 8 characters',
+                  label: context.l10n.passwordLabel,
+                  hint: context.l10n.passwordMinHint,
                   obscureText: _obscure,
                   suffixIcon: IconButton(
+                    tooltip: _obscure
+                        ? context.l10n.showPassword
+                        : context.l10n.hidePassword,
                     icon: Icon(
                       _obscure
                           ? Icons.visibility_outlined
                           : Icons.visibility_off_outlined,
-                      color: Colors.white38,
+                      color: kAuthMuted,
                       size: 20,
                     ),
                     onPressed: () => setState(() => _obscure = !_obscure),
@@ -148,21 +153,22 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   validator: Validators.password,
                 ),
                 const SizedBox(height: kSpaceLG),
-                DarkField(
+                AuthField(
                   controller: _confirmCtrl,
-                  label: 'CONFIRM PASSWORD',
-                  hint: 'Repeat password',
+                  label: context.l10n.confirmPasswordLabel,
+                  hint: context.l10n.repeatPasswordHint,
                   obscureText: _obscure,
-                  validator: (v) =>
-                      v != _passCtrl.text ? 'Passwords do not match' : null,
+                  validator: (v) => v != _passCtrl.text
+                      ? context.l10n.passwordsMismatch
+                      : null,
                 ),
                 const SizedBox(height: kSpaceXL),
                 Text(
-                  'I AM A...',
+                  context.l10n.iAmA,
                   style: GoogleFonts.dmSans(
                     fontSize: kFontCaption,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white38,
+                    color: kAuthMuted,
                     letterSpacing: 0.6,
                   ),
                 ),
@@ -180,18 +186,18 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                           children: [
                             const SizedBox(height: kSpaceXL),
                             Text(
-                              'DRIVER DETAILS',
+                              context.l10n.driverDetails,
                               style: GoogleFonts.dmSans(
                                 fontSize: kFontCaption,
                                 fontWeight: FontWeight.w700,
-                                color: Colors.white38,
+                                color: kAuthMuted,
                                 letterSpacing: 0.6,
                               ),
                             ),
                             const SizedBox(height: kSpaceMD),
-                            DarkField(
+                            AuthField(
                               controller: _licenseCtrl,
-                              label: 'LICENSE NUMBER',
+                              label: context.l10n.licenseLabel,
                               hint: 'e.g. LHR-DL-12345',
                               validator: (v) => _needsDriverFields
                                   ? Validators.required(
@@ -201,9 +207,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                   : null,
                             ),
                             const SizedBox(height: kSpaceLG),
-                            DarkField(
+                            AuthField(
                               controller: _plateCtrl,
-                              label: 'VEHICLE PLATE',
+                              label: context.l10n.plateLabel,
                               hint: 'e.g. ABC-123',
                               validator: (v) => _needsDriverFields
                                   ? Validators.required(
@@ -214,11 +220,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                             ),
                             const SizedBox(height: kSpaceLG),
                             Text(
-                              'VEHICLE TYPE',
+                              context.l10n.vehicleTypeLabel,
                               style: GoogleFonts.dmSans(
                                 fontSize: kFontCaption,
                                 fontWeight: FontWeight.w700,
-                                color: Colors.white38,
+                                color: kAuthMuted,
                                 letterSpacing: 0.6,
                               ),
                             ),
@@ -238,7 +244,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   child: ElevatedButton(
                     onPressed: isLoading ? null : _submit,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: kAuthTeal,
+                      backgroundColor: kAuthAccent,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(kRadiusLG),
@@ -254,7 +260,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                             ),
                           )
                         : Text(
-                            'Create Account',
+                            context.l10n.createAccount,
                             style: GoogleFonts.dmSans(
                               fontSize: kFontBody,
                               fontWeight: FontWeight.bold,
@@ -268,9 +274,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
-                      'Already have an account? ',
+                      context.l10n.haveAccountPrefix,
                       style: GoogleFonts.dmSans(
-                        color: Colors.white70,
+                        color: kAuthMuted,
                         fontSize: kFontSmall,
                       ),
                     ),
@@ -280,9 +286,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                         minimumSize: const Size(kMinTapTarget, kMinTapTarget),
                       ),
                       child: Text(
-                        'Log in',
+                        context.l10n.logInLink,
                         style: GoogleFonts.dmSans(
-                          color: kDarkTeal,
+                          color: kAuthAccent,
                           fontSize: kFontSmall,
                           fontWeight: FontWeight.w600,
                         ),
@@ -334,11 +340,11 @@ class _VehicleTypeChips extends StatelessWidget {
                 constraints: const BoxConstraints(minHeight: kMinTapTarget),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? kAuthTeal.withValues(alpha: 0.15)
-                      : kDarkFieldBg,
+                      ? kAuthAccent.withValues(alpha: 0.15)
+                      : kAuthFieldBg,
                   borderRadius: BorderRadius.circular(kRadiusMD),
                   border: Border.all(
-                    color: isSelected ? kAuthTeal : kDarkFieldBorder,
+                    color: isSelected ? kAuthAccent : kAuthFieldBorder,
                     width: isSelected ? 1.5 : 1.0,
                   ),
                 ),
@@ -347,7 +353,7 @@ class _VehicleTypeChips extends StatelessWidget {
                   style: GoogleFonts.dmSans(
                     fontSize: kFontSmall,
                     fontWeight: FontWeight.w600,
-                    color: isSelected ? kDarkTeal : Colors.white70,
+                    color: isSelected ? kAuthAccent : kAuthMuted,
                   ),
                 ),
               ),
@@ -373,8 +379,8 @@ class _RoleSelector extends StatelessWidget {
           value: _RoleChoice.patient,
           selected: selected,
           emoji: '🏥',
-          title: 'Patient',
-          subtitle: 'Book and receive medical rides',
+          title: context.l10n.rolePatient,
+          subtitle: context.l10n.rolePatientSub,
           onTap: () => onChanged(_RoleChoice.patient),
         ),
         const SizedBox(height: kSpaceSM),
@@ -382,8 +388,8 @@ class _RoleSelector extends StatelessWidget {
           value: _RoleChoice.driver,
           selected: selected,
           emoji: '🚗',
-          title: 'Driver',
-          subtitle: 'Drive patients to appointments',
+          title: context.l10n.roleDriver,
+          subtitle: context.l10n.roleDriverSub,
           onTap: () => onChanged(_RoleChoice.driver),
         ),
         const SizedBox(height: kSpaceSM),
@@ -391,8 +397,8 @@ class _RoleSelector extends StatelessWidget {
           value: _RoleChoice.both,
           selected: selected,
           emoji: '👥',
-          title: 'Both',
-          subtitle: 'Access both patient and driver portals',
+          title: context.l10n.roleBoth,
+          subtitle: context.l10n.roleBothSub,
           onTap: () => onChanged(_RoleChoice.both),
         ),
       ],
@@ -436,10 +442,10 @@ class _RoleCard extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             color:
-                isSelected ? kAuthTeal.withValues(alpha: 0.15) : kDarkFieldBg,
+                isSelected ? kAuthAccent.withValues(alpha: 0.15) : kAuthFieldBg,
             borderRadius: BorderRadius.circular(kRadiusMD),
             border: Border.all(
-              color: isSelected ? kAuthTeal : kDarkFieldBorder,
+              color: isSelected ? kAuthAccent : kAuthFieldBorder,
               width: isSelected ? 1.5 : 1.0,
             ),
           ),
@@ -454,7 +460,7 @@ class _RoleCard extends StatelessWidget {
                     Text(
                       title,
                       style: GoogleFonts.dmSans(
-                        color: isSelected ? Colors.white : Colors.white70,
+                        color: isSelected ? kAuthText : kAuthMuted,
                         fontWeight: FontWeight.w600,
                         fontSize: kFontBody,
                       ),
@@ -462,7 +468,7 @@ class _RoleCard extends StatelessWidget {
                     Text(
                       subtitle,
                       style: GoogleFonts.dmSans(
-                        color: Colors.white70,
+                        color: kAuthMuted,
                         fontSize: kFontSmall,
                       ),
                     ),
@@ -470,7 +476,7 @@ class _RoleCard extends StatelessWidget {
                 ),
               ),
               if (isSelected)
-                const Icon(Icons.check_circle, color: kAuthTeal, size: 20),
+                const Icon(Icons.check_circle, color: kAuthAccent, size: 20),
             ],
           ),
         ),

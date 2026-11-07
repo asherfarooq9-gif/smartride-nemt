@@ -21,9 +21,7 @@ async def _driver(client, db) -> uuid.UUID:
 
 async def _topup(client, admin_token, driver_id, key=None, **body):
     body = {"amount_pkr": "100.00", "payment_method": "jazzcash", **body}
-    headers = _auth(admin_token)
-    if key:
-        headers["Idempotency-Key"] = key
+    headers = {**_auth(admin_token), "Idempotency-Key": key or uuid.uuid4().hex}
     return await client.post(
         f"/api/v1/drivers/{driver_id}/wallet/topup", json=body, headers=headers
     )
@@ -115,6 +113,20 @@ async def test_idempotency_key_is_unique_in_the_database(client, db):
 
 
 # ── top-up behaviour ──────────────────────────────────────────────────────────
+
+
+async def test_topup_without_idempotency_key_is_rejected(client, db, admin_token):
+    """A keyless retry would credit twice (NULL keys never conflict), so refuse it."""
+    driver_id = await _driver(client, db)
+
+    r = await client.post(
+        f"/api/v1/drivers/{driver_id}/wallet/topup",
+        json={"amount_pkr": "100.00", "payment_method": "jazzcash"},
+        headers=_auth(admin_token),
+    )
+
+    assert r.status_code == 422, r.text
+    assert await _entries(db, driver_id) == []
 
 
 async def test_topup_replay_with_same_key_credits_once(client, db, admin_token):

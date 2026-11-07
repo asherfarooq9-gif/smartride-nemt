@@ -1,10 +1,11 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart';
 import 'package:patient_app/core/providers.dart';
 
-/// "Become a Driver" / "Become a Patient" — adds a role to the current account.
+/// context.l10n.becomeDriver / context.l10n.becomePatient — adds a role to the current account.
 class AddRoleScreen extends ConsumerStatefulWidget {
   const AddRoleScreen({super.key, required this.role});
 
@@ -50,7 +51,7 @@ class _AddRoleScreenState extends ConsumerState<AddRoleScreen> {
       _showError(e.message);
     } on Exception catch (e, st) {
       ErrorReporter.report('Adding a role failed', e, st);
-      _showError('Could not add this role. Please try again.');
+      _showError(context.l10n.couldNotAddRole);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -67,7 +68,9 @@ class _AddRoleScreenState extends ConsumerState<AddRoleScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          title: Text(_isDriver ? 'Become a Driver' : 'Become a Patient')),
+          title: Text(_isDriver
+              ? context.l10n.becomeDriver
+              : context.l10n.becomePatient)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(kSpaceLG),
@@ -81,8 +84,8 @@ class _AddRoleScreenState extends ConsumerState<AddRoleScreen> {
                 const SizedBox(height: kSpaceLG),
                 Text(
                   _isDriver
-                      ? 'Add a driver profile to start accepting rides.'
-                      : 'Add a patient profile to request rides.',
+                      ? context.l10n.addDriverProfile
+                      : context.l10n.addPatientProfile,
                   textAlign: TextAlign.center,
                   style: Theme.of(context)
                       .textTheme
@@ -93,9 +96,9 @@ class _AddRoleScreenState extends ConsumerState<AddRoleScreen> {
                 if (_isDriver) ...[
                   TextFormField(
                     controller: _licenseCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'License number',
-                      prefixIcon: Icon(Icons.badge),
+                    decoration: InputDecoration(
+                      labelText: context.l10n.licenseField,
+                      prefixIcon: const Icon(Icons.badge),
                     ),
                     validator: (v) =>
                         Validators.required(v, field: 'License number'),
@@ -103,9 +106,9 @@ class _AddRoleScreenState extends ConsumerState<AddRoleScreen> {
                   const SizedBox(height: kSpaceLG),
                   TextFormField(
                     controller: _plateCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Vehicle plate',
-                      prefixIcon: Icon(Icons.confirmation_number),
+                    decoration: InputDecoration(
+                      labelText: context.l10n.plateField,
+                      prefixIcon: const Icon(Icons.confirmation_number),
                     ),
                     validator: (v) =>
                         Validators.required(v, field: 'Vehicle plate'),
@@ -113,9 +116,9 @@ class _AddRoleScreenState extends ConsumerState<AddRoleScreen> {
                   const SizedBox(height: kSpaceLG),
                   TextFormField(
                     controller: _vehicleTypeCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Vehicle type (e.g. Sedan, Ambulette)',
-                      prefixIcon: Icon(Icons.directions_car),
+                    decoration: InputDecoration(
+                      labelText: context.l10n.vehicleTypeExample,
+                      prefixIcon: const Icon(Icons.directions_car),
                     ),
                     validator: (v) =>
                         Validators.required(v, field: 'Vehicle type'),
@@ -123,7 +126,9 @@ class _AddRoleScreenState extends ConsumerState<AddRoleScreen> {
                   const SizedBox(height: kSpaceXXL),
                 ],
                 PrimaryButton(
-                  label: _isDriver ? 'Become a Driver' : 'Become a Patient',
+                  label: _isDriver
+                      ? context.l10n.becomeDriver
+                      : context.l10n.becomePatient,
                   onPressed: _busy ? null : _submit,
                   isLoading: _busy,
                 ),

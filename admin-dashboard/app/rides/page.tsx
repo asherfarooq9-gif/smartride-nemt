@@ -16,13 +16,13 @@ const STATUSES = ['pending', 'driver_assigned', 'driver_en_route', 'patient_pick
 const TYPES = ['emergency', 'scheduled']
 const PAGE_SIZE = 20
 
-function exportRides(rides: Ride[]) {
+function exportRides(rides: Ride[], page: number) {
   const rows = rides.map(r => [
     r.id, r.ride_type, r.status,
     r.pickup_address ?? `${r.pickup_lat},${r.pickup_lng}`,
     r.requested_at, r.completed_at,
   ])
-  downloadCsv('rides.csv', toCsv(['ID', 'Type', 'Status', 'Pickup', 'Requested', 'Completed'], rows))
+  downloadCsv(`rides-page-${page}.csv`, toCsv(['ID', 'Type', 'Status', 'Pickup', 'Requested', 'Completed'], rows))
 }
 
 export default function RidesPage() {
@@ -51,37 +51,38 @@ export default function RidesPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-blue-900">Rides <span className="text-blue-600 font-normal text-lg">({total})</span></h1>
+        <h1 className="title text-3xl">Rides <span className="text-ink-dim font-normal text-base">({total})</span></h1>
         <button
           type="button"
-          onClick={() => exportRides(rides)}
-          className="flex items-center gap-2 text-sm bg-white border border-gray-200 hover:border-gray-300 px-4 py-2 rounded-xl shadow-sm transition"
+          onClick={() => exportRides(rides, page)}
+          title={`Exports the ${rides.length} rides on this page only, not all ${total}`}
+          className="flex items-center gap-2 text-sm bg-panel-raised border border-edge hover:border-edge-strong px-4 py-2 rounded-md  transition"
         >
           <Download size={14} aria-hidden="true" />
-          Export CSV
+          Export this page (CSV)
         </button>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 bg-white border border-blue-100 rounded-2xl p-4 shadow-sm">
+      <div className="flex flex-wrap gap-3 bg-panel-raised border border-edge rounded-md p-4 ">
         <div className="relative flex-1 min-w-[200px]">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden="true" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-dim" aria-hidden="true" />
           <input
             type="search"
             aria-label="Search rides by pickup address"
             placeholder="Search pickup address…"
             value={searchInput}
             onChange={e => setSearchInput(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+            className="w-full pl-9 pr-3 py-2 text-sm border border-edge rounded-md focus:outline-none focus:ring-2 focus:ring-steel/40 focus:border-steel"
           />
         </div>
         <div className="flex items-center gap-2">
-          <Filter size={14} className="text-gray-400" aria-hidden="true" />
+          <Filter size={14} className="text-ink-dim" aria-hidden="true" />
           <select
             aria-label="Filter by status"
             value={statusFilter}
             onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
-            className="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+            className="text-sm border border-edge rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-steel/40 focus:border-steel"
           >
             <option value="">All Statuses</option>
             {STATUSES.map(s => (
@@ -92,7 +93,7 @@ export default function RidesPage() {
             aria-label="Filter by ride type"
             value={typeFilter}
             onChange={e => { setTypeFilter(e.target.value); setPage(1) }}
-            className="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+            className="text-sm border border-edge rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-steel/40 focus:border-steel"
           >
             <option value="">All Types</option>
             {TYPES.map(t => (
@@ -110,7 +111,7 @@ export default function RidesPage() {
           {
             header: 'Type', key: 'ride_type',
             render: r => (
-              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${r.ride_type === 'emergency' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
+              <span className={`legend rounded-sm px-2 py-0.5 text-[0.72rem] ${r.ride_type === 'emergency' ? '!text-lamp-red' : ''}`}>
                 {r.ride_type}
               </span>
             )
@@ -118,16 +119,16 @@ export default function RidesPage() {
           { header: 'Status', key: 'status', render: r => <StatusBadge value={r.status} /> },
           {
             header: 'Pickup', key: 'pickup',
-            render: r => <span className="text-gray-600 text-xs">{r.pickup_address ?? `${r.pickup_lat?.toFixed(4)}, ${r.pickup_lng?.toFixed(4)}`}</span>
+            render: r => <span className="text-ink-dim text-xs">{r.pickup_address ?? `${r.pickup_lat?.toFixed(4)}, ${r.pickup_lng?.toFixed(4)}`}</span>
           },
           {
             header: 'Requested', key: 'requested_at',
-            render: r => <span className="text-gray-500 text-xs">{new Date(r.requested_at).toLocaleString()}</span>
+            render: r => <span className="text-ink-dim text-xs">{new Date(r.requested_at).toLocaleString()}</span>
           },
           {
             header: 'Actions', key: 'actions', hideHeader: true,
             render: r => (
-              <button type="button" onClick={() => setDetailId(r.id)} className="text-blue-700 hover:underline text-xs">
+              <button type="button" onClick={() => setDetailId(r.id)} className="text-steel hover:underline text-xs">
                 Detail<span className="sr-only"> for ride {r.id.slice(0, 8)}</span>
               </button>
             )
@@ -151,12 +152,12 @@ export default function RidesPage() {
       <Modal open={detailId !== null} onClose={() => setDetailId(null)} title="Ride Details" width="xl">
         {detailLoading && (
           <div className="space-y-3 animate-pulse" role="status" aria-label="Loading ride details">
-            {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-10 bg-gray-100 rounded-xl" />)}
+            {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-10 bg-edge rounded-md" />)}
           </div>
         )}
         <ErrorBanner message={detailError} />
         {detailError && (
-          <button type="button" onClick={reloadDetail} className="mt-3 text-sm text-blue-700 hover:underline">
+          <button type="button" onClick={reloadDetail} className="mt-3 text-sm text-steel hover:underline">
             Try again
           </button>
         )}

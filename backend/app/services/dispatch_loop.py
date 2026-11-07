@@ -5,15 +5,20 @@ driver or a missing hospital used to strand the ride. This loop re-dispatches
 stale pending rides (most severe first), promotes scheduled rides that fall due,
 takes rides back from drivers who never acknowledged them, and closes rides
 nobody accepted in time. Safe to run on several instances at once: assignment
-is a guarded UPDATE, so only one dispatch can win a given ride or driver.
+is a guarded UPDATE, so only one dispatch can win a given ride or driver. The
+row locks taken to pick ride ids are released before dispatching starts, so two
+instances can both triage the same ride; only the guarded UPDATEs stop a double
+assignment, and the loser's work is discarded.
 """
 
 import asyncio
 import logging
+from itertools import groupby
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import and_, or_, select, update
 
+from app.core import metrics
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.models.models import (
@@ -24,8 +29,16 @@ from app.models.models import (
     RideType,
     TriageEvent,
 )
-from app.services.emergency_dispatch import dispatch_emergency
-from app.services.notifications import notify_user
+from app.services.emergency_dispatch import (
+    dispatch_emergency,
+    notify_patient_and_family_of_accepted_ride,
+)
+from app.services.health_metrics import record_health_metrics
+from app.services.notifications import (
+    notify_user,
+    send_sms_to_patient,
+    tell_hospital_ride_stopped,
+)
 
 log = logging.getLogger("smartride.dispatch_loop")
 BATCH = 20
@@ -88,7 +101,14 @@ async def _expire(db, now: datetime) -> None:
             body="We could not find a driver. Please call 1122.",
             data={"ride_id": str(ride_id)},
         )
-        if not told:
+        # A push can fail silently (stale token, FCM down) or go unseen, and
+        # this is the one message that must arrive, so also send an SMS.
+        texted = await send_sms_to_patient(
+            db,
+            patient_id=patient_id,
+            body="SmartRide: we could not find a driver. Please call 1122 now.",
+        )
+        if not (told or texted):
             log.error("patient NOT told to call 1122 after expiry ride_id=%s", ride_id)
 
 
@@ -97,7 +117,7 @@ async def _requeue_unacknowledged(db, now: datetime) -> None:
     cutoff = now - timedelta(seconds=DRIVER_ACK_TIMEOUT_SECONDS)
     stuck = (
         await db.execute(
-            select(Ride.id, Ride.driver_id, Ride.patient_id)
+            select(Ride.id, Ride.driver_id, Ride.patient_id, Ride.hospital_id)
             .where(
                 Ride.status == RideStatus.driver_assigned,
                 Ride.driver_assigned_at < cutoff,
@@ -108,7 +128,7 @@ async def _requeue_unacknowledged(db, now: datetime) -> None:
         )
     ).all()
     requeued = []
-    for ride_id, driver_id, patient_id in stuck:
+    for ride_id, driver_id, patient_id, hospital_id in stuck:
         # Guarded: the driver may have just moved the ride on or cancelled.
         result = await db.execute(
             update(Ride)
@@ -123,6 +143,10 @@ async def _requeue_unacknowledged(db, now: datetime) -> None:
                 driver_id=None,
                 driver_assigned_at=None,
                 hospital_id=None,
+                # A driver who never set off loses any claim, or this would hand
+                # the ride straight back to them.
+                claimed_driver_id=None,
+                claimed_at=None,
             )
         )
         if result.rowcount == 1:
@@ -131,9 +155,9 @@ async def _requeue_unacknowledged(db, now: datetime) -> None:
                 .where(Driver.id == driver_id)
                 .values(status=DriverStatus.offline)
             )
-            requeued.append((ride_id, patient_id))
+            requeued.append((ride_id, patient_id, hospital_id))
     await db.commit()
-    for ride_id, patient_id in requeued:
+    for ride_id, patient_id, hospital_id in requeued:
         log.warning("driver never acknowledged, ride requeued ride_id=%s", ride_id)
         told = await notify_user(
             db,
@@ -144,10 +168,101 @@ async def _requeue_unacknowledged(db, now: datetime) -> None:
         )
         if not told:
             log.warning("patient NOT told about the requeue ride_id=%s", ride_id)
+        if hospital_id is not None:
+            await tell_hospital_ride_stopped(
+                db, ride_id=ride_id, hospital_id=hospital_id
+            )
 
 
-async def _pending_ride_ids(db, now: datetime) -> list:
-    """Ids of rides to retry: most severe first, then longest waiting.
+async def assign_due_claims(db, now: datetime) -> None:
+    """Hand each claimed ride to its driver once the pickup window opens.
+
+    A driver who cannot take it (busy, offline) keeps the claim until the
+    fallback time before pickup, then it returns to normal dispatch. Guarded
+    UPDATEs make this safe to run on several instances at once.
+    """
+    lead = now + timedelta(minutes=settings.SCHEDULED_DISPATCH_LEAD_MINUTES)
+    fallback = now + timedelta(minutes=settings.SCHEDULED_CLAIM_FALLBACK_MINUTES)
+    due = (
+        await db.execute(
+            select(Ride.id, Ride.claimed_driver_id, Ride.scheduled_for)
+            .where(
+                Ride.status == RideStatus.pending,
+                Ride.ride_type == RideType.scheduled,
+                Ride.driver_id.is_(None),
+                Ride.claimed_driver_id.is_not(None),
+                Ride.scheduled_for <= lead,
+            )
+            .order_by(Ride.scheduled_for)
+            .limit(BATCH)
+            .with_for_update(skip_locked=True, of=Ride)
+        )
+    ).all()
+    assigned = []
+    for ride_id, driver_id, scheduled_for in due:
+        took_driver = await db.execute(
+            update(Driver)
+            .where(
+                Driver.id == driver_id,
+                Driver.status == DriverStatus.available,
+                Driver.is_verified.is_(True),
+                Driver.wallet_balance_pkr >= -settings.DRIVER_DEBT_LIMIT_PKR,
+            )
+            .values(status=DriverStatus.busy)
+        )
+        if took_driver.rowcount == 1:
+            placed = await db.execute(
+                update(Ride)
+                .where(
+                    Ride.id == ride_id,
+                    Ride.status == RideStatus.pending,
+                    Ride.driver_id.is_(None),
+                )
+                .values(
+                    driver_id=driver_id,
+                    status=RideStatus.driver_assigned,
+                    driver_assigned_at=now,
+                )
+            )
+            if placed.rowcount == 1:
+                assigned.append((ride_id, driver_id))
+            else:  # the ride moved on meanwhile: give the driver back
+                await db.execute(
+                    update(Driver)
+                    .where(Driver.id == driver_id)
+                    .values(status=DriverStatus.available)
+                )
+        elif scheduled_for <= fallback:
+            await db.execute(
+                update(Ride)
+                .where(Ride.id == ride_id, Ride.driver_id.is_(None))
+                .values(claimed_driver_id=None, claimed_at=None)
+            )
+            log.warning("claim dropped, driver unavailable ride_id=%s", ride_id)
+    await db.commit()
+    for ride_id, driver_id in assigned:
+        await notify_patient_and_family_of_accepted_ride(str(ride_id))
+        await _tell_driver_claim_is_starting(db, ride_id, driver_id)
+
+
+async def _tell_driver_claim_is_starting(db, ride_id, driver_id) -> None:
+    """Push to the claiming driver: their booked ride is now theirs to start."""
+    user_id = (
+        await db.execute(select(Driver.user_id).where(Driver.id == driver_id))
+    ).scalar_one_or_none()
+    told = await notify_user(
+        db,
+        user_id=user_id,
+        title="Your booked ride is starting",
+        body="Head to the pickup now. Open the app for details.",
+        data={"ride_id": str(ride_id)},
+    )
+    if not told:
+        log.warning("driver NOT told their claim is starting ride_id=%s", ride_id)
+
+
+async def _pending_rides(db, now: datetime) -> list:
+    """(id, severity) of rides to retry: most severe first, then longest waiting.
 
     Rides with no triage yet sort as the most severe (we know nothing, so we
     assume the worst). SKIP LOCKED keeps two instances from picking the same
@@ -157,21 +272,26 @@ async def _pending_ride_ids(db, now: datetime) -> list:
     stale = now - timedelta(seconds=settings.DISPATCH_RETRY_AFTER_SECONDS)
     lead = now + timedelta(minutes=settings.SCHEDULED_DISPATCH_LEAD_MINUTES)
     result = await db.execute(
-        select(Ride.id)
+        select(Ride.id, TriageEvent.severity_level)
         .outerjoin(TriageEvent, TriageEvent.ride_id == Ride.id)
         .where(
             Ride.status == RideStatus.pending,
             or_(
                 # A requeued ride keeps its old requested_at, so it retries at once.
                 and_(Ride.ride_type == RideType.emergency, Ride.requested_at < stale),
-                and_(Ride.ride_type == RideType.scheduled, Ride.scheduled_for <= lead),
+                and_(
+                    Ride.ride_type == RideType.scheduled,
+                    Ride.scheduled_for <= lead,
+                    # A claimed ride is reserved: assign_due_claims hands it over.
+                    Ride.claimed_driver_id.is_(None),
+                ),
             ),
         )
         .order_by(TriageEvent.severity_level.desc().nulls_first(), Ride.queued_at)
         .limit(BATCH)
         .with_for_update(skip_locked=True, of=Ride)
     )
-    return list(result.scalars().all())
+    return [(ride_id, severity) for ride_id, severity in result.all()]
 
 
 async def _dispatch_one(ride_id) -> None:
@@ -198,15 +318,34 @@ async def retry_pending_dispatches() -> None:
     async with AsyncSessionLocal() as db:
         await _expire(db, now)
         await _requeue_unacknowledged(db, now)
-        ride_ids = await _pending_ride_ids(db, now)
-    for ride_id in ride_ids:
-        await _dispatch_one(ride_id)
+        await assign_due_claims(db, now)
+        pending = await _pending_rides(db, now)
+    slots = asyncio.Semaphore(max(1, settings.DISPATCH_CONCURRENCY))
+
+    async def dispatch_when_free(ride_id) -> None:
+        async with slots:
+            await _dispatch_one(ride_id)
+
+    # Rides of one severity run together, but a less severe group starts only
+    # after the more severe one has finished: when drivers are scarce, the most
+    # severe patient must be the one who gets the nearest driver.
+    for _, group in groupby(pending, key=lambda row: row[1]):
+        await asyncio.gather(*(dispatch_when_free(ride_id) for ride_id, _ in group))
+
+
+async def run_pass() -> None:
+    """One loop pass. The success stamp moves only when the pass finished cleanly,
+    so DispatchLoopStalled fires on a loop that keeps failing as well as on one that
+    has stopped. The health gauges are refreshed either way."""
+    try:
+        await retry_pending_dispatches()
+        metrics.dispatch_loop_last_success_timestamp.set_to_current_time()
+    except Exception:
+        log.exception("dispatch loop pass failed")
+    await record_health_metrics()
 
 
 async def run_forever() -> None:
     while True:
-        try:
-            await retry_pending_dispatches()
-        except Exception:
-            log.exception("dispatch loop pass failed")
+        await run_pass()
         await asyncio.sleep(settings.DISPATCH_LOOP_INTERVAL_SECONDS)

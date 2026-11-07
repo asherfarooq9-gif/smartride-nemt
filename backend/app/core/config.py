@@ -28,6 +28,13 @@ class Settings(BaseSettings):
 
     # AI Services
     TRIAGE_SERVICE_URL: str = "http://triage:8001"
+    # The service is rules-only, so a slow answer is a sick service, not a hard
+    # question. Seconds to wait before using the local rules instead.
+    TRIAGE_TIMEOUT_SECONDS: float = 3.0
+    # After this many failures in a row, stop calling it for TRIAGE_BREAKER_SECONDS
+    # (local rules answer meanwhile), then let one probe call through.
+    TRIAGE_BREAKER_FAILURES: int = 3
+    TRIAGE_BREAKER_SECONDS: int = 30
 
     # Twilio
     TWILIO_ACCOUNT_SID: str = ""
@@ -61,27 +68,58 @@ class Settings(BaseSettings):
     # without letting one stranger lock the real owner out.
     LOGIN_PHONE_MAX_FAILURES: int = 25
     LOGIN_LOCK_SECONDS: int = 900
+    # An address that has logged in to an account is remembered this long. The
+    # per-phone ceiling does not apply to it, so guessing from elsewhere cannot
+    # lock the real owner out.
+    LOGIN_KNOWN_ADDRESS_SECONDS: int = 60 * 60 * 24 * 30
     SESSION_MAX_DAYS: int = 30
     # Bearer token Prometheus must send to /metrics (open without it only in DEBUG)
     METRICS_TOKEN: str = ""
+    # Seconds the admin dashboard summary is cached (it runs several aggregate
+    # queries and every open dashboard polls it). 0 turns the cache off.
+    SUMMARY_CACHE_SECONDS: int = 15
     # Drivers farther than this from the pickup are not considered for dispatch
-    DRIVER_SEARCH_RADIUS_KM: float = 50.0
+    DRIVER_SEARCH_RADIUS_KM: float = 10.0
     # Fares (flat base + per km) and the platform's share of each fare
     FARE_BASE_PKR: float = 200.0
     FARE_PER_KM_PKR: float = 40.0
     COMMISSION_RATE: float = 0.10
     # Dispatch retry loop (app/services/dispatch_loop.py)
     DISPATCH_LOOP_ENABLED: bool = True
+    # Days after a ride ends before its raw symptom text is blanked. 0 keeps it forever.
+    SYMPTOM_RETENTION_DAYS: int = 0
     DISPATCH_LOOP_INTERVAL_SECONDS: float = 15.0
     DISPATCH_RETRY_AFTER_SECONDS: int = 30
+    # Rides dispatched at the same time. Each can wait on triage, FHIR and SMS, so
+    # one at a time makes the last of a surge wait minutes.
+    DISPATCH_CONCURRENCY: int = 4
     DISPATCH_MAX_AGE_SECONDS: int = 900
     SCHEDULED_DISPATCH_LEAD_MINUTES: int = 30
+    # A driver may claim a booked ride before its pickup window opens.
+    # Most rides one driver can hold at once.
+    MAX_SCHEDULED_CLAIMS: int = 5
+    # Drivers pay commission out of a prepaid wallet because cash fares never pass
+    # through the app. A driver may owe at most this much (a few rides) before they
+    # must top up to receive more work; without a limit the debt can only grow.
+    DRIVER_DEBT_LIMIT_PKR: int = 200
+    # Upcoming scheduled rides one patient may have open at once. Without a cap
+    # a free account could flood every driver's Scheduled tab with fake trips.
+    MAX_UPCOMING_SCHEDULED_RIDES: int = 30
+    # A claim can be given back until this long before pickup; after that the
+    # patient is counting on the driver.
+    SCHEDULED_RELEASE_CUTOFF_MINUTES: int = 60
+    # Once the window is open, a claimed ride whose driver is still busy or
+    # offline this close to pickup goes back to normal dispatch.
+    SCHEDULED_CLAIM_FALLBACK_MINUTES: int = 15
     LOG_LEVEL: str = "INFO"
     # Minimum seconds a driver must spend on the pickup->hospital and
     # hospital->completed legs before the next status is accepted. 0 disables it
     # (dev/tests); production sets a real value so a ride cannot be "completed"
     # instantly to book a fare and commission without any transport.
     RIDE_MIN_TRANSITION_SECONDS: int = 0
+    # A driver must be within this many metres of the pickup to start a scheduled
+    # ride. 0 disables the check. Emergencies are never held back by it.
+    PICKUP_ARRIVAL_RADIUS_M: float = 150.0
     # "min_lat,min_lng,max_lat,max_lng". Pickups outside this box are rejected.
     # Empty disables the check (emulator GPS defaults to California); production
     # sets it to the area the service operates in.

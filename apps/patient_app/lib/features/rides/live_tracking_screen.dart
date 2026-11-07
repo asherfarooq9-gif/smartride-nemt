@@ -1,3 +1,4 @@
+import 'package:patient_app/core/ride_status_label.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -7,6 +8,10 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:patient_app/shared/english_map_tiles.dart';
+import 'package:patient_app/driver/ride_events.dart' show rideHasEnded;
+import 'package:patient_app/l10n/l10n.dart';
+import 'package:patient_app/core/payment_methods.dart';
 
 const _genericLoadError =
     'We could not load your ride. Please check your connection and try again.';
@@ -69,7 +74,13 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
         '${core.ApiClient.instance.wsBaseUrl}/ws/ride/${widget.rideId}');
     final ws = _ws ??= core.WsClient(
       onMessage: _handleWsMessage,
-      onConnected: () => _setConnection(isConnected: true),
+      tokenProvider: core.SecureStorage.instance.readToken,
+      onConnected: () {
+        _setConnection(isConnected: true);
+        // The ride may have finished while the socket was down; the server's
+        // 'ride_ended' only reaches a client that is connected when it is sent.
+        unawaited(_refreshRide());
+      },
       onDisconnected: () => _setConnection(isConnected: false),
       onError: _onWsError,
     );
@@ -88,6 +99,27 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
   void _onWsError(Object error) {
     if (!mounted || _ended || error is! core.WsRetriesExhausted) return;
     setState(() => _hasGivenUp = true);
+    unawaited(_refreshRide());
+  }
+
+  /// Reads the ride again and, if it is over, shows the same completion dialog the
+  /// socket would have. Without this a patient whose tunnel dropped at the wrong
+  /// moment stays on "help is on the way" for a ride that is already finished.
+  Future<void> _refreshRide() async {
+    try {
+      final ride = await core.getRideDetail(widget.rideId);
+      if (!mounted) return;
+      setState(() => _ride = ride);
+      if (rideHasEnded(ride.status) && !_ended) {
+        _ended = true;
+        unawaited(_ws?.disconnect());
+        _showCompletionDialog(
+          ride.status == core.RideStatus.completed ? 'completed' : 'cancelled',
+        );
+      }
+    } on core.AppError {
+      // Keep what is on screen; the socket or the next reconnect will say more.
+    }
   }
 
   void _handleWsMessage(Map<String, dynamic> msg) {
@@ -112,10 +144,12 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
       context: context,
       barrierDismissible: false,
       builder: (_) => AlertDialog(
-        title: Text(status == 'completed' ? 'Ride Completed' : 'Ride Ended'),
+        title: Text(status == 'completed'
+            ? context.l10n.rideCompletedTitle
+            : context.l10n.rideEndedTitle),
         content: Text(status == 'completed'
-            ? 'You have arrived at your destination.'
-            : 'Your ride has ended.'),
+            ? context.l10n.arrivedDestination
+            : context.l10n.rideHasEnded),
         actions: [
           if (status == 'completed')
             TextButton(
@@ -123,14 +157,14 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
                 Navigator.of(context).pop();
                 context.go('/rate-driver/${widget.rideId}');
               },
-              child: const Text('Rate Driver'),
+              child: Text(context.l10n.rateDriverBtn),
             ),
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
               context.go('/');
             },
-            child: const Text('Done'),
+            child: Text(context.l10n.done),
           ),
         ],
       ),
@@ -151,7 +185,7 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
       await launchUrl(uri);
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No phone app available on this device')),
+        SnackBar(content: Text(context.l10n.noPhoneApp)),
       );
     }
   }
@@ -172,7 +206,7 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
       await launchUrl(uri);
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No SMS app available on this device')),
+        SnackBar(content: Text(context.l10n.noSmsApp)),
       );
     }
   }
@@ -192,7 +226,7 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
   Widget build(BuildContext context) {
     if (_error != null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Live Tracking')),
+        appBar: AppBar(title: Text(context.l10n.liveTracking)),
         body: core.ErrorState(
           message: _error!,
           onRetry: () {
@@ -203,7 +237,8 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
       );
     }
     if (!_loaded) {
-      return const Scaffold(body: core.LoadingState(message: 'Connecting...'));
+      return Scaffold(
+          body: core.LoadingState(message: context.l10n.connecting));
     }
 
     final center = _driverPos ?? _pickupPos ?? const LatLng(33.6844, 73.0479);
@@ -220,7 +255,9 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
           ),
           SafeArea(
             child: _StatusPanel(
-              statusLabel: _ride?.status.displayLabel ?? 'En Route',
+              statusLabel: _ride == null
+                  ? context.l10n.statusEnRoute
+                  : rideStatusLabel(context.l10n, _ride!.status),
               etaLabel: _etaLabel,
               hospitalName: _ride?.hospital?['name'] as String?,
               isConnected: _connected,
@@ -267,10 +304,7 @@ class _TrackingMap extends StatelessWidget {
         onMapReady: onMapReady,
       ),
       children: [
-        TileLayer(
-          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          userAgentPackageName: 'com.smartride.patient',
-        ),
+        ...englishTileLayers(),
         MarkerLayer(markers: [
           if (pickup != null)
             Marker(
@@ -278,7 +312,7 @@ class _TrackingMap extends StatelessWidget {
               width: 40,
               height: 40,
               child: Semantics(
-                label: 'Pickup location',
+                label: context.l10n.pickupLocation,
                 child: const Icon(Icons.location_on,
                     color: core.kEmergencyRed, size: 40),
               ),
@@ -289,7 +323,7 @@ class _TrackingMap extends StatelessWidget {
               width: 40,
               height: 40,
               child: Semantics(
-                label: 'Driver location',
+                label: context.l10n.driverLocation,
                 child: const Icon(Icons.local_taxi,
                     color: core.kDriverPrimary, size: 40),
               ),
@@ -342,9 +376,9 @@ class _StatusPanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 2),
-          const Text(
-            'Help is on the way',
-            style: TextStyle(
+          Text(
+            context.l10n.helpOnTheWay,
+            style: const TextStyle(
               color: Colors.white,
               fontSize: core.kFontLG,
               fontWeight: FontWeight.bold,
@@ -366,12 +400,12 @@ class _StatusPanel extends StatelessWidget {
           ),
           if (hasGivenUp)
             _ConnectionNotice(
-              message: 'Live location is unavailable.',
+              message: context.l10n.liveUnavailable,
               onRetry: onRetry,
             )
           else if (!isConnected)
-            const _ConnectionNotice(
-              message: 'Reconnecting — driver location may be out of date',
+            _ConnectionNotice(
+              message: context.l10n.liveReconnecting,
             ),
         ],
       ),
@@ -407,9 +441,10 @@ class _ConnectionNotice extends StatelessWidget {
                 onPressed: onRetry,
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.white,
-                  minimumSize: const Size(core.kMinTapTarget, core.kMinTapTarget),
+                  minimumSize:
+                      const Size(core.kMinTapTarget, core.kMinTapTarget),
                 ),
-                child: const Text('Retry'),
+                child: Text(context.l10n.retry),
               ),
           ],
         ),
@@ -434,10 +469,15 @@ class _DriverCard extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final phone = driver?['phone'] as String?;
-    final name = driver?['full_name'] as String? ?? 'Your Driver';
+    final methods = [
+      for (final m
+          in (driver?['payment_methods'] as List<dynamic>? ?? const []))
+        m.toString(),
+    ];
+    final name = driver?['full_name'] as String? ?? context.l10n.yourDriver;
     final vehicle = driver != null
         ? '${driver!['vehicle_type'] ?? ''} · ${driver!['vehicle_plate'] ?? ''}'
-        : 'En route to you';
+        : context.l10n.enRouteToYou;
 
     return Container(
       margin: const EdgeInsets.all(core.kSpaceLG),
@@ -474,11 +514,18 @@ class _DriverCard extends StatelessWidget {
                       style: textTheme.bodyMedium
                           ?.copyWith(color: colors.onSurfaceVariant),
                     ),
+                    if (methods.isNotEmpty)
+                      Text(
+                        '${context.l10n.payByLabel}: '
+                        '${paymentMethodsSummary(context.l10n, methods)}',
+                        style: textTheme.bodyMedium
+                            ?.copyWith(color: colors.onSurfaceVariant),
+                      ),
                   ],
                 ),
               ),
               IconButton.filled(
-                tooltip: 'Call driver',
+                tooltip: context.l10n.callDriver,
                 onPressed: phone == null ? null : () => onCall(phone),
                 icon: const Icon(Icons.phone),
                 style: IconButton.styleFrom(
@@ -492,7 +539,7 @@ class _DriverCard extends StatelessWidget {
           OutlinedButton.icon(
             onPressed: onShare,
             icon: const Icon(Icons.share_location_outlined, size: 18),
-            label: const Text('Share live location with family'),
+            label: Text(context.l10n.shareWithFamily),
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(double.infinity, core.kMinTapTarget),
               shape: RoundedRectangleBorder(

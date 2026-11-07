@@ -11,7 +11,7 @@ export default function ErrorBanner({ message, className = '' }: Props) {
   return (
     <div
       role="alert"
-      className={`flex items-center gap-3 text-red-700 bg-red-50 border border-red-200 rounded-xl p-4 text-sm ${className}`}
+      className={`flex items-center gap-3 text-lamp-red bg-lamp-red/10 border border-lamp-red/40 rounded-md p-4 text-sm ${className}`}
     >
       <AlertCircle size={16} className="shrink-0" aria-hidden="true" />
       <span>{message}</span>

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
+import 'package:patient_app/l10n/l10n.dart';
+import 'package:patient_app/core/payment_methods.dart';
 
-final _profileProvider = FutureProvider.autoDispose<core.DriverResponse>(
+final driverProfileProvider = FutureProvider.autoDispose<core.DriverResponse>(
   (_) => core.getDriverMe(),
 );
 
@@ -32,7 +34,8 @@ class DriverProfileScreen extends ConsumerStatefulWidget {
   const DriverProfileScreen({super.key});
 
   @override
-  ConsumerState<DriverProfileScreen> createState() => _DriverProfileScreenState();
+  ConsumerState<DriverProfileScreen> createState() =>
+      _DriverProfileScreenState();
 }
 
 class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
@@ -42,8 +45,10 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
   final _vehicleModelCtrl = TextEditingController();
   final _vehiclePlateCtrl = TextEditingController();
   bool _editing = false;
+  List<String> _methods = [];
 
   void _populate(core.DriverResponse d) {
+    _methods = [...d.paymentMethods];
     _nameCtrl.text = d.fullName ?? '';
     _licenseCtrl.text = d.licenseNumber ?? '';
     _vehicleModelCtrl.text = d.vehicleModel ?? '';
@@ -61,19 +66,19 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final profileAsync = ref.watch(_profileProvider);
+    final profileAsync = ref.watch(driverProfileProvider);
     final isUpdating = ref.watch(_updateProvider) is AsyncLoading;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: Text(context.l10n.navProfile),
         actions: [
           if (!_editing)
             IconButton(
               icon: const Icon(Icons.edit),
-              tooltip: 'Edit profile',
+              tooltip: context.l10n.editProfile,
               onPressed: () {
-                final p = ref.read(_profileProvider).value;
+                final p = ref.read(driverProfileProvider).value;
                 if (p != null) _populate(p);
                 setState(() => _editing = true);
               },
@@ -83,80 +88,146 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
       body: profileAsync.when(
         loading: () => const core.LoadingState(),
         error: (e, _) => core.ErrorState(
-          message: e is core.AppError ? e.message : 'Failed to load profile',
-          onRetry: () => ref.invalidate(_profileProvider),
+          message:
+              e is core.AppError ? e.message : context.l10n.failedLoadProfile,
+          onRetry: () => ref.invalidate(driverProfileProvider),
         ),
-        data: (driver) => SingleChildScrollView(
-          padding: const EdgeInsets.all(core.kSpaceLG),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const CircleAvatar(
-                  radius: 40,
-                  child: Icon(Icons.person, size: 48),
-                ),
-                const SizedBox(height: core.kSpaceSM),
-                Text(driver.phone, textAlign: TextAlign.center),
-                const SizedBox(height: core.kSpaceXL),
-                _field(_nameCtrl, 'Full name', Icons.person),
-                const SizedBox(height: core.kSpaceLG),
-                _field(_licenseCtrl, 'License number', Icons.badge),
-                const SizedBox(height: core.kSpaceLG),
-                _field(_vehicleModelCtrl, 'Vehicle model', Icons.directions_car),
-                const SizedBox(height: core.kSpaceLG),
-                _field(_vehiclePlateCtrl, 'Vehicle plate', Icons.confirmation_number),
-                if (!_editing) ...[
-                  const SizedBox(height: core.kSpaceXL),
-                  const Divider(),
-                  ListTile(
-                    leading: const Icon(Icons.history),
-                    title: const Text('Trip History'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push('/driver/history'),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.account_balance_wallet_outlined),
-                    title: const Text('Wallet'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push('/driver/wallet'),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.bar_chart_outlined),
-                    title: const Text('Earnings'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push('/driver/earnings'),
-                  ),
-                  const Divider(),
-                ],
-                if (_editing) ...[
-                  const SizedBox(height: core.kSpaceXXL),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => setState(() => _editing = false),
-                          child: const Text('Cancel'),
-                        ),
-                      ),
-                      const SizedBox(width: core.kSpaceLG),
-                      Expanded(
-                        child: core.PrimaryButton(
-                          label: 'Save',
-                          onPressed: isUpdating ? null : _save,
-                          isLoading: isUpdating,
-                          height: core.kMinTapTarget,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ],
+        data: (driver) {
+          // Show the saved values while reading; editing keeps the user's typing.
+          if (!_editing) _populate(driver);
+          return _buildBody(driver, isUpdating);
+        },
+      ),
+    );
+  }
+
+  Widget _buildBody(core.DriverResponse driver, bool isUpdating) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(core.kSpaceLG),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const CircleAvatar(
+              radius: 40,
+              child: Icon(Icons.person, size: 48),
             ),
-          ),
+            const SizedBox(height: core.kSpaceSM),
+            Text(driver.phone, textAlign: TextAlign.center),
+            const SizedBox(height: core.kSpaceXL),
+            _field(_nameCtrl, context.l10n.fullNameField, Icons.person),
+            const SizedBox(height: core.kSpaceLG),
+            _field(_licenseCtrl, context.l10n.licenseField, Icons.badge),
+            const SizedBox(height: core.kSpaceLG),
+            _field(_vehicleModelCtrl, context.l10n.vehicleModelField,
+                Icons.directions_car),
+            const SizedBox(height: core.kSpaceLG),
+            _field(_vehiclePlateCtrl, context.l10n.plateField,
+                Icons.confirmation_number),
+            const SizedBox(height: core.kSpaceXL),
+            _paymentMethods(driver),
+            if (!_editing) ...[
+              const SizedBox(height: core.kSpaceXL),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.history),
+                title: Text(context.l10n.tripHistory),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/driver/history'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.account_balance_wallet_outlined),
+                title: Text(context.l10n.walletTitle),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/driver/wallet'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.bar_chart_outlined),
+                title: Text(context.l10n.earnings),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/driver/earnings'),
+              ),
+              const Divider(),
+            ],
+            if (_editing) ...[
+              const SizedBox(height: core.kSpaceXXL),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => setState(() => _editing = false),
+                      child: Text(context.l10n.cancel),
+                    ),
+                  ),
+                  const SizedBox(width: core.kSpaceLG),
+                  Expanded(
+                    child: core.PrimaryButton(
+                      label: context.l10n.save,
+                      onPressed: isUpdating ? null : _save,
+                      isLoading: isUpdating,
+                      height: core.kMinTapTarget,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
         ),
       ),
+    );
+  }
+
+  /// How this driver says they take payment. Editable only in edit mode.
+  Widget _paymentMethods(core.DriverResponse driver) {
+    final l = context.l10n;
+    final chosen = driver.paymentMethods;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l.paymentSectionTitle,
+            style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: core.kSpaceXS),
+        Text(
+          l.paymentSectionHint,
+          style: Theme.of(context)
+              .textTheme
+              .bodySmall
+              ?.copyWith(color: core.kTextSecondary),
+        ),
+        const SizedBox(height: core.kSpaceSM),
+        if (!_editing)
+          // Reading: show only what the driver accepts, as plain labels.
+          chosen.isEmpty
+              ? Text(l.paymentNotSet,
+                  style: const TextStyle(color: core.kTextSecondary))
+              : Wrap(
+                  spacing: core.kSpaceSM,
+                  runSpacing: core.kSpaceSM,
+                  children: [
+                    for (final id in chosen)
+                      Chip(label: Text(paymentMethodLabel(l, id))),
+                  ],
+                )
+        else
+          Wrap(
+            spacing: core.kSpaceSM,
+            runSpacing: core.kSpaceSM,
+            children: [
+              for (final id in paymentMethodIds)
+                FilterChip(
+                  label: Text(paymentMethodLabel(l, id)),
+                  selected: _methods.contains(id),
+                  onSelected: (on) => setState(() {
+                    _methods = [
+                      for (final other in paymentMethodIds)
+                        if (other == id ? on : _methods.contains(other)) other,
+                    ];
+                  }),
+                ),
+            ],
+          ),
+      ],
     );
   }
 
@@ -171,23 +242,26 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
     if (!_formKey.currentState!.validate()) return;
     final ok = await ref.read(_updateProvider.notifier).update(
           core.DriverUpdate(
-            fullName: _nameCtrl.text.trim().isEmpty ? null : _nameCtrl.text.trim(),
-            licenseNumber:
-                _licenseCtrl.text.trim().isEmpty ? null : _licenseCtrl.text.trim(),
+            fullName:
+                _nameCtrl.text.trim().isEmpty ? null : _nameCtrl.text.trim(),
+            licenseNumber: _licenseCtrl.text.trim().isEmpty
+                ? null
+                : _licenseCtrl.text.trim(),
             vehicleModel: _vehicleModelCtrl.text.trim().isEmpty
                 ? null
                 : _vehicleModelCtrl.text.trim(),
             vehiclePlate: _vehiclePlateCtrl.text.trim().isEmpty
                 ? null
                 : _vehiclePlateCtrl.text.trim(),
+            paymentMethods: _methods,
           ),
         );
     if (!mounted) return;
     if (ok) {
       setState(() => _editing = false);
-      ref.invalidate(_profileProvider);
+      ref.invalidate(driverProfileProvider);
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Profile updated')));
+          .showSnackBar(SnackBar(content: Text(context.l10n.profileUpdated)));
     }
   }
 }

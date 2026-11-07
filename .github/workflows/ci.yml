@@ -27,8 +27,11 @@ jobs:
           cache: pip
           cache-dependency-path: backend/requirements.txt
 
+      # ruff is pinned in requirements-dev.txt so a new release cannot turn main red
+      # without a code change (Dependabot proposes the bump). mypy was installed but
+      # never run, so it is gone until someone decides to enforce it.
       - name: Install lint tools
-        run: pip install ruff mypy
+        run: pip install -r backend/requirements-dev.txt
 
       - name: Ruff lint
         run: |

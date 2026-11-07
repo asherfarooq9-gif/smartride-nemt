@@ -39,6 +39,7 @@ class DriverResponse {
     this.rating,
     this.isVerified = false,
     this.walletBalancePkr = 0.0,
+    this.paymentMethods = const [],
   });
 
   final String id;
@@ -54,6 +55,9 @@ class DriverResponse {
   final double? rating;
   final bool isVerified;
   final double walletBalancePkr;
+
+  /// How the driver says they take payment ("cash", "easypaisa", ...).
+  final List<String> paymentMethods;
 
   bool get isOnline => status != DriverStatus.offline;
   bool get isLowBalance => walletBalancePkr < 500;
@@ -72,6 +76,9 @@ class DriverResponse {
         rating: (json['rating'] as num?)?.toDouble(),
         isVerified: json['is_verified'] as bool? ?? false,
         walletBalancePkr: (json['wallet_balance_pkr'] as num?)?.toDouble() ?? 0.0,
+        paymentMethods: (json['payment_methods'] as List<dynamic>? ?? const [])
+            .map((e) => e.toString())
+            .toList(),
       );
 }
 
@@ -81,17 +88,20 @@ class DriverUpdate {
     this.licenseNumber,
     this.vehicleModel,
     this.vehiclePlate,
+    this.paymentMethods,
   });
 
   final String? fullName;
   final String? licenseNumber;
   final String? vehicleModel;
   final String? vehiclePlate;
+  final List<String>? paymentMethods;
 
   Map<String, dynamic> toJson() => {
-        // Backend DriverUpdate accepts only full_name and vehicle_type.
+        // Backend DriverUpdate accepts only these fields.
         if (fullName != null) 'full_name': fullName,
         if (vehicleModel != null) 'vehicle_type': vehicleModel,
+        if (paymentMethods != null) 'payment_methods': paymentMethods,
       };
 }
 

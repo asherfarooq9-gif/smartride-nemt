@@ -1,7 +1,9 @@
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart';
+import 'package:patient_app/driver/money_format.dart';
 
 final _walletProvider = FutureProvider.autoDispose<Map<String, dynamic>>(
   (_) => getDriverWallet(),
@@ -17,7 +19,7 @@ class WalletScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: kBlue600,
         foregroundColor: Colors.white,
-        title: const Text('Wallet'),
+        title: Text(context.l10n.walletTitle),
         leading: const BackButton(),
       ),
       body: ref.watch(_walletProvider).when(
@@ -26,27 +28,24 @@ class WalletScreen extends ConsumerWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    'Failed to load wallet',
-                    style: TextStyle(color: kText600),
+                  Text(
+                    context.l10n.failedLoadWallet,
+                    style: const TextStyle(color: kText600),
                   ),
                   const SizedBox(height: kSpaceMD),
                   TextButton(
                     onPressed: () => ref.invalidate(_walletProvider),
-                    child: const Text('Retry'),
+                    child: Text(context.l10n.retry),
                   ),
                 ],
               ),
             ),
             data: (wallet) {
-              final balance =
-                  (wallet['balance_pkr'] as num?)?.toDouble() ?? 0;
+              final balance = (wallet['balance_pkr'] as num?)?.toDouble() ?? 0;
               final lowBalance = wallet['low_balance'] as bool? ?? false;
-              final plan =
-                  wallet['plan'] as String? ?? 'Pay Per Ride · 10%';
+              final plan = wallet['plan'] as String? ?? 'Pay Per Ride · 10%';
               final weeklyCommission =
-                  (wallet['weekly_commission_paid'] as num?)?.toDouble() ??
-                      0;
+                  (wallet['weekly_commission_paid'] as num?)?.toDouble() ?? 0;
               final weeklyNet =
                   (wallet['weekly_net_earnings'] as num?)?.toDouble() ?? 0;
               final transactions =
@@ -76,9 +75,9 @@ class WalletScreen extends ConsumerWidget {
                   Center(
                     child: TextButton(
                       onPressed: () => context.push('/driver/earnings'),
-                      child: const Text(
-                        'Driver earnings history →',
-                        style: TextStyle(
+                      child: Text(
+                        context.l10n.driverEarningsHistory,
+                        style: const TextStyle(
                           color: kBlue600,
                           fontWeight: FontWeight.w600,
                         ),
@@ -107,13 +106,7 @@ class _BalanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final formatted = balance
-        .toInt()
-        .toString()
-        .replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (m) => '${m[1]},',
-        );
+    final formatted = formatPkr(balance);
     return Container(
       padding: const EdgeInsets.all(kSpaceXL),
       decoration: BoxDecoration(
@@ -127,9 +120,9 @@ class _BalanceCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'ACCOUNT BALANCE',
-            style: TextStyle(
+          Text(
+            context.l10n.accountBalance,
+            style: const TextStyle(
               fontSize: kFontCaption,
               fontWeight: FontWeight.w700,
               color: Colors.white70,
@@ -138,7 +131,7 @@ class _BalanceCard extends StatelessWidget {
           ),
           const SizedBox(height: kSpaceSM),
           Text(
-            'PKR $formatted',
+            formatted,
             style: const TextStyle(
               fontSize: kFontDisplay,
               fontWeight: FontWeight.w700,
@@ -156,12 +149,13 @@ class _BalanceCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(kRadiusPill),
             ),
             child: Text(
-              lowBalance ? '⚠ Low balance' : '● All set',
+              lowBalance ? context.l10n.lowBalanceChip : context.l10n.allSet,
               style: TextStyle(
                 fontSize: kFontCaption,
                 fontWeight: FontWeight.w600,
                 color: lowBalance
-                    ? const Color(0xFFFF7043)
+                    ? const Color(
+                        0xFFFFD180) // light amber: readable on the blue card
                     : const Color(0xFF69F0AE),
               ),
             ),
@@ -177,12 +171,11 @@ class _BalanceCard extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(kRadiusMD),
                 ),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: kSpaceXL),
+                padding: const EdgeInsets.symmetric(horizontal: kSpaceXL),
               ),
-              child: const Text(
-                'Top Up',
-                style: TextStyle(fontWeight: FontWeight.w700),
+              child: Text(
+                context.l10n.topUp,
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
           ),
@@ -235,15 +228,15 @@ class _CurrentPlanCard extends StatelessWidget {
             color: kText900,
           ),
         ),
-        subtitle: const Text(
-          'per completed ride',
-          style: TextStyle(fontSize: kFontSmall, color: kText600),
+        subtitle: Text(
+          context.l10n.perCompletedRide,
+          style: const TextStyle(fontSize: kFontSmall, color: kText600),
         ),
         trailing: GestureDetector(
           onTap: onChangePlan,
-          child: const Text(
-            'Change Plan →',
-            style: TextStyle(
+          child: Text(
+            context.l10n.changePlan,
+            style: const TextStyle(
               fontSize: kFontSmall,
               fontWeight: FontWeight.w600,
               color: kBlue600,
@@ -277,16 +270,17 @@ class _WeekSummaryRow extends StatelessWidget {
         children: [
           Expanded(
             child: _SummaryItem(
-              label: 'Commission paid',
-              value: 'PKR ${weeklyCommission.toInt()}',
+              label: context.l10n.commissionPaid,
+              value: formatPkr(weeklyCommission),
               valueColor: kRed600,
             ),
           ),
-          const SizedBox(width: 1, height: 40, child: ColoredBox(color: kBorder)),
+          const SizedBox(
+              width: 1, height: 40, child: ColoredBox(color: kBorder)),
           Expanded(
             child: _SummaryItem(
-              label: 'Net earnings',
-              value: 'PKR ${weeklyNet.toInt()}',
+              label: context.l10n.netEarnings,
+              value: formatPkr(weeklyNet),
               valueColor: kOnlineGreen,
             ),
           ),
@@ -349,12 +343,12 @@ class _TransactionsList extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
                 kSpaceLG, kSpaceLG, kSpaceLG, kSpaceSM),
             child: Text(
-              'Recent Transactions',
-              style: TextStyle(
+              context.l10n.recentTransactions,
+              style: const TextStyle(
                 fontSize: kFontBody,
                 fontWeight: FontWeight.w700,
                 color: kText900,
@@ -362,15 +356,22 @@ class _TransactionsList extends StatelessWidget {
             ),
           ),
           const Divider(height: 1, color: kBorder),
+          if (transactions.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(kSpaceLG),
+              child: Text(
+                context.l10n.noTransactionsYet,
+                style: const TextStyle(color: kTextSecondary),
+              ),
+            ),
           ...transactions.map((tx) {
             final txMap = tx as Map<String, dynamic>;
-            final amount =
-                (txMap['amount_pkr'] as num?)?.toDouble() ?? 0;
-            final description =
-                txMap['description'] as String? ?? '';
-            final type = txMap['type'] as String? ?? '';
+            final amount = (txMap['amount_pkr'] as num?)?.toDouble() ?? 0;
+            final description = txMap['description'] as String? ?? '';
             final createdAt = txMap['created_at'] as String? ?? '';
-            final isCredit = type == 'topup';
+            // By the sign of the amount, not the type: commissions are stored
+            // negative and an opening 'adjustment' can be either.
+            final isCredit = isCreditAmount(amount);
             return _TransactionRow(
               amount: amount,
               description: description,
@@ -400,9 +401,7 @@ class _TransactionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final amountColor = isCredit ? kOnlineGreen : kRed600;
-    final amountText = isCredit
-        ? '+PKR ${amount.toInt()}'
-        : '−PKR ${amount.toInt()}';
+    final amountText = formatSignedPkr(amount);
     final icon =
         isCredit ? Icons.add_circle_outline : Icons.remove_circle_outline;
 

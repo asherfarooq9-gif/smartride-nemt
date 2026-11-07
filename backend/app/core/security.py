@@ -30,6 +30,8 @@ def hash_password(plain: str) -> str:
 
 
 def verify_password(plain: str, hashed: str) -> bool:
+    if "\x00" in plain:  # bcrypt raises on NUL bytes; no stored password has one
+        return False
     return pwd_context.verify(plain, hashed)
 
 
@@ -122,6 +124,9 @@ async def get_current_user(
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if user is None or not user.is_active:
+        raise credentials_exception
+    # Tokens issued before the version existed carry none and count as version 0.
+    if int(payload.get("tv", 0)) != user.token_version:
         raise credentials_exception
     return user
 
