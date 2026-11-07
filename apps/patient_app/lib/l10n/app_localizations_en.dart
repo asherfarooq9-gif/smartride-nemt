@@ -1114,4 +1114,92 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get save => 'Save';
+
+  @override
+  String get helpTitle => 'Help & FAQ';
+
+  @override
+  String get helpBanner =>
+      'In a life-threatening emergency, call 1122 immediately.';
+
+  @override
+  String get faq1q => 'How do I request an emergency ride?';
+
+  @override
+  String get faq1a =>
+      'Tap the red EMERGENCY button on the home screen, describe your symptoms, and confirm. The nearest available driver is dispatched automatically.';
+
+  @override
+  String get faq2q => 'How do I book a ride for later?';
+
+  @override
+  String get faq2a =>
+      'On the home screen choose \"Book a Ride\", pick a pickup time and destination, and confirm. You can see it later under your rides.';
+
+  @override
+  String get faq3q => 'Can I track my driver?';
+
+  @override
+  String get faq3a =>
+      'Yes. Once a driver accepts your ride, open the ride to see their live location on the map until they arrive.';
+
+  @override
+  String get faq4q => 'How do I cancel a ride?';
+
+  @override
+  String get faq4a =>
+      'Open the ride from your rides list. Cancellation is available while the ride is still pending or before the driver arrives.';
+
+  @override
+  String get faq5q => 'I am also a driver. How do I switch?';
+
+  @override
+  String get faq5a =>
+      'Use the menu drawer to switch between the patient and driver portals. Both run from the same account.';
+
+  @override
+  String get contactTitle => 'Contact Us';
+
+  @override
+  String get contactIntro =>
+      'We are here to help. For anything that is not an emergency, reach the SmartRide support team:';
+
+  @override
+  String get contactEmergency => 'Emergency (Rescue 1122)';
+
+  @override
+  String get contactHotline => 'Support hotline';
+
+  @override
+  String get contactEmail => 'Email';
+
+  @override
+  String get contactHours => 'Hours';
+
+  @override
+  String get contactHoursValue =>
+      'Support: 8am to 10pm. Emergency dispatch: 24/7.';
+
+  @override
+  String copiedMessage(String label) {
+    return '$label copied';
+  }
+
+  @override
+  String get howToTopUp => 'How to top up';
+
+  @override
+  String get choosePlan => 'Choose a plan';
+
+  @override
+  String get payFrom => 'Pay From';
+
+  @override
+  String get mostPopular => 'Most Popular';
+
+  @override
+  String get customAmount => 'Custom amount';
+
+  @override
+  String get enterAmount => 'Enter amount';
 }

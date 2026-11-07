@@ -115,7 +115,7 @@ class _TopUpScreenState extends State<TopUpScreen> {
     showDialog<void>(
       context: context,
       builder: (_) => _InstructionsDialog(
-        title: 'How to top up',
+        title: context.l10n.howToTopUp,
         message: 'Nothing has been charged. Send PKR $amount by '
             '$_paymentMethod, then send the receipt to SmartRide support '
             '($_supportEmail). Your wallet is credited once an admin '
@@ -141,9 +141,9 @@ class _TopUpScreenState extends State<TopUpScreen> {
       body: ListView(
         padding: const EdgeInsets.all(kSpaceLG),
         children: [
-          const Text(
-            'Choose a plan',
-            style: TextStyle(
+          Text(
+            context.l10n.choosePlan,
+            style: const TextStyle(
               fontSize: kFontSubhead,
               fontWeight: FontWeight.w700,
               color: kText900,
@@ -173,9 +173,9 @@ class _TopUpScreenState extends State<TopUpScreen> {
             onAmountChanged: () => setState(() {}),
           ),
           const SizedBox(height: kSpaceXL),
-          const Text(
-            'Pay From',
-            style: TextStyle(
+          Text(
+            context.l10n.payFrom,
+            style: const TextStyle(
               fontSize: kFontSubhead,
               fontWeight: FontWeight.w700,
               color: kText900,
@@ -267,9 +267,9 @@ class _PlanCard extends StatelessWidget {
                             color: kDriverPrimary.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(kRadiusPill),
                           ),
-                          child: const Text(
-                            'Most Popular',
-                            style: TextStyle(
+                          child: Text(
+                            context.l10n.mostPopular,
+                            style: const TextStyle(
                               fontSize: kFontCaption,
                               fontWeight: FontWeight.w700,
                               color: kDriverPrimary,
@@ -379,9 +379,9 @@ class _CustomAmountTile extends StatelessWidget {
                     ),
                   ),
                 ),
-                const Text(
-                  'Custom amount',
-                  style: TextStyle(
+                Text(
+                  context.l10n.customAmount,
+                  style: const TextStyle(
                     fontSize: kFontBody,
                     fontWeight: FontWeight.w600,
                     color: kText900,
@@ -396,10 +396,10 @@ class _CustomAmountTile extends StatelessWidget {
               controller: controller,
               keyboardType: TextInputType.number,
               onChanged: (_) => onAmountChanged(),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 prefixText: 'PKR  ',
-                hintText: 'Enter amount',
-                border: OutlineInputBorder(),
+                hintText: context.l10n.enterAmount,
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: kSpaceMD),
@@ -555,7 +555,7 @@ class _InstructionsDialog extends StatelessWidget {
             ),
             const SizedBox(height: kSpaceXXL),
             PrimaryButton(
-              label: 'Done',
+              label: context.l10n.done,
               onPressed: onDone,
               color: kBlue600,
               height: kButtonHeight,

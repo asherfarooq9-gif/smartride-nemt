@@ -1,44 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:patient_app/l10n/l10n.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 
 /// Static Help and FAQ screen. No backend call; the content is bundled.
 class HelpScreen extends StatelessWidget {
   const HelpScreen({super.key});
 
-  static const _faqs = <_Faq>[
-    _Faq(
-      'How do I request an emergency ride?',
-      'Tap the red EMERGENCY button on the home screen, describe your '
-          'symptoms, and confirm. The nearest available driver is dispatched '
-          'automatically.',
-    ),
-    _Faq(
-      'How do I book a ride for later?',
-      'On the home screen choose "Book a Ride", pick a pickup time and '
-          'destination, and confirm. You can see it later under your rides.',
-    ),
-    _Faq(
-      'Can I track my driver?',
-      'Yes. Once a driver accepts your ride, open the ride to see their live '
-          'location on the map until they arrive.',
-    ),
-    _Faq(
-      'How do I cancel a ride?',
-      'Open the ride from your rides list. Cancellation is available while the '
-          'ride is still pending or before the driver arrives.',
-    ),
-    _Faq(
-      'I am also a driver. How do I switch?',
-      'Use the menu drawer to switch between the patient and driver portals. '
-          'Both run from the same account.',
-    ),
-  ];
+  static List<_Faq> _faqsFor(AppLocalizations l) => [
+        _Faq(l.faq1q, l.faq1a),
+        _Faq(l.faq2q, l.faq2a),
+        _Faq(l.faq3q, l.faq3a),
+        _Faq(l.faq4q, l.faq4a),
+        _Faq(l.faq5q, l.faq5a),
+      ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Help & FAQ')),
+      appBar: AppBar(title: Text(context.l10n.helpTitle)),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: core.kSpaceSM),
         children: [
@@ -51,14 +31,15 @@ class HelpScreen extends StatelessWidget {
               border:
                   Border.all(color: core.kEmergencyRed.withValues(alpha: 0.3)),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(Icons.warning_amber_rounded, color: core.kEmergencyRed),
-                SizedBox(width: core.kSpaceMD),
+                const Icon(Icons.warning_amber_rounded,
+                    color: core.kEmergencyRed),
+                const SizedBox(width: core.kSpaceMD),
                 Expanded(
                   child: Text(
-                    'In a life-threatening emergency, call 1122 immediately.',
-                    style: TextStyle(
+                    context.l10n.helpBanner,
+                    style: const TextStyle(
                       color: core.kEmergencyRed,
                       fontWeight: FontWeight.w600,
                     ),
@@ -67,7 +48,7 @@ class HelpScreen extends StatelessWidget {
               ],
             ),
           ),
-          for (final faq in _faqs)
+          for (final faq in _faqsFor(context.l10n))
             ExpansionTile(
               leading: const Icon(Icons.help_outline),
               title: Text(faq.question),
@@ -100,36 +81,35 @@ class ContactScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Contact Us')),
+      appBar: AppBar(title: Text(context.l10n.contactTitle)),
       body: ListView(
         padding: const EdgeInsets.all(core.kSpaceLG),
-        children: const [
+        children: [
           Text(
-            'We are here to help. For anything that is not an emergency, reach '
-            'the SmartRide support team:',
-            style: TextStyle(color: core.kTextSecondary, height: 1.4),
+            context.l10n.contactIntro,
+            style: const TextStyle(color: core.kTextSecondary, height: 1.4),
           ),
-          SizedBox(height: core.kSpaceLG),
+          const SizedBox(height: core.kSpaceLG),
           _ContactCard(
             icon: Icons.emergency,
             iconColor: core.kEmergencyRed,
-            label: 'Emergency (Rescue 1122)',
+            label: context.l10n.contactEmergency,
             value: '1122',
           ),
           _ContactCard(
             icon: Icons.support_agent,
-            label: 'Support hotline',
+            label: context.l10n.contactHotline,
             value: '+92 51 111 1122',
           ),
           _ContactCard(
             icon: Icons.email_outlined,
-            label: 'Email',
+            label: context.l10n.contactEmail,
             value: 'support@smartride.pk',
           ),
           _ContactCard(
             icon: Icons.schedule,
-            label: 'Hours',
-            value: 'Support: 8am to 10pm. Emergency dispatch: 24/7.',
+            label: context.l10n.contactHours,
+            value: context.l10n.contactHoursValue,
             copyable: false,
           ),
         ],
@@ -166,7 +146,7 @@ class _ContactCard extends StatelessWidget {
             ? () {
                 Clipboard.setData(ClipboardData(text: value));
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('$label copied')),
+                  SnackBar(content: Text(context.l10n.copiedMessage(label))),
                 );
               }
             : null,

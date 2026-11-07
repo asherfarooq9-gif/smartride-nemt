@@ -1113,4 +1113,91 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get save => 'محفوظ کریں';
+
+  @override
+  String get helpTitle => 'مدد اور اکثر پوچھے گئے سوالات';
+
+  @override
+  String get helpBanner => 'جان لیوا ہنگامی صورت میں فوراً 1122 پر کال کریں۔';
+
+  @override
+  String get faq1q => 'ہنگامی سواری کیسے منگواؤں؟';
+
+  @override
+  String get faq1a =>
+      'ہوم اسکرین پر سرخ ایمرجنسی بٹن دبائیں، علامات بیان کریں اور تصدیق کریں۔ قریب ترین دستیاب ڈرائیور خود بخود بھیج دیا جاتا ہے۔';
+
+  @override
+  String get faq2q => 'بعد کے لیے سواری کیسے بُک کروں؟';
+
+  @override
+  String get faq2a =>
+      'ہوم اسکرین پر \"سواری بُک کریں\" چنیں، پک اپ کا وقت اور منزل منتخب کریں اور تصدیق کریں۔ آپ اسے بعد میں اپنی سواریوں میں دیکھ سکتے ہیں۔';
+
+  @override
+  String get faq3q => 'کیا میں اپنے ڈرائیور کو ٹریک کر سکتا ہوں؟';
+
+  @override
+  String get faq3a =>
+      'جی ہاں۔ ڈرائیور کے آپ کی سواری قبول کرنے کے بعد، سواری کھولیں اور اس کے پہنچنے تک نقشے پر اس کی لائیو لوکیشن دیکھیں۔';
+
+  @override
+  String get faq4q => 'سواری کیسے منسوخ کروں؟';
+
+  @override
+  String get faq4a =>
+      'اپنی سواریوں کی فہرست سے سواری کھولیں۔ سواری کے زیرِ التوا ہونے پر یا ڈرائیور کے پہنچنے سے پہلے منسوخی ممکن ہے۔';
+
+  @override
+  String get faq5q => 'میں ڈرائیور بھی ہوں۔ پورٹل کیسے بدلوں؟';
+
+  @override
+  String get faq5a =>
+      'مریض اور ڈرائیور پورٹل کے درمیان بدلنے کے لیے مینو استعمال کریں۔ دونوں ایک ہی اکاؤنٹ سے چلتے ہیں۔';
+
+  @override
+  String get contactTitle => 'ہم سے رابطہ کریں';
+
+  @override
+  String get contactIntro =>
+      'ہم مدد کے لیے حاضر ہیں۔ ہنگامی صورت کے علاوہ کسی بھی معاملے کے لیے سمارٹ رائیڈ سپورٹ ٹیم سے رابطہ کریں:';
+
+  @override
+  String get contactEmergency => 'ایمرجنسی (ریسکیو 1122)';
+
+  @override
+  String get contactHotline => 'سپورٹ ہاٹ لائن';
+
+  @override
+  String get contactEmail => 'ای میل';
+
+  @override
+  String get contactHours => 'اوقات';
+
+  @override
+  String get contactHoursValue =>
+      'سپورٹ: صبح 8 بجے سے رات 10 بجے تک۔ ہنگامی ڈسپیچ: 24/7۔';
+
+  @override
+  String copiedMessage(String label) {
+    return '$label کاپی ہو گیا';
+  }
+
+  @override
+  String get howToTopUp => 'ٹاپ اپ کیسے کریں';
+
+  @override
+  String get choosePlan => 'پلان چنیں';
+
+  @override
+  String get payFrom => 'ادائیگی کا ذریعہ';
+
+  @override
+  String get mostPopular => 'سب سے مقبول';
+
+  @override
+  String get customAmount => 'اپنی رقم';
+
+  @override
+  String get enterAmount => 'رقم لکھیں';
 }

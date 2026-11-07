@@ -2227,6 +2227,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Save'**
   String get save;
+
+  /// No description provided for @helpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Help & FAQ'**
+  String get helpTitle;
+
+  /// No description provided for @helpBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'In a life-threatening emergency, call 1122 immediately.'**
+  String get helpBanner;
+
+  /// No description provided for @faq1q.
+  ///
+  /// In en, this message translates to:
+  /// **'How do I request an emergency ride?'**
+  String get faq1q;
+
+  /// No description provided for @faq1a.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the red EMERGENCY button on the home screen, describe your symptoms, and confirm. The nearest available driver is dispatched automatically.'**
+  String get faq1a;
+
+  /// No description provided for @faq2q.
+  ///
+  /// In en, this message translates to:
+  /// **'How do I book a ride for later?'**
+  String get faq2q;
+
+  /// No description provided for @faq2a.
+  ///
+  /// In en, this message translates to:
+  /// **'On the home screen choose \"Book a Ride\", pick a pickup time and destination, and confirm. You can see it later under your rides.'**
+  String get faq2a;
+
+  /// No description provided for @faq3q.
+  ///
+  /// In en, this message translates to:
+  /// **'Can I track my driver?'**
+  String get faq3q;
+
+  /// No description provided for @faq3a.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes. Once a driver accepts your ride, open the ride to see their live location on the map until they arrive.'**
+  String get faq3a;
+
+  /// No description provided for @faq4q.
+  ///
+  /// In en, this message translates to:
+  /// **'How do I cancel a ride?'**
+  String get faq4q;
+
+  /// No description provided for @faq4a.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the ride from your rides list. Cancellation is available while the ride is still pending or before the driver arrives.'**
+  String get faq4a;
+
+  /// No description provided for @faq5q.
+  ///
+  /// In en, this message translates to:
+  /// **'I am also a driver. How do I switch?'**
+  String get faq5q;
+
+  /// No description provided for @faq5a.
+  ///
+  /// In en, this message translates to:
+  /// **'Use the menu drawer to switch between the patient and driver portals. Both run from the same account.'**
+  String get faq5a;
+
+  /// No description provided for @contactTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Us'**
+  String get contactTitle;
+
+  /// No description provided for @contactIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'We are here to help. For anything that is not an emergency, reach the SmartRide support team:'**
+  String get contactIntro;
+
+  /// No description provided for @contactEmergency.
+  ///
+  /// In en, this message translates to:
+  /// **'Emergency (Rescue 1122)'**
+  String get contactEmergency;
+
+  /// No description provided for @contactHotline.
+  ///
+  /// In en, this message translates to:
+  /// **'Support hotline'**
+  String get contactHotline;
+
+  /// No description provided for @contactEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get contactEmail;
+
+  /// No description provided for @contactHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Hours'**
+  String get contactHours;
+
+  /// No description provided for @contactHoursValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Support: 8am to 10pm. Emergency dispatch: 24/7.'**
+  String get contactHoursValue;
+
+  /// No description provided for @copiedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'{label} copied'**
+  String copiedMessage(String label);
+
+  /// No description provided for @howToTopUp.
+  ///
+  /// In en, this message translates to:
+  /// **'How to top up'**
+  String get howToTopUp;
+
+  /// No description provided for @choosePlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a plan'**
+  String get choosePlan;
+
+  /// No description provided for @payFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay From'**
+  String get payFrom;
+
+  /// No description provided for @mostPopular.
+  ///
+  /// In en, this message translates to:
+  /// **'Most Popular'**
+  String get mostPopular;
+
+  /// No description provided for @customAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom amount'**
+  String get customAmount;
+
+  /// No description provided for @enterAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter amount'**
+  String get enterAmount;
 }
 
 class _AppLocalizationsDelegate

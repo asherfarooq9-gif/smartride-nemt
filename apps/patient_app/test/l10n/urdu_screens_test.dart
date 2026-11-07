@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:patient_app/features/auth/welcome_screen.dart';
+import 'package:patient_app/features/support/support_screen.dart';
 import 'package:patient_app/l10n/app_localizations.dart';
 
 Future<void> _pump(WidgetTester tester, Widget screen, Locale locale) async {
@@ -33,5 +34,14 @@ void main() {
     expect(find.text('شروع کریں'), findsOneWidget);
     expect(find.text('لاگ اِن'), findsOneWidget);
     expect(find.text('Get started'), findsNothing);
+  });
+
+  testWidgets('help and contact read in Urdu', (tester) async {
+    await _pump(tester, const HelpScreen(), const Locale('ur'));
+    expect(find.text('ہنگامی سواری کیسے منگواؤں؟'), findsOneWidget);
+    expect(find.text('How do I request an emergency ride?'), findsNothing);
+
+    await _pump(tester, const ContactScreen(), const Locale('ur'));
+    expect(find.text('سپورٹ ہاٹ لائن'), findsOneWidget);
   });
 }

@@ -375,5 +375,38 @@
   "moreRides": "More rides",
   "couldNotLoadHospitals": "Could not load hospitals",
   "editProfile": "Edit profile",
-  "save": "Save"
+  "save": "Save",
+  "helpTitle": "Help & FAQ",
+  "helpBanner": "In a life-threatening emergency, call 1122 immediately.",
+  "faq1q": "How do I request an emergency ride?",
+  "faq1a": "Tap the red EMERGENCY button on the home screen, describe your symptoms, and confirm. The nearest available driver is dispatched automatically.",
+  "faq2q": "How do I book a ride for later?",
+  "faq2a": "On the home screen choose \"Book a Ride\", pick a pickup time and destination, and confirm. You can see it later under your rides.",
+  "faq3q": "Can I track my driver?",
+  "faq3a": "Yes. Once a driver accepts your ride, open the ride to see their live location on the map until they arrive.",
+  "faq4q": "How do I cancel a ride?",
+  "faq4a": "Open the ride from your rides list. Cancellation is available while the ride is still pending or before the driver arrives.",
+  "faq5q": "I am also a driver. How do I switch?",
+  "faq5a": "Use the menu drawer to switch between the patient and driver portals. Both run from the same account.",
+  "contactTitle": "Contact Us",
+  "contactIntro": "We are here to help. For anything that is not an emergency, reach the SmartRide support team:",
+  "contactEmergency": "Emergency (Rescue 1122)",
+  "contactHotline": "Support hotline",
+  "contactEmail": "Email",
+  "contactHours": "Hours",
+  "contactHoursValue": "Support: 8am to 10pm. Emergency dispatch: 24/7.",
+  "copiedMessage": "{label} copied",
+  "@copiedMessage": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "howToTopUp": "How to top up",
+  "choosePlan": "Choose a plan",
+  "payFrom": "Pay From",
+  "mostPopular": "Most Popular",
+  "customAmount": "Custom amount",
+  "enterAmount": "Enter amount"
 }
