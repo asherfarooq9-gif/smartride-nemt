@@ -44,6 +44,18 @@ Always-apply skills:
 - `documentation-and-adrs` for architecture decisions. Record ADRs in `docs/adr/`.
 - `observability-and-instrumentation` for new production paths. See `docs/OBSERVABILITY.md`.
 
+Extra checks for this repo:
+- `ecc:silent-failure-hunter` agent on payment and dispatch code (no swallowed errors).
+- `ecc:healthcare-reviewer` agent and `ecc:healthcare-phi-compliance` skill on anything touching patient data.
+- `impeccable` for admin-dashboard and patient app UI work.
+- `ecc:accessibility` for UI changes.
+
+Agents for this repo:
+- `ecc:fastapi-reviewer` on `backend/` and `ai-services/triage/` changes.
+- `ecc:database-reviewer` on Alembic migrations and SQL.
+- `ecc:react-reviewer` on `admin-dashboard/` changes.
+- `ecc:e2e-runner` for critical user flows (login, booking, dispatch).
+
 Quality bar lives in `CONSTRAINTS.md` (constraint-driven-development). Never lower it to get green.
 
 ## Rules for this repo
