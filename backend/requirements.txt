@@ -11,7 +11,7 @@ PyJWT==2.15.1
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
 pydantic-settings==2.2.1
-slowapi==0.1.9
+slowapi==0.1.10
 prometheus-fastapi-instrumentator==8.1.0
 sentry-sdk[fastapi]==2.73.0
 google-auth==2.62.0
