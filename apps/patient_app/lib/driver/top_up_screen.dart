@@ -153,7 +153,8 @@ class _TopUpScreenState extends State<TopUpScreen> {
                 ),
               AppleRow(
                 title: l.customAmount,
-                trailing: _isCustom ? const _Check() : null,
+                trailing:
+                    _isCustom ? const _Check() : const SizedBox(width: 22),
                 onTap: () => setState(() {
                   _isCustom = !_isCustom;
                   if (_isCustom) _selectedPlan = null;
@@ -174,7 +175,9 @@ class _TopUpScreenState extends State<TopUpScreen> {
                 AppleRow(
                   icon: m.icon,
                   title: m.label,
-                  trailing: _paymentMethod == m.label ? const _Check() : null,
+                  trailing: _paymentMethod == m.label
+                      ? const _Check()
+                      : const SizedBox(width: 22),
                   onTap: () => setState(() => _paymentMethod = m.label),
                 ),
             ],

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:patient_app/core/locale_provider.dart';
 import 'package:patient_app/core/providers.dart';
 // Auth
+import 'package:patient_app/features/auth/language_screen.dart';
 import 'package:patient_app/features/auth/welcome_screen.dart';
 import 'package:patient_app/features/auth/login_screen.dart';
 import 'package:patient_app/features/auth/signup_screen.dart';
@@ -34,7 +36,8 @@ import 'package:patient_app/features/profile/saved_places_screen.dart';
 import 'package:patient_app/features/rides/system_states_screen.dart';
 import 'package:patient_app/features/rides/rate_driver_screen.dart';
 
-const _authPages = {'/welcome', '/login', '/signup'};
+// Pages a signed-out person may see. Signed-in people are sent home from them.
+const _authPages = {'/language', '/welcome', '/login', '/signup'};
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authListenable = _AuthListenable(ref);
@@ -50,6 +53,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       final loc = state.matchedLocation;
 
       if (isLoading) return null;
+
+      // First launch: pick a language before anything else.
+      final toLanguage = languageRedirect(
+        chosen: ref.read(languageChosenProvider),
+        isLoggedIn: isLoggedIn,
+        location: loc,
+      );
+      if (toLanguage != null) return toLanguage;
 
       if (!isLoggedIn) {
         return _authPages.contains(loc) ? null : '/welcome';
@@ -68,6 +79,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: authListenable,
     routes: [
       // ── Auth ──────────────────────────────────────────────────────────────
+      GoRoute(path: '/language', builder: (_, __) => const LanguageScreen()),
       GoRoute(path: '/welcome', builder: (_, __) => const WelcomeScreen()),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/signup', builder: (_, __) => const SignupScreen()),
@@ -196,6 +208,7 @@ class _AuthListenable extends ChangeNotifier {
     _subs = [
       ref.listen(authProvider, (_, __) => notifyListeners()),
       ref.listen(activeRoleProvider, (_, __) => notifyListeners()),
+      ref.listen(languageChosenProvider, (_, __) => notifyListeners()),
     ];
   }
 
