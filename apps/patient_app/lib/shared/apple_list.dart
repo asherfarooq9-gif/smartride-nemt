@@ -124,6 +124,7 @@ class AppleRow extends StatelessWidget {
     this.trailing,
     this.onTap,
     this.destructive = false,
+    this.detail = false,
   });
 
   final String title;
@@ -140,6 +141,10 @@ class AppleRow extends StatelessWidget {
 
   /// For sign out and delete: red text and a red icon tile.
   final bool destructive;
+
+  /// A read-only fact: a small [title] label over the [subtitle] value, which
+  /// wraps instead of being cut.
+  final bool detail;
 
   @override
   Widget build(BuildContext context) {
@@ -177,18 +182,22 @@ class AppleRow extends StatelessWidget {
       leading: icon == null ? null : _IconTile(icon: icon!, color: tileColor),
       title: Text(
         title,
-        maxLines: 2,
+        maxLines: detail ? 1 : 2,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontSize: core.kFontBody,
-          color: destructive ? red : scheme.onSurface,
-        ),
+        style: detail
+            ? TextStyle(color: hint, fontSize: 13)
+            : TextStyle(
+                fontSize: core.kFontBody,
+                color: destructive ? red : scheme.onSurface,
+              ),
       ),
       subtitle: subtitle == null
           ? null
           : Text(
               subtitle!,
-              style: TextStyle(color: hint, fontSize: core.kFontSmall),
+              style: detail
+                  ? TextStyle(color: scheme.onSurface, fontSize: core.kFontBody)
+                  : TextStyle(color: hint, fontSize: core.kFontSmall),
             ),
       trailing: end,
       onTap: onTap,

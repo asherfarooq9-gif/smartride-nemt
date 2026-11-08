@@ -60,6 +60,26 @@ void main() {
     expect(line.style?.color, core.kText400);
   });
 
+  testWidgets('a detail row shows a small label over a full-size value',
+      (tester) async {
+    await tester.pumpWidget(_app(const AppleSection(children: [
+      AppleRow(
+        icon: Icons.location_on,
+        title: 'Pickup',
+        subtitle: 'F-8 Markaz, Islamabad. Near the main gate, second floor.',
+        detail: true,
+      ),
+    ])));
+
+    final label = tester.widget<Text>(find.text('Pickup'));
+    expect(label.style?.fontSize, 13);
+    expect(label.style?.color, core.kText400);
+    final value = tester.widget<Text>(find.textContaining('F-8 Markaz'));
+    expect(value.style?.fontSize, 16);
+    expect(value.style?.color, isNot(core.kText400));
+    expect(value.maxLines, isNull, reason: 'long values wrap, never cut');
+  });
+
   testWidgets('a destructive row is red and has a red icon tile',
       (tester) async {
     await tester.pumpWidget(_app(AppleSection(children: [
