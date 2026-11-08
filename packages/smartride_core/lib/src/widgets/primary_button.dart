@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import '../theme/design_tokens.dart';
 
 class PrimaryButton extends StatelessWidget {
@@ -44,10 +45,7 @@ class PrimaryButton extends StatelessWidget {
               ? const SizedBox(
                   width: 24,
                   height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
+                  child: CupertinoActivityIndicator(color: Colors.white),
                 )
               : Text(
                   label,

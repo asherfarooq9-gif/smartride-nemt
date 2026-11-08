@@ -1,5 +1,6 @@
 import 'package:patient_app/shared/apple_alert.dart';
 import 'package:patient_app/l10n/l10n.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -163,10 +164,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
+                            child:
+                                CupertinoActivityIndicator(color: Colors.white),
                           )
                         : Text(
                             context.l10n.logIn,

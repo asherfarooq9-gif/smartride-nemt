@@ -4,6 +4,7 @@ import 'package:patient_app/l10n/l10n.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart' show defaultTargetPlatform;
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -440,10 +441,7 @@ class _ActionPanel extends StatelessWidget {
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: core.kError,
-                        ),
+                        child: CupertinoActivityIndicator(color: core.kError),
                       )
                     : Text(context.l10n.cancelRide),
               ),

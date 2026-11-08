@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -396,8 +397,8 @@ class _ScheduleTripScreenState extends ConsumerState<ScheduleTripScreen> {
                             ? const SizedBox(
                                 width: 20,
                                 height: 20,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: Colors.white),
+                                child: CupertinoActivityIndicator(
+                                    color: Colors.white),
                               )
                             : Text(context.l10n.confirmBooking,
                                 style: const TextStyle(

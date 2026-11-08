@@ -1,4 +1,5 @@
 import 'package:patient_app/l10n/l10n.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:patient_app/driver/driver_demand_card.dart';
@@ -14,7 +15,7 @@ class DemandForecastScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.demandForecastTitle)),
       body: forecast.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: CupertinoActivityIndicator()),
         error: (_, __) => Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
