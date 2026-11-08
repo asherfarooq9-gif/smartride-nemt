@@ -152,6 +152,26 @@ Things code cannot do for you:
       wallets by hand; fares and commission are recorded in the ledger).
 - [ ] Test on real phones: GPS in the background, push notifications, calling and SMS.
 
+## Internet calls: the relay (coturn)
+
+Patient-driver calls need a TURN relay or they fail on most mobile networks.
+
+1. Pick a long random `TURN_SECRET` and put it in the backend's environment **and**
+   coturn's (the same value). Set `TURN_URLS` (and `STUN_URLS`) to the relay's public
+   address, e.g. `["turn:turn.example.com:3478?transport=udp","turn:turn.example.com:3478?transport=tcp"]`.
+2. Run coturn on a host with a public IP: `docker compose --profile calls up -d coturn`
+   (the dev file binds loopback only; in production run the same image with
+   `network_mode: host` or publish `3478/udp`, `3478/tcp` and the relay range
+   `49160-49200/udp`, and add `--external-ip=<public ip>`).
+3. Open those ports in the firewall. Do not open anything else on that host to the
+   relay: the private-address denial in the compose file protects the internal network,
+   keep it.
+4. Check from a phone on mobile data: start a call between two test accounts on a live
+   ride. If it never connects, coturn's log shows whether the login was refused (wrong
+   secret) or the ports are closed.
+5. Rotate `TURN_SECRET` like any other secret: change both sides together; logins
+   issued before the change stop working within an hour.
+
 ## Push notification go-live check (after the Firebase files are in place)
 
 1. Backend: set `FIREBASE_PROJECT_ID` and mount the service-account file at

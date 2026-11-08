@@ -47,6 +47,7 @@ POLICY = {
     ("POST", "/api/v1/rides/{ride_id}/rate"): {P},
     ("GET", "/api/v1/rides/{ride_id}/messages"): {P, D},
     ("POST", "/api/v1/rides/{ride_id}/messages"): {P, D},
+    ("GET", "/api/v1/rides/{ride_id}/call/ice-servers"): {P, D},
     ("GET", "/api/v1/drivers/me"): {D},
     ("PATCH", "/api/v1/drivers/me"): {D},
     ("PATCH", "/api/v1/drivers/status"): {D},

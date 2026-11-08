@@ -41,6 +41,14 @@ class Settings(BaseSettings):
     TWILIO_AUTH_TOKEN: str = ""
     TWILIO_FROM_NUMBER: str = ""
 
+    # Internet calls (WebRTC). The relay is our own coturn server; see
+    # docs/runbooks and ADR 0004. Without TURN_URLS and TURN_SECRET no relay
+    # credentials are handed out and calls only connect on a shared network.
+    STUN_URLS: List[str] = []
+    TURN_URLS: List[str] = []
+    TURN_SECRET: str = ""  # the same value as coturn's static-auth-secret
+    TURN_TTL_SECONDS: int = 3600
+
     # Firebase
     FIREBASE_PROJECT_ID: str = ""
     FIREBASE_CREDENTIALS_PATH: str = "firebase-credentials.json"

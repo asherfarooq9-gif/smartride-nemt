@@ -52,6 +52,21 @@ class LocationManager:
             timeout=REDIS_OP_TIMEOUT_SECONDS,
         )
 
+    def _call_channel(self, ride_id: str, role: str) -> str:
+        return f"ride:{ride_id}:call:{role}"
+
+    async def publish_call(self, ride_id: str, role: str, payload: dict) -> int:
+        """Send a call message to one side. Returns how many sockets heard it, so a
+        caller can tell the other person's app is not open."""
+        r = await self._get_redis()
+        return await asyncio.wait_for(
+            r.publish(self._call_channel(ride_id, role), json.dumps(payload)),
+            timeout=REDIS_OP_TIMEOUT_SECONDS,
+        )
+
+    async def subscribe_call(self, ride_id: str, role: str) -> aioredis.client.PubSub:
+        return await self._subscribe(self._call_channel(ride_id, role))
+
     async def subscribe(self, ride_id: str) -> aioredis.client.PubSub:
         return await self._subscribe(self._channel(ride_id))
 
