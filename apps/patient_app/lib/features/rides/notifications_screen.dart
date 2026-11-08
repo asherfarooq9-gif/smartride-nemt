@@ -32,6 +32,7 @@ class NotificationsScreen extends ConsumerWidget {
                 style: TextStyle(color: primary, fontWeight: FontWeight.w600),
               ),
             ),
+          const SizedBox(width: kSpaceXS),
         ],
       ),
       body: notifications.isEmpty

@@ -18,6 +18,10 @@ class HelpScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The plain emergency red is too dim to read on dark surfaces.
+    final alarm = Theme.of(context).brightness == Brightness.dark
+        ? core.kDarkRed
+        : core.kEmergencyRed;
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.helpTitle)),
       body: ListView(
@@ -34,14 +38,13 @@ class HelpScreen extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const Icon(Icons.warning_amber_rounded,
-                    color: core.kEmergencyRed),
+                Icon(Icons.warning_amber_rounded, color: alarm),
                 const SizedBox(width: core.kSpaceMD),
                 Expanded(
                   child: Text(
                     context.l10n.helpBanner,
-                    style: const TextStyle(
-                      color: core.kEmergencyRed,
+                    style: TextStyle(
+                      color: alarm,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

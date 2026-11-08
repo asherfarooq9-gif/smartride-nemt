@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smartride_core/smartride_core.dart';
 import 'package:patient_app/core/providers.dart';
+import 'package:patient_app/shared/apple_list.dart';
 
 class SavedPlacesScreen extends ConsumerWidget {
   const SavedPlacesScreen({super.key});
@@ -15,33 +16,32 @@ class SavedPlacesScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(context.l10n.savedPlaces),
         leading: const BackButton(),
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: kPatient600,
-        foregroundColor: Colors.white,
-        onPressed: () => _openSheet(context, ref),
-        child: const Icon(Icons.add),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            tooltip: context.l10n.addPlaceBtn,
+            onPressed: () => _openSheet(context, ref),
+          ),
+        ],
       ),
       body: places.isEmpty
           ? _EmptyState(onAdd: () => _openSheet(context, ref))
-          : ListView.separated(
-              padding: const EdgeInsets.all(kSpaceLG),
-              itemCount: places.length + 1,
-              separatorBuilder: (_, __) => const SizedBox(height: kSpaceMD),
-              itemBuilder: (context, i) {
-                if (i == places.length) {
-                  return Padding(
-                    padding: const EdgeInsets.only(top: kSpaceSM),
-                    child:
-                        _AddPlaceButton(onTap: () => _openSheet(context, ref)),
-                  );
-                }
-                return _PlaceCard(
-                  place: places[i],
-                  onEdit: () => _openSheet(context, ref, existing: places[i]),
-                  onDelete: () => _confirmDelete(context, ref, places[i]),
-                );
-              },
+          : ListView(
+              padding: const EdgeInsets.only(bottom: kSpaceXXL),
+              children: [
+                AppleSection(
+                  dividerIndent: appleIconDividerIndent,
+                  children: [
+                    for (final place in places)
+                      _PlaceRow(
+                        place: place,
+                        onEdit: () => _openSheet(context, ref, existing: place),
+                        onDelete: () => _confirmDelete(context, ref, place),
+                      ),
+                    _AddPlaceRow(onTap: () => _openSheet(context, ref)),
+                  ],
+                ),
+              ],
             ),
     );
   }
@@ -92,10 +92,10 @@ class SavedPlacesScreen extends ConsumerWidget {
   }
 }
 
-// ── Place card ─────────────────────────────────────────────────────────────────
+// -- Place row --------------------------------------------------------------
 
-class _PlaceCard extends StatelessWidget {
-  const _PlaceCard(
+class _PlaceRow extends StatelessWidget {
+  const _PlaceRow(
       {required this.place, required this.onEdit, required this.onDelete});
 
   final SavedPlace place;
@@ -104,82 +104,55 @@ class _PlaceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: kSurface,
-        borderRadius: BorderRadius.circular(kRadiusXL),
-        border: Border.all(color: kBorder),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(
-            horizontal: kSpaceLG, vertical: kSpaceSM),
-        leading: Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: kPatient600.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(kRadiusMD),
-          ),
-          child: Icon(place.icon, color: kPatient600, size: 22),
-        ),
-        title: Text(
-          place.label,
-          style: const TextStyle(
-            fontSize: kFontBody,
-            fontWeight: FontWeight.w700,
-            color: kText900,
-          ),
-        ),
-        subtitle: Text(
-          place.address,
-          style: const TextStyle(fontSize: kFontSmall, color: kText600),
-        ),
-        trailing: PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert, color: kText400),
-          onSelected: (value) {
-            if (value == 'edit') onEdit();
-            if (value == 'delete') onDelete();
-          },
-          itemBuilder: (_) => [
-            PopupMenuItem(value: 'edit', child: Text(context.l10n.edit)),
-            PopupMenuItem(
-              value: 'delete',
-              child: Text(context.l10n.delete,
-                  style: const TextStyle(color: kError)),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final hint = isDark ? kDarkText3 : kText400;
+    return AppleRow(
+      icon: place.icon,
+      title: place.label,
+      subtitle: place.address,
+      trailing: PopupMenuButton<String>(
+        icon: Icon(Icons.more_horiz, color: hint),
+        onSelected: (value) {
+          if (value == 'edit') onEdit();
+          if (value == 'delete') onDelete();
+        },
+        itemBuilder: (_) => [
+          PopupMenuItem(value: 'edit', child: Text(context.l10n.edit)),
+          PopupMenuItem(
+            value: 'delete',
+            child: Text(
+              context.l10n.delete,
+              style: TextStyle(color: isDark ? kDarkRed : kError),
             ),
-          ],
-        ),
-        minVerticalPadding: 0,
+          ),
+        ],
       ),
+      onTap: onEdit,
     );
   }
 }
 
-// ── Add place button ───────────────────────────────────────────────────────────
+// -- Add place row ----------------------------------------------------------
 
-class _AddPlaceButton extends StatelessWidget {
-  const _AddPlaceButton({required this.onTap});
+class _AddPlaceRow extends StatelessWidget {
+  const _AddPlaceRow({required this.onTap});
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size.fromHeight(kMinTapTarget),
-        side: const BorderSide(color: kBorder),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(kRadiusLG),
-        ),
-      ),
-      child: Text(
+    final scheme = Theme.of(context).colorScheme;
+    final link =
+        scheme.brightness == Brightness.dark ? kDarkAccent : scheme.primary;
+    return ListTile(
+      minTileHeight: 48,
+      contentPadding: const EdgeInsets.symmetric(horizontal: kSpaceLG),
+      leading: Icon(Icons.add_circle, color: link, size: 30),
+      horizontalTitleGap: kSpaceMD,
+      title: Text(
         context.l10n.addPlaceBtn,
-        style: const TextStyle(
-          fontSize: kFontSmall,
-          fontWeight: FontWeight.w600,
-          color: kPatient600,
-        ),
+        style: TextStyle(fontSize: kFontBody, color: link),
       ),
+      onTap: onTap,
     );
   }
 }
@@ -196,16 +169,18 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.place_outlined, size: 64, color: kText400),
+          Icon(Icons.place_outlined,
+              size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant),
           const SizedBox(height: kSpaceLG),
           Text(context.l10n.noSavedPlaces,
-              style: const TextStyle(fontSize: kFontBody, color: kText600)),
+              style: TextStyle(
+                  fontSize: kFontBody,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
           const SizedBox(height: kSpaceSM),
           TextButton(
             onPressed: onAdd,
             child: Text(context.l10n.addFirstPlace,
-                style: const TextStyle(
-                    color: kPatient600, fontWeight: FontWeight.w600)),
+                style: const TextStyle(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -281,23 +256,12 @@ class _PlaceSheetState extends State<_PlaceSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: kBorder,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: kSpaceLG),
             Text(
               isEdit ? context.l10n.editPlace : context.l10n.addPlace,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: kFontSubhead,
                 fontWeight: FontWeight.w700,
-                color: kText900,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: kSpaceLG),
@@ -312,13 +276,20 @@ class _PlaceSheetState extends State<_PlaceSheet> {
                       children: [
                         Icon(icon,
                             size: 15,
-                            color: _iconType == type ? kPatient600 : kText600),
+                            color: _iconType == type
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant),
                         const SizedBox(width: 4),
                         Text(lbl),
                       ],
                     ),
                     selected: _iconType == type,
-                    selectedColor: kPatient600.withValues(alpha: 0.12),
+                    selectedColor: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.12),
                     onSelected: (_) => setState(() => _iconType = type),
                   ),
               ],
