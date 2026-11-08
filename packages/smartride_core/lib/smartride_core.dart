@@ -10,6 +10,7 @@ export 'src/models/user.dart';
 export 'src/models/patient.dart';
 export 'src/models/demand.dart';
 export 'src/models/driver.dart';
+export 'src/models/chat.dart';
 export 'src/models/hospital.dart';
 export 'src/models/ride.dart';
 export 'src/models/triage.dart';
