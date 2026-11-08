@@ -1465,4 +1465,66 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get chatLoadFailed => 'چیٹ لوڈ نہیں ہو سکی۔';
+
+  @override
+  String get callPatient => 'مریض کو کال کریں';
+
+  @override
+  String get callIncoming => 'آنے والی کال';
+
+  @override
+  String get callCalling => 'کال کی جا رہی ہے…';
+
+  @override
+  String get callConnecting => 'جڑ رہا ہے…';
+
+  @override
+  String get callMute => 'خاموش';
+
+  @override
+  String get callUnmute => 'آواز چالو کریں';
+
+  @override
+  String get callSpeaker => 'سپیکر';
+
+  @override
+  String get callAnswer => 'جواب دیں';
+
+  @override
+  String get callDecline => 'مسترد کریں';
+
+  @override
+  String get callEnd => 'کال ختم کریں';
+
+  @override
+  String get callPrivacyNote => 'مفت انٹرنیٹ کال۔ آپ کا نمبر ظاہر نہیں ہوتا۔';
+
+  @override
+  String get callEndedHungUp => 'کال ختم ہو گئی';
+
+  @override
+  String get callEndedRemote => 'دوسرے شخص نے کال ختم کر دی';
+
+  @override
+  String get callEndedDeclined => 'کال مسترد کر دی گئی';
+
+  @override
+  String get callEndedNoAnswer => 'کوئی جواب نہیں';
+
+  @override
+  String get callEndedMissed => 'مس کال';
+
+  @override
+  String get callEndedUnreachable =>
+      'ابھی رابطہ ممکن نہیں۔ پیغام بھیج کر دیکھیں۔';
+
+  @override
+  String get callEndedFailed => 'کال نہیں جڑ سکی۔ پیغام بھیج کر دیکھیں۔';
+
+  @override
+  String get callEndedRideEnded => 'سواری ختم ہو گئی، اس لیے کال ختم ہو گئی۔';
+
+  @override
+  String get callPermissionDenied =>
+      'کال کے لیے سیٹنگز میں مائیکروفون کی اجازت دیں۔';
 }

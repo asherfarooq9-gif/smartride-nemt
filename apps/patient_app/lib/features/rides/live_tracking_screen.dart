@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:patient_app/features/call/incoming_call_listener.dart';
 import 'package:patient_app/shared/english_map_tiles.dart';
 import 'package:patient_app/driver/ride_events.dart' show rideHasEnded;
 import 'package:patient_app/l10n/l10n.dart';
@@ -180,17 +181,6 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
     super.dispose();
   }
 
-  Future<void> _callDriver(String phone) async {
-    final uri = Uri.parse('tel:$phone');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.noPhoneApp)),
-      );
-    }
-  }
-
   /// Open the SMS composer pre-filled with the ride details so the patient
   /// can send it to family. SMS works without data — important mid-emergency.
   Future<void> _shareWithFamily() async {
@@ -244,38 +234,42 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
 
     final center = _driverPos ?? _pickupPos ?? const LatLng(33.6844, 73.0479);
 
-    return Scaffold(
-      body: Stack(
-        children: [
-          _TrackingMap(
-            controller: _mapController,
-            center: center,
-            pickup: _pickupPos,
-            driver: _driverPos,
-            onMapReady: () => _isMapReady = true,
-          ),
-          SafeArea(
-            child: _StatusPanel(
-              statusLabel: _ride == null
-                  ? context.l10n.statusEnRoute
-                  : rideStatusLabel(context.l10n, _ride!.status),
-              etaLabel: _etaLabel,
-              hospitalName: _ride?.hospital?['name'] as String?,
-              isConnected: _connected,
-              hasGivenUp: _hasGivenUp,
-              onRetry: _connectWs,
+    return IncomingCallListener(
+      rideId: widget.rideId,
+      callPath: '/call/${widget.rideId}',
+      child: Scaffold(
+        body: Stack(
+          children: [
+            _TrackingMap(
+              controller: _mapController,
+              center: center,
+              pickup: _pickupPos,
+              driver: _driverPos,
+              onMapReady: () => _isMapReady = true,
             ),
-          ),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: _DriverCard(
-              driver: _ride?.driver,
-              onCall: _callDriver,
-              onMessage: () => context.push('/chat/${widget.rideId}'),
-              onShare: _shareWithFamily,
+            SafeArea(
+              child: _StatusPanel(
+                statusLabel: _ride == null
+                    ? context.l10n.statusEnRoute
+                    : rideStatusLabel(context.l10n, _ride!.status),
+                etaLabel: _etaLabel,
+                hospitalName: _ride?.hospital?['name'] as String?,
+                isConnected: _connected,
+                hasGivenUp: _hasGivenUp,
+                onRetry: _connectWs,
+              ),
             ),
-          ),
-        ],
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: _DriverCard(
+                driver: _ride?.driver,
+                onCall: () => context.push('/call/${widget.rideId}?start=1'),
+                onMessage: () => context.push('/chat/${widget.rideId}'),
+                onShare: _shareWithFamily,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -464,7 +458,7 @@ class _DriverCard extends StatelessWidget {
   });
 
   final Map<String, dynamic>? driver;
-  final Future<void> Function(String phone) onCall;
+  final VoidCallback onCall;
   final VoidCallback onMessage;
   final VoidCallback onShare;
 
@@ -472,7 +466,6 @@ class _DriverCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final phone = driver?['phone'] as String?;
     final methods = [
       for (final m
           in (driver?['payment_methods'] as List<dynamic>? ?? const []))
@@ -541,7 +534,7 @@ class _DriverCard extends StatelessWidget {
               const SizedBox(width: core.kSpaceSM),
               IconButton.filled(
                 tooltip: context.l10n.callDriver,
-                onPressed: phone == null ? null : () => onCall(phone),
+                onPressed: driver == null ? null : onCall,
                 icon: const Icon(Icons.phone),
                 style: IconButton.styleFrom(
                   minimumSize:

@@ -1464,4 +1464,67 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatLoadFailed => 'Could not load the chat.';
+
+  @override
+  String get callPatient => 'Call patient';
+
+  @override
+  String get callIncoming => 'Incoming call';
+
+  @override
+  String get callCalling => 'Calling…';
+
+  @override
+  String get callConnecting => 'Connecting…';
+
+  @override
+  String get callMute => 'Mute';
+
+  @override
+  String get callUnmute => 'Unmute';
+
+  @override
+  String get callSpeaker => 'Speaker';
+
+  @override
+  String get callAnswer => 'Answer';
+
+  @override
+  String get callDecline => 'Decline';
+
+  @override
+  String get callEnd => 'End call';
+
+  @override
+  String get callPrivacyNote => 'Free internet call. Your number is not shown.';
+
+  @override
+  String get callEndedHungUp => 'Call ended';
+
+  @override
+  String get callEndedRemote => 'The other person ended the call';
+
+  @override
+  String get callEndedDeclined => 'Call declined';
+
+  @override
+  String get callEndedNoAnswer => 'No answer';
+
+  @override
+  String get callEndedMissed => 'Missed call';
+
+  @override
+  String get callEndedUnreachable =>
+      'Not reachable right now. Try a message instead.';
+
+  @override
+  String get callEndedFailed =>
+      'The call could not connect. Try a message instead.';
+
+  @override
+  String get callEndedRideEnded => 'The ride has ended, so the call ended.';
+
+  @override
+  String get callPermissionDenied =>
+      'Allow the microphone in Settings to make calls.';
 }

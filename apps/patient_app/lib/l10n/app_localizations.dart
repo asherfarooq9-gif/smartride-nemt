@@ -2869,6 +2869,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not load the chat.'**
   String get chatLoadFailed;
+
+  /// No description provided for @callPatient.
+  ///
+  /// In en, this message translates to:
+  /// **'Call patient'**
+  String get callPatient;
+
+  /// No description provided for @callIncoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Incoming call'**
+  String get callIncoming;
+
+  /// No description provided for @callCalling.
+  ///
+  /// In en, this message translates to:
+  /// **'Calling…'**
+  String get callCalling;
+
+  /// No description provided for @callConnecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting…'**
+  String get callConnecting;
+
+  /// No description provided for @callMute.
+  ///
+  /// In en, this message translates to:
+  /// **'Mute'**
+  String get callMute;
+
+  /// No description provided for @callUnmute.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmute'**
+  String get callUnmute;
+
+  /// No description provided for @callSpeaker.
+  ///
+  /// In en, this message translates to:
+  /// **'Speaker'**
+  String get callSpeaker;
+
+  /// No description provided for @callAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer'**
+  String get callAnswer;
+
+  /// No description provided for @callDecline.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline'**
+  String get callDecline;
+
+  /// No description provided for @callEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'End call'**
+  String get callEnd;
+
+  /// No description provided for @callPrivacyNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Free internet call. Your number is not shown.'**
+  String get callPrivacyNote;
+
+  /// No description provided for @callEndedHungUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Call ended'**
+  String get callEndedHungUp;
+
+  /// No description provided for @callEndedRemote.
+  ///
+  /// In en, this message translates to:
+  /// **'The other person ended the call'**
+  String get callEndedRemote;
+
+  /// No description provided for @callEndedDeclined.
+  ///
+  /// In en, this message translates to:
+  /// **'Call declined'**
+  String get callEndedDeclined;
+
+  /// No description provided for @callEndedNoAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'No answer'**
+  String get callEndedNoAnswer;
+
+  /// No description provided for @callEndedMissed.
+  ///
+  /// In en, this message translates to:
+  /// **'Missed call'**
+  String get callEndedMissed;
+
+  /// No description provided for @callEndedUnreachable.
+  ///
+  /// In en, this message translates to:
+  /// **'Not reachable right now. Try a message instead.'**
+  String get callEndedUnreachable;
+
+  /// No description provided for @callEndedFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The call could not connect. Try a message instead.'**
+  String get callEndedFailed;
+
+  /// No description provided for @callEndedRideEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'The ride has ended, so the call ended.'**
+  String get callEndedRideEnded;
+
+  /// No description provided for @callPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow the microphone in Settings to make calls.'**
+  String get callPermissionDenied;
 }
 
 class _AppLocalizationsDelegate
