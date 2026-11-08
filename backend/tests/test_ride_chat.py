@@ -161,16 +161,11 @@ async def test_chat_is_closed_until_a_driver_has_the_ride(client):
     patient_token = await _register(client, _phone(), "patient")
     from tests.test_dispatch_endpoints import _create_emergency
 
-    ride_id = await _create_emergency(client, patient_token)
+    ride_id = await _create_emergency(client, patient_token)  # dispatch is stubbed
 
-    # Dispatch may place a driver on its own; a ride that is still pending has
-    # nobody to talk to, so both calls say the chat is not open.
-    ride = (
-        await client.get(f"/api/v1/rides/{ride_id}", headers=_auth(patient_token))
-    ).json()
-    if ride["status"] == "pending":
-        assert (await _post(client, patient_token, ride_id, "hello")).status_code == 409
-        assert (await _list(client, patient_token, ride_id)).status_code == 409
+    # Still pending: nobody to talk to, so both calls say the chat is not open.
+    assert (await _post(client, patient_token, ride_id, "hello")).status_code == 409
+    assert (await _list(client, patient_token, ride_id)).status_code == 409
 
 
 async def test_unknown_ride_is_404(client, verified_driver_token):

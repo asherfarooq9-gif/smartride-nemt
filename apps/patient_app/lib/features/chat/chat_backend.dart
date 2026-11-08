@@ -3,10 +3,8 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 
-/// A live chat channel; close it when the screen goes away.
-abstract class ChatConnection {
-  Future<void> close();
-}
+/// Closes a live chat channel; call it when the screen goes away.
+typedef CloseChat = Future<void> Function();
 
 /// Everything the chat screen needs from the server, behind one small door so
 /// tests can play the server.
@@ -15,10 +13,11 @@ abstract class ChatBackend {
 
   Future<core.RideMessage> send(String rideId, String body);
 
-  /// Opens the live channel. [onMessage] gets each new message, [onClosed] fires
-  /// when the server says the chat is over, and [onConnected] fires every time
-  /// the socket (re)opens so the caller can fetch anything it missed.
-  Future<ChatConnection> connect(
+  /// Opens the live channel and returns how to close it. [onMessage] gets each
+  /// new message, [onClosed] fires when the server says the chat is over, and
+  /// [onConnected] fires every time the socket (re)opens so the caller can fetch
+  /// anything it missed.
+  Future<CloseChat> connect(
     String rideId, {
     required void Function(core.RideMessage) onMessage,
     required void Function() onClosed,
@@ -39,7 +38,7 @@ class ApiChatBackend implements ChatBackend {
       core.sendRideMessage(rideId, body);
 
   @override
-  Future<ChatConnection> connect(
+  Future<CloseChat> connect(
     String rideId, {
     required void Function(core.RideMessage) onMessage,
     required void Function() onClosed,
@@ -68,16 +67,8 @@ class ApiChatBackend implements ChatBackend {
       );
       await ws.connect(uri, token);
     }
-    return _WsConnection(ws);
+    return ws.disconnect;
   }
-}
-
-class _WsConnection implements ChatConnection {
-  _WsConnection(this._ws);
-  final core.WsClient _ws;
-
-  @override
-  Future<void> close() => _ws.disconnect();
 }
 
 final chatBackendProvider = Provider<ChatBackend>(

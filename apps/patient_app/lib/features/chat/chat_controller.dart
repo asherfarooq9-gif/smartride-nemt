@@ -59,7 +59,7 @@ class ChatController extends StateNotifier<ChatState> {
 
   final ChatBackend _backend;
   final String rideId;
-  ChatConnection? _connection;
+  CloseChat? _closeLive;
   bool _isDisposed = false;
 
   // 409 means the chat is closed; 403/404 mean this ride is not ours to read.
@@ -85,17 +85,17 @@ class ChatController extends StateNotifier<ChatState> {
       );
       return;
     }
-    final connection = await _backend.connect(
+    final closeLive = await _backend.connect(
       rideId,
       onMessage: _add,
       onClosed: _close,
       onConnected: () => unawaited(_catchUp()),
     );
     if (_isDisposed) {
-      await connection.close();
+      await closeLive();
       return;
     }
-    _connection = connection;
+    _closeLive = closeLive;
   }
 
   /// Messages that arrived while the live channel was down.
@@ -133,9 +133,9 @@ class ChatController extends StateNotifier<ChatState> {
   void _close() {
     if (_isDisposed) return;
     state = state.copyWith(status: ChatStatus.closed, isSending: false);
-    final connection = _connection;
-    _connection = null;
-    if (connection != null) unawaited(connection.close());
+    final closeLive = _closeLive;
+    _closeLive = null;
+    if (closeLive != null) unawaited(closeLive());
   }
 
   /// Sends [text]. False when nothing was sent (empty, too long, or it failed);
@@ -173,9 +173,9 @@ class ChatController extends StateNotifier<ChatState> {
   @override
   void dispose() {
     _isDisposed = true;
-    final connection = _connection;
-    _connection = null;
-    if (connection != null) unawaited(connection.close());
+    final closeLive = _closeLive;
+    _closeLive = null;
+    if (closeLive != null) unawaited(closeLive());
     super.dispose();
   }
 }

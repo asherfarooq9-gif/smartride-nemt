@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 MAX_MESSAGE_LENGTH = 500
 
@@ -23,8 +23,6 @@ class MessageCreate(BaseModel):
 
 
 class MessageResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
     id: int
     ride_id: UUID
     sender: Literal["patient", "driver"]

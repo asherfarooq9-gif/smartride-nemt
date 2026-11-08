@@ -68,7 +68,7 @@ class FakeChatBackend implements ChatBackend {
   }
 
   @override
-  Future<ChatConnection> connect(
+  Future<CloseChat> connect(
     String rideId, {
     required void Function(core.RideMessage) onMessage,
     required void Function() onClosed,
@@ -78,14 +78,8 @@ class FakeChatBackend implements ChatBackend {
     _onMessage = onMessage;
     _onClosed = onClosed;
     _onConnected = onConnected;
-    return _FakeConnection(() => closeCalls++);
+    return () async {
+      closeCalls++;
+    };
   }
-}
-
-class _FakeConnection implements ChatConnection {
-  _FakeConnection(this._onClose);
-  final void Function() _onClose;
-
-  @override
-  Future<void> close() async => _onClose();
 }
