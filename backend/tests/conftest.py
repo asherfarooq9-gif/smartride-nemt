@@ -122,6 +122,21 @@ async def _reset_redis_singleton():
         rc._redis = None
 
 
+@pytest_asyncio.fixture(autouse=True)
+async def _reset_location_manager_redis():
+    """Same reason as above, for the client the live GPS and chat channels use."""
+    from app.services.ws_manager import location_manager
+
+    location_manager._redis = None
+    yield
+    if location_manager._redis is not None:
+        try:
+            await location_manager._redis.aclose()
+        except Exception:
+            pass
+        location_manager._redis = None
+
+
 @pytest_asyncio.fixture
 async def db():
     engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool)

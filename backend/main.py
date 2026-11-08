@@ -28,7 +28,7 @@ from app.core.logging import StructuredLoggingMiddleware
 from app.core.observability import init_error_tracking
 from app.core.ratelimit import make_limiter
 from app.core.security import require_metrics_access
-from app.routers import auth, patients, drivers, hospitals, rides, analytics, ws
+from app.routers import auth, patients, drivers, hospitals, rides, chat, analytics, ws
 from app.services import dispatch_loop, retention
 from app.services.notifications import push_setup_problem
 from app.services.ws_manager import location_manager
@@ -274,6 +274,7 @@ app.include_router(patients.router, prefix="/api/v1/patients", tags=["Patients"]
 app.include_router(drivers.router, prefix="/api/v1/drivers", tags=["Drivers"])
 app.include_router(hospitals.router, prefix="/api/v1/hospitals", tags=["Hospitals"])
 app.include_router(rides.router, prefix="/api/v1/rides", tags=["Rides"])
+app.include_router(chat.router, prefix="/api/v1/rides", tags=["Chat"])
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytics"])
 app.include_router(ws.router, prefix="/ws", tags=["WebSocket"])
 

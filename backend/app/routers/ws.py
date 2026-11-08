@@ -16,7 +16,7 @@ import time
 import uuid
 from collections import Counter
 from datetime import datetime, timezone
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, status
 from redis.exceptions import RedisError
 from sqlalchemy import select, update
 from sqlalchemy.exc import SQLAlchemyError
@@ -26,6 +26,7 @@ from app.core.security import decode_token
 from app.core.database import AsyncSessionLocal
 from app.core.redis_client import is_token_blocked
 from app.models.models import User, Driver, Patient, Ride, RideStatus
+from app.services import chat_service
 from app.services.ws_manager import location_manager
 
 router = APIRouter()
@@ -467,6 +468,90 @@ async def ride_tracking_ws(websocket: WebSocket, ride_id: str):
     try:
         pubsub = await location_manager.subscribe(ride_id)
         await _relay_location(websocket, ride_id, pubsub, token)
+    except WebSocketDisconnect:
+        pass
+    except Exception:
+        await _close_on_error(websocket, ride_id)
+    finally:
+        _release_slot(user.id)
+        if pubsub is not None:
+            await _close_pubsub(pubsub, ride_id)
+
+
+# ── Patient and driver → live chat for one ride ───────────────────────────────
+
+
+async def _chat_is_open(ride_id: str) -> bool:
+    async with AsyncSessionLocal() as db:
+        row = (
+            await db.execute(
+                select(Ride.status, Ride.driver_id).where(Ride.id == ride_id)
+            )
+        ).first()
+    return (
+        row is not None
+        and row.driver_id is not None
+        and row.status in chat_service.CHAT_OPEN_STATUSES
+    )
+
+
+async def _relay_chat(websocket: WebSocket, ride_id: str, pubsub, token: str) -> None:
+    """Forward chat messages to the socket until the chat closes.
+
+    Same rhythm as the location relay: wake at least every _PING_SECONDS, and
+    re-check the token and the ride on a timer, not per message.
+    """
+    last_checked = None
+    while True:
+        message = await pubsub.get_message(
+            ignore_subscribe_messages=True, timeout=_PING_SECONDS
+        )
+        if _expired(token):
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+        now = time.monotonic()
+        if (
+            message is None
+            or last_checked is None
+            or now - last_checked >= _STATUS_RECHECK_SECONDS
+        ):
+            last_checked = now
+            if await _revoked(token):
+                await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+                return
+            if not await _chat_is_open(ride_id):
+                # The ride ended or the driver gave it back: the chat is gone.
+                await websocket.send_json({"event": "chat_closed"})
+                return
+        if message is None:
+            await websocket.send_json({"event": "ping"})
+        else:
+            await websocket.send_text(message["data"])
+
+
+@router.websocket("/chat/{ride_id}")
+async def ride_chat_ws(websocket: WebSocket, ride_id: str):
+    """Live messages for a ride's chat. Sending is a normal POST; this socket only
+    delivers, so there is no way to write through it."""
+    auth = await _accept_and_authenticate(websocket, ride_id)
+    if auth is None:
+        return
+    user, token = auth
+
+    try:
+        async with AsyncSessionLocal() as db:
+            await chat_service.open_chat(db, user, uuid.UUID(ride_id))
+    except HTTPException:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    if not _acquire_slot(user.id):
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+    pubsub = None
+    try:
+        pubsub = await location_manager.subscribe_chat(ride_id)
+        await _relay_chat(websocket, ride_id, pubsub, token)
     except WebSocketDisconnect:
         pass
     except Exception:
