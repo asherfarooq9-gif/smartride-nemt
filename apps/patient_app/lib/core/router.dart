@@ -69,8 +69,8 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       // ── Auth ──────────────────────────────────────────────────────────────
       GoRoute(path: '/welcome', builder: (_, __) => const WelcomeScreen()),
-      GoRoute(path: '/login',   builder: (_, __) => const LoginScreen()),
-      GoRoute(path: '/signup',  builder: (_, __) => const SignupScreen()),
+      GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
+      GoRoute(path: '/signup', builder: (_, __) => const SignupScreen()),
       GoRoute(
         path: '/become-driver',
         builder: (_, __) => const AddRoleScreen(role: 'driver'),
@@ -96,21 +96,27 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/tracking/:id',
         builder: (_, s) => LiveTrackingScreen(rideId: s.pathParameters['id']!),
       ),
-      GoRoute(path: '/book-ride', builder: (_, __) => const ScheduleTripScreen()),
+      GoRoute(
+          path: '/book-ride', builder: (_, __) => const ScheduleTripScreen()),
       GoRoute(
         path: '/booking-confirmed/:id',
         builder: (_, s) =>
             BookingConfirmedScreen(rideId: s.pathParameters['id']!),
       ),
-      GoRoute(path: '/profile',  builder: (_, __) => const ProfileScreen()),
+      GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
       GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
-      GoRoute(path: '/help',     builder: (_, __) => const HelpScreen()),
-      GoRoute(path: '/contact',  builder: (_, __) => const ContactScreen()),
-      GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen(portal: 'patient')),
-      GoRoute(path: '/saved-places', builder: (_, __) => const SavedPlacesScreen()),
-      GoRoute(path: '/permissions', builder: (_, __) => const PermissionsScreen()),
+      GoRoute(path: '/help', builder: (_, __) => const HelpScreen()),
+      GoRoute(path: '/contact', builder: (_, __) => const ContactScreen()),
+      GoRoute(
+          path: '/notifications',
+          builder: (_, __) => const NotificationsScreen(portal: 'patient')),
+      GoRoute(
+          path: '/saved-places', builder: (_, __) => const SavedPlacesScreen()),
+      GoRoute(
+          path: '/permissions', builder: (_, __) => const PermissionsScreen()),
       GoRoute(path: '/no-drivers', builder: (_, __) => const NoDriversScreen()),
-      GoRoute(path: '/no-internet', builder: (_, __) => const NoInternetScreen()),
+      GoRoute(
+          path: '/no-internet', builder: (_, __) => const NoInternetScreen()),
       GoRoute(
         path: '/rate-driver/:id',
         builder: (_, s) => RateDriverScreen(rideId: s.pathParameters['id']!),
@@ -118,12 +124,19 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // ── Driver portal ─────────────────────────────────────────────────────
       GoRoute(path: '/driver', builder: (_, __) => const DashboardScreen()),
-      GoRoute(path: '/driver/earnings', builder: (_, __) => const EarningsScreen()),
-      GoRoute(path: '/driver/scheduled', builder: (_, __) => const DriverScheduledScreen()),
-      GoRoute(path: '/driver/demand', builder: (_, __) => const DemandForecastScreen()),
+      GoRoute(
+          path: '/driver/earnings', builder: (_, __) => const EarningsScreen()),
+      GoRoute(
+          path: '/driver/scheduled',
+          builder: (_, __) => const DriverScheduledScreen()),
+      GoRoute(
+          path: '/driver/demand',
+          builder: (_, __) => const DemandForecastScreen()),
       GoRoute(path: '/driver/wallet', builder: (_, __) => const WalletScreen()),
       GoRoute(path: '/driver/top-up', builder: (_, __) => const TopUpScreen()),
-      GoRoute(path: '/driver/notifications', builder: (_, __) => const NotificationsScreen(portal: 'driver')),
+      GoRoute(
+          path: '/driver/notifications',
+          builder: (_, __) => const NotificationsScreen(portal: 'driver')),
       GoRoute(
         path: '/driver/ride/:id',
         builder: (_, s) => ActiveRideScreen(rideId: s.pathParameters['id']!),

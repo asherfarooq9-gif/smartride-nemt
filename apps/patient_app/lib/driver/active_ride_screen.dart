@@ -1,3 +1,4 @@
+import 'package:patient_app/shared/apple_alert.dart';
 import 'package:patient_app/core/ride_status_label.dart';
 import 'package:patient_app/l10n/l10n.dart';
 import 'dart:async';
@@ -176,7 +177,7 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
   Future<void> _cancel() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (_) => AppleAlertDialog(
         title: Text(context.l10n.cancelRide),
         content: Text(context.l10n.cancelRideConfirm),
         actions: [

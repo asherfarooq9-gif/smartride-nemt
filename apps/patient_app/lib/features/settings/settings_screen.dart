@@ -1,3 +1,4 @@
+import 'package:patient_app/shared/apple_alert.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -158,7 +159,7 @@ class SettingsScreen extends ConsumerWidget {
     final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (_) => AppleAlertDialog(
         title: Text(l10n.signOutEverywhere),
         content: Text(l10n.signOutEverywhereBody),
         actions: [
@@ -194,7 +195,7 @@ class SettingsScreen extends ConsumerWidget {
   Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (_) => AppleAlertDialog(
         title: Text(context.l10n.signOutTitle),
         content: Text(
           isDriver ? context.l10n.signOutDriverBody : context.l10n.signOutBody,

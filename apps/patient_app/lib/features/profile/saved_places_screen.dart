@@ -1,3 +1,4 @@
+import 'package:patient_app/shared/apple_alert.dart';
 import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -71,7 +72,7 @@ class SavedPlacesScreen extends ConsumerWidget {
       BuildContext context, WidgetRef ref, SavedPlace place) async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (_) => AppleAlertDialog(
         title: Text(context.l10n.removePlace),
         content: Text('Remove "${place.label}" from saved places?'),
         actions: [

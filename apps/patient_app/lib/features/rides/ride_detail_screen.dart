@@ -1,3 +1,4 @@
+import 'package:patient_app/shared/apple_alert.dart';
 import 'package:patient_app/core/ride_status_label.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -201,7 +202,7 @@ class _CancelReasonDialogState extends State<_CancelReasonDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
+    return AppleAlertDialog(
       title: Text(context.l10n.cancelRide),
       content: TextField(
         controller: _controller,

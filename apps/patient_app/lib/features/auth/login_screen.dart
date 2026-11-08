@@ -1,3 +1,4 @@
+import 'package:patient_app/shared/apple_alert.dart';
 import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -126,7 +127,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     // user to support instead of a button that does nothing.
                     onPressed: () => showDialog<void>(
                       context: context,
-                      builder: (ctx) => AlertDialog(
+                      builder: (ctx) => AppleAlertDialog(
                         title: Text(context.l10n.resetPasswordTitle),
                         content: Text(context.l10n.resetPasswordBody),
                         actions: [
