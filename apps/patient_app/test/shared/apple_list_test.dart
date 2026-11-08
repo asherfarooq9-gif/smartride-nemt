@@ -50,6 +50,16 @@ void main() {
     expect(chevron.color!.a, lessThan(0.7));
   });
 
+  testWidgets('a row can show a second line under its title', (tester) async {
+    await tester.pumpWidget(_app(const AppleSection(children: [
+      AppleRow(title: 'Email', subtitle: 'support@smartride.pk'),
+    ])));
+
+    expect(find.text('Email'), findsOneWidget);
+    final line = tester.widget<Text>(find.text('support@smartride.pk'));
+    expect(line.style?.color, core.kText400);
+  });
+
   testWidgets('a destructive row is red and has a red icon tile',
       (tester) async {
     await tester.pumpWidget(_app(AppleSection(children: [

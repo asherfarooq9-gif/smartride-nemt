@@ -119,6 +119,7 @@ class AppleRow extends StatelessWidget {
     required this.title,
     this.icon,
     this.iconColor,
+    this.subtitle,
     this.value,
     this.trailing,
     this.onTap,
@@ -130,6 +131,9 @@ class AppleRow extends StatelessWidget {
 
   /// Colour of the icon tile. Defaults to the portal blue.
   final Color? iconColor;
+
+  /// A smaller line under the title.
+  final String? subtitle;
   final String? value;
   final Widget? trailing;
   final VoidCallback? onTap;
@@ -173,11 +177,19 @@ class AppleRow extends StatelessWidget {
       leading: icon == null ? null : _IconTile(icon: icon!, color: tileColor),
       title: Text(
         title,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontSize: core.kFontBody,
           color: destructive ? red : scheme.onSurface,
         ),
       ),
+      subtitle: subtitle == null
+          ? null
+          : Text(
+              subtitle!,
+              style: TextStyle(color: hint, fontSize: core.kFontSmall),
+            ),
       trailing: end,
       onTap: onTap,
     );

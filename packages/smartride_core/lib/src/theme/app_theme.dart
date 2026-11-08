@@ -84,6 +84,10 @@ class AppTheme {
       ),
     );
 
+    // Blue for text and outlines. The portal blue is 3.3:1 on the dark page,
+    // so dark mode uses the lighter blue; filled buttons keep the portal blue.
+    final link = dark ? kDarkAccent : primary;
+
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
@@ -103,8 +107,8 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: true,
-        iconTheme: IconThemeData(color: dark ? kDarkAccent : primary),
-        actionsIconTheme: IconThemeData(color: dark ? kDarkAccent : primary),
+        iconTheme: IconThemeData(color: link),
+        actionsIconTheme: IconThemeData(color: link),
         systemOverlayStyle:
             dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         titleTextStyle: GoogleFonts.dmSans(
@@ -136,9 +140,9 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: primary,
+          foregroundColor: link,
           minimumSize: const Size(double.infinity, kButtonHeight),
-          side: BorderSide(color: primary, width: 1.5),
+          side: BorderSide(color: link, width: 1.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(kRadiusLG),
           ),
@@ -150,7 +154,7 @@ class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: primary,
+          foregroundColor: link,
           minimumSize: const Size(kMinTapTarget, kMinTapTarget),
           textStyle: GoogleFonts.dmSans(
             fontSize: kFontSmall,

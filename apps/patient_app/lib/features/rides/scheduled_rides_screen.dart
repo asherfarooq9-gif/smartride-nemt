@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 import 'package:patient_app/features/rides/rides_notifier.dart';
+import 'package:patient_app/shared/apple_list.dart';
+import 'package:patient_app/shared/patient_nav_bar.dart';
 
 class ScheduledRidesScreen extends ConsumerWidget {
   const ScheduledRidesScreen({super.key});
@@ -15,27 +17,7 @@ class ScheduledRidesScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.navMyRides)),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: 1,
-        onDestinationSelected: (i) {
-          if (i == 0) context.go('/');
-          if (i == 2) context.go('/profile');
-        },
-        destinations: [
-          NavigationDestination(
-              icon: const Icon(Icons.home_outlined),
-              selectedIcon: const Icon(Icons.home),
-              label: context.l10n.navHome),
-          NavigationDestination(
-              icon: const Icon(Icons.history_outlined),
-              selectedIcon: const Icon(Icons.history),
-              label: context.l10n.navMyRides),
-          NavigationDestination(
-              icon: const Icon(Icons.person_outline),
-              selectedIcon: const Icon(Icons.person),
-              label: context.l10n.navProfile),
-        ],
-      ),
+      bottomNavigationBar: const PatientNavBar(currentIndex: 1),
       body: RefreshIndicator(
         onRefresh: () => ref.read(ridesProvider.notifier).refresh(),
         child: ridesAsync.when(
@@ -64,33 +46,29 @@ class ScheduledRidesScreen extends ConsumerWidget {
                 ),
               );
             }
-            return ListView.builder(
-              padding: const EdgeInsets.all(core.kSpaceLG),
-              itemCount: data.items.length,
-              itemBuilder: (context, i) {
-                final ride = data.items[i];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: core.kSpaceSM),
-                  child: ListTile(
-                    leading: Icon(
-                      ride.rideType == core.RideType.emergency
-                          ? Icons.emergency
-                          : Icons.calendar_today,
-                      color: ride.rideType == core.RideType.emergency
-                          ? core.kEmergencyRed
-                          : Theme.of(context).colorScheme.primary,
-                    ),
-                    title: Text(
-                      ride.pickupAddress,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    subtitle: Text(rideStatusLabel(context.l10n, ride.status)),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () => context.push('/ride/${ride.id}'),
-                  ),
-                );
-              },
+            return ListView(
+              // Always scrollable so pull-to-refresh works on a short list.
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.only(bottom: core.kSpaceXXL),
+              children: [
+                AppleSection(
+                  dividerIndent: appleIconDividerIndent,
+                  children: [
+                    for (final ride in data.items)
+                      AppleRow(
+                        icon: ride.rideType == core.RideType.emergency
+                            ? Icons.emergency
+                            : Icons.calendar_today,
+                        iconColor: ride.rideType == core.RideType.emergency
+                            ? core.kEmergencyRed
+                            : null,
+                        title: ride.pickupAddress,
+                        subtitle: rideStatusLabel(context.l10n, ride.status),
+                        onTap: () => context.push('/ride/${ride.id}'),
+                      ),
+                  ],
+                ),
+              ],
             );
           },
         ),

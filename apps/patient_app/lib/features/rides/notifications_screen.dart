@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smartride_core/smartride_core.dart';
 import 'package:patient_app/core/providers.dart';
+import 'package:patient_app/shared/apple_list.dart';
 
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key, required this.portal});
@@ -15,7 +16,6 @@ class NotificationsScreen extends ConsumerWidget {
     final hasUnread = notifications.any((n) => !n.isRead);
     final isPatient = portal == 'patient';
     final primary = isPatient ? kPatient600 : kBlue600;
-    final unreadBg = isPatient ? kPatient50 : kBlue100;
 
     return Scaffold(
       appBar: AppBar(
@@ -36,19 +36,23 @@ class NotificationsScreen extends ConsumerWidget {
       ),
       body: notifications.isEmpty
           ? EmptyState(message: context.l10n.noNotificationsYet)
-          : ListView.builder(
-              itemCount: notifications.length,
-              itemBuilder: (context, i) {
-                final item = notifications[i];
-                return _NotificationTile(
-                  item: item,
-                  primary: primary,
-                  unreadBg: unreadBg,
-                  onTap: () => ref
-                      .read(notificationsProvider(portal).notifier)
-                      .markRead(item.id),
-                );
-              },
+          : ListView(
+              padding: const EdgeInsets.only(bottom: kSpaceXXL),
+              children: [
+                AppleSection(
+                  dividerIndent: kSpaceLG + 8 + kSpaceSM,
+                  children: [
+                    for (final item in notifications)
+                      _NotificationTile(
+                        item: item,
+                        primary: primary,
+                        onTap: () => ref
+                            .read(notificationsProvider(portal).notifier)
+                            .markRead(item.id),
+                      ),
+                  ],
+                ),
+              ],
             ),
     );
   }
@@ -58,22 +62,22 @@ class _NotificationTile extends StatelessWidget {
   const _NotificationTile({
     required this.item,
     required this.primary,
-    required this.unreadBg,
     required this.onTap,
   });
 
   final AppNotification item;
   final Color primary;
-  final Color unreadBg;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = scheme.brightness == Brightness.dark;
+    final hint = isDark ? kDarkText3 : kText400;
     return InkWell(
       onTap: onTap,
       child: Container(
         constraints: const BoxConstraints(minHeight: 56),
-        color: item.isRead ? kSurface : unreadBg,
         padding: const EdgeInsets.symmetric(
           horizontal: kSpaceLG,
           vertical: kSpaceMD,
@@ -81,28 +85,35 @@ class _NotificationTile extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (!item.isRead)
-              Padding(
-                padding: const EdgeInsets.only(top: 6, right: kSpaceSM),
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: primary,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              )
-            else
-              const SizedBox(width: kSpaceLG),
+            // The unread dot sits in its own slot so read and unread rows
+            // line up.
+            SizedBox(
+              width: 8 + kSpaceSM,
+              child: item.isRead
+                  ? null
+                  : Padding(
+                      padding: const EdgeInsets.only(top: 11),
+                      child: Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: primary,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    ),
+            ),
             Container(
-              width: 40,
-              height: 40,
+              width: 30,
+              height: 30,
               decoration: BoxDecoration(
-                color: primary.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(kRadiusMD),
+                color: primary,
+                borderRadius: BorderRadius.circular(7),
               ),
-              child: Icon(item.icon, size: 20, color: primary),
+              child: Icon(item.icon, size: 18, color: Colors.white),
             ),
             const SizedBox(width: kSpaceMD),
             Expanded(
@@ -115,20 +126,18 @@ class _NotificationTile extends StatelessWidget {
                       Expanded(
                         child: Text(
                           item.title,
-                          style: const TextStyle(
-                            fontSize: kFontSmall,
-                            fontWeight: FontWeight.w700,
-                            color: kText900,
+                          style: TextStyle(
+                            fontSize: kFontBody,
+                            fontWeight:
+                                item.isRead ? FontWeight.w500 : FontWeight.w700,
+                            color: scheme.onSurface,
                           ),
                         ),
                       ),
                       const SizedBox(width: kSpaceSM),
                       Text(
                         item.time,
-                        style: const TextStyle(
-                          fontSize: kFontCaption,
-                          color: kText400,
-                        ),
+                        style: TextStyle(fontSize: 13, color: hint),
                       ),
                     ],
                   ),
@@ -137,9 +146,9 @@ class _NotificationTile extends StatelessWidget {
                     item.body,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: kText600,
+                    style: TextStyle(
+                      fontSize: kFontSmall,
+                      color: scheme.onSurfaceVariant,
                       height: 1.4,
                     ),
                   ),

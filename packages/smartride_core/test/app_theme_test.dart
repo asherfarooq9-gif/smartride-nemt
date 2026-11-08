@@ -75,6 +75,19 @@ void main() {
         expect(bar.actionsIconTheme!.color, bar.iconTheme!.color);
       });
 
+      testWidgets('text and outlined buttons are readable on the page',
+          (tester) async {
+        final theme = build();
+        final bg = theme.scaffoldBackgroundColor;
+        final text = theme.textButtonTheme.style!.foregroundColor!.resolve({})!;
+        final outlined =
+            theme.outlinedButtonTheme.style!.foregroundColor!.resolve({})!;
+        expect(contrast(text, bg), greaterThanOrEqualTo(4.5),
+            reason: 'text button label');
+        expect(contrast(outlined, bg), greaterThanOrEqualTo(4.5),
+            reason: 'outlined button label');
+      });
+
       testWidgets('pages swipe back like iOS on every platform',
           (tester) async {
         final theme = build();
