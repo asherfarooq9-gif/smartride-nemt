@@ -92,14 +92,15 @@ class RideResponse(BaseModel):
 
 class RidePatientInfo(BaseModel):
     full_name: str
-    # None once the ride is over and the viewer is the driver (see _patient_info).
+    # Only the patient themself and dispatch get it; a driver never does.
     phone: Optional[str] = None
     mobility_needs: Optional[str] = None
 
 
 class RideDriverInfo(BaseModel):
     full_name: str
-    phone: str
+    # Only the driver themself and dispatch get it; a patient never does.
+    phone: Optional[str] = None
     vehicle_plate: str
     vehicle_type: str
     # How the driver says they take payment, so the patient can have it ready.

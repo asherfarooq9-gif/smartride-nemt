@@ -194,7 +194,7 @@ async def _complete(client, driver_token: str, ride_id: str) -> None:
         assert r.status_code == 200, r.text
 
 
-async def test_driver_sees_patient_contact_only_while_the_ride_is_live(
+async def test_driver_sees_mobility_needs_only_while_live_and_never_the_phone(
     client, db, verified_driver_token
 ):
     from sqlalchemy import update
@@ -209,7 +209,8 @@ async def test_driver_sees_patient_contact_only_while_the_ride_is_live(
     await db.commit()
 
     live = (await _detail(client, verified_driver_token, ride_id))["patient"]
-    assert live["phone"]
+    # Contact goes through in-app chat and calls, so no number is ever handed over.
+    assert live["phone"] is None
     assert live["mobility_needs"] == "wheelchair"
 
     await _complete(client, verified_driver_token, ride_id)

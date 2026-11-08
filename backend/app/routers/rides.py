@@ -335,22 +335,26 @@ def _patient_info(ride: Ride, authorized_as: str) -> Optional[RidePatientInfo]:
     if not ride.patient:
         return None
     p = ride.patient
-    # The driver needs the patient's number and mobility needs to complete the
-    # ride, not afterwards: once it is over, minimum necessary applies.
+    # The driver needs the patient's mobility needs to complete the ride, not
+    # afterwards: once it is over, minimum necessary applies. A driver never gets
+    # the number: patient and driver reach each other through in-app chat and
+    # internet calls, so no real number outlives the trip.
+    phone = p.user.phone if authorized_as in ("patient", "admin") else None
     if authorized_as == "driver" and ride.status in ride_service.TERMINAL_STATUSES:
         return RidePatientInfo(full_name=p.full_name)
     return RidePatientInfo(
-        full_name=p.full_name, phone=p.user.phone, mobility_needs=p.mobility_needs
+        full_name=p.full_name, phone=phone, mobility_needs=p.mobility_needs
     )
 
 
-def _driver_info(ride: Ride) -> Optional[RideDriverInfo]:
+def _driver_info(ride: Ride, authorized_as: str) -> Optional[RideDriverInfo]:
     if not ride.driver:
         return None
     d = ride.driver
     return RideDriverInfo(
         full_name=d.full_name,
-        phone=d.user.phone,
+        # A patient never gets the driver's number (see _patient_info).
+        phone=d.user.phone if authorized_as in ("driver", "admin") else None,
         vehicle_plate=d.vehicle_plate,
         vehicle_type=d.vehicle_type,
         payment_methods=list(d.payment_methods or []),
@@ -410,7 +414,7 @@ async def get_ride_detail(
     return RideDetailResponse(
         **_to_response(ride).model_dump(),
         patient=patient_info,
-        driver=_driver_info(ride),
+        driver=_driver_info(ride, authorized_as),
         hospital=_hospital_info(ride),
         triage=triage_info,
     )
