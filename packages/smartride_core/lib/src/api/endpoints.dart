@@ -1,3 +1,4 @@
+import '../models/call.dart';
 import '../models/chat.dart';
 import '../models/user.dart';
 import '../models/patient.dart';
@@ -263,4 +264,13 @@ Future<List<RideMessage>> getRideMessages(
 Future<RideMessage> sendRideMessage(String rideId, String body) async {
   final data = await _c.post('/api/v1/rides/$rideId/messages', {'body': body});
   return RideMessage.fromJson(data);
+}
+
+// ── Internet calls ────────────────────────────────────────────────────────────
+
+/// Relay servers and a login that expires, for this ride's call. 409 once the
+/// ride is over.
+Future<IceServers> getCallIceServers(String rideId) async {
+  final data = await _c.get('/api/v1/rides/$rideId/call/ice-servers');
+  return IceServers.fromJson(data);
 }
