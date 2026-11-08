@@ -1430,4 +1430,38 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get vehicleModelField => 'Vehicle model';
+
+  @override
+  String get chatTitle => 'Chat';
+
+  @override
+  String get chatWithDriver => 'Message driver';
+
+  @override
+  String get chatWithPatient => 'Message patient';
+
+  @override
+  String get chatHint => 'Message';
+
+  @override
+  String get chatSend => 'Send';
+
+  @override
+  String get chatEmpty => 'No messages yet. Say hello.';
+
+  @override
+  String get chatPrivacyNote => 'Messages are deleted when the ride ends.';
+
+  @override
+  String get chatEnded => 'This chat has ended with the ride.';
+
+  @override
+  String get chatSendFailed =>
+      'Could not send. Check your connection and try again.';
+
+  @override
+  String get chatTooLong => 'A message can be up to 500 characters.';
+
+  @override
+  String get chatLoadFailed => 'Could not load the chat.';
 }

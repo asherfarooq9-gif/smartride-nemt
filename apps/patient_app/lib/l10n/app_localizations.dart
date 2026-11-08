@@ -2803,6 +2803,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Vehicle model'**
   String get vehicleModelField;
+
+  /// No description provided for @chatTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat'**
+  String get chatTitle;
+
+  /// No description provided for @chatWithDriver.
+  ///
+  /// In en, this message translates to:
+  /// **'Message driver'**
+  String get chatWithDriver;
+
+  /// No description provided for @chatWithPatient.
+  ///
+  /// In en, this message translates to:
+  /// **'Message patient'**
+  String get chatWithPatient;
+
+  /// No description provided for @chatHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get chatHint;
+
+  /// No description provided for @chatSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get chatSend;
+
+  /// No description provided for @chatEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No messages yet. Say hello.'**
+  String get chatEmpty;
+
+  /// No description provided for @chatPrivacyNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages are deleted when the ride ends.'**
+  String get chatPrivacyNote;
+
+  /// No description provided for @chatEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'This chat has ended with the ride.'**
+  String get chatEnded;
+
+  /// No description provided for @chatSendFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not send. Check your connection and try again.'**
+  String get chatSendFailed;
+
+  /// No description provided for @chatTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'A message can be up to 500 characters.'**
+  String get chatTooLong;
+
+  /// No description provided for @chatLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load the chat.'**
+  String get chatLoadFailed;
 }
 
 class _AppLocalizationsDelegate

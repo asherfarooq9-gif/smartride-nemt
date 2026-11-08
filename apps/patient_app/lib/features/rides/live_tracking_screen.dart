@@ -271,6 +271,7 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
             child: _DriverCard(
               driver: _ride?.driver,
               onCall: _callDriver,
+              onMessage: () => context.push('/chat/${widget.rideId}'),
               onShare: _shareWithFamily,
             ),
           ),
@@ -458,11 +459,13 @@ class _DriverCard extends StatelessWidget {
   const _DriverCard({
     required this.driver,
     required this.onCall,
+    required this.onMessage,
     required this.onShare,
   });
 
   final Map<String, dynamic>? driver;
   final Future<void> Function(String phone) onCall;
+  final VoidCallback onMessage;
   final VoidCallback onShare;
 
   @override
@@ -525,6 +528,17 @@ class _DriverCard extends StatelessWidget {
                   ],
                 ),
               ),
+              IconButton.filledTonal(
+                key: const ValueKey('message-driver-button'),
+                tooltip: context.l10n.chatWithDriver,
+                onPressed: onMessage,
+                icon: const Icon(Icons.chat_bubble_outline),
+                style: IconButton.styleFrom(
+                  minimumSize:
+                      const Size(core.kMinTapTarget, core.kMinTapTarget),
+                ),
+              ),
+              const SizedBox(width: core.kSpaceSM),
               IconButton.filled(
                 tooltip: context.l10n.callDriver,
                 onPressed: phone == null ? null : () => onCall(phone),

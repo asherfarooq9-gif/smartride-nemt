@@ -1431,4 +1431,38 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get vehicleModelField => 'گاڑی کا ماڈل';
+
+  @override
+  String get chatTitle => 'چیٹ';
+
+  @override
+  String get chatWithDriver => 'ڈرائیور کو پیغام بھیجیں';
+
+  @override
+  String get chatWithPatient => 'مریض کو پیغام بھیجیں';
+
+  @override
+  String get chatHint => 'پیغام';
+
+  @override
+  String get chatSend => 'بھیجیں';
+
+  @override
+  String get chatEmpty => 'ابھی کوئی پیغام نہیں۔ سلام کریں۔';
+
+  @override
+  String get chatPrivacyNote => 'سواری ختم ہونے پر پیغامات حذف ہو جاتے ہیں۔';
+
+  @override
+  String get chatEnded => 'سواری ختم ہونے کے ساتھ یہ چیٹ ختم ہو گئی۔';
+
+  @override
+  String get chatSendFailed =>
+      'پیغام نہیں بھیجا جا سکا۔ انٹرنیٹ چیک کریں اور دوبارہ کوشش کریں۔';
+
+  @override
+  String get chatTooLong => 'ایک پیغام زیادہ سے زیادہ 500 حروف کا ہو سکتا ہے۔';
+
+  @override
+  String get chatLoadFailed => 'چیٹ لوڈ نہیں ہو سکی۔';
 }

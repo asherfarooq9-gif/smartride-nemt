@@ -515,5 +515,16 @@
   "locationNeededToHelp": "We need your location to send help. Turn on location and try again.",
   "sendingRequest": "Sending your request",
   "verificationSemantic": "Verification pending. You cannot go online until your account is verified.",
-  "vehicleModelField": "Vehicle model"
+  "vehicleModelField": "Vehicle model",
+  "chatTitle": "Chat",
+  "chatWithDriver": "Message driver",
+  "chatWithPatient": "Message patient",
+  "chatHint": "Message",
+  "chatSend": "Send",
+  "chatEmpty": "No messages yet. Say hello.",
+  "chatPrivacyNote": "Messages are deleted when the ride ends.",
+  "chatEnded": "This chat has ended with the ride.",
+  "chatSendFailed": "Could not send. Check your connection and try again.",
+  "chatTooLong": "A message can be up to 500 characters.",
+  "chatLoadFailed": "Could not load the chat."
 }

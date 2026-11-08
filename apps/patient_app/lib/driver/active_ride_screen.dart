@@ -304,6 +304,7 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
                 onAdvance: _advance,
                 onCancel: _cancel,
                 onNavigate: _navigate,
+                onMessage: () => context.push('/driver/chat/${widget.rideId}'),
               ),
             ],
           );
@@ -344,6 +345,7 @@ class _ActionPanel extends StatelessWidget {
     required this.onAdvance,
     required this.onCancel,
     required this.onNavigate,
+    required this.onMessage,
   });
 
   final core.RideDetailResponse ride;
@@ -352,6 +354,7 @@ class _ActionPanel extends StatelessWidget {
   final Future<void> Function(core.RideStatus) onAdvance;
   final Future<void> Function() onCancel;
   final Future<void> Function(NavigationTarget) onNavigate;
+  final VoidCallback onMessage;
 
   core.RideStatus? get _nextStatus {
     switch (ride.status) {
@@ -419,6 +422,17 @@ class _ActionPanel extends StatelessWidget {
             ),
             const SizedBox(height: core.kSpaceSM),
           ],
+          SizedBox(
+            width: double.infinity,
+            height: core.kMinTapTarget,
+            child: OutlinedButton.icon(
+              key: const ValueKey('message-patient-button'),
+              onPressed: onMessage,
+              icon: const Icon(Icons.chat_bubble_outline),
+              label: Text(context.l10n.chatWithPatient),
+            ),
+          ),
+          const SizedBox(height: core.kSpaceSM),
           if (next != null)
             core.PrimaryButton(
               label: _nextLabel(context.l10n),
