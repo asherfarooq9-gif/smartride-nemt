@@ -16,7 +16,7 @@ import time
 import uuid
 from collections import Counter
 from datetime import datetime, timezone
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, status
 from redis.exceptions import RedisError
 from sqlalchemy import select, update
 from sqlalchemy.exc import SQLAlchemyError
@@ -26,6 +26,7 @@ from app.core.security import decode_token
 from app.core.database import AsyncSessionLocal
 from app.core.redis_client import is_token_blocked
 from app.models.models import User, Driver, Patient, Ride, RideStatus
+from app.services import call_service, chat_service
 from app.services.ws_manager import location_manager
 
 router = APIRouter()
@@ -467,6 +468,206 @@ async def ride_tracking_ws(websocket: WebSocket, ride_id: str):
     try:
         pubsub = await location_manager.subscribe(ride_id)
         await _relay_location(websocket, ride_id, pubsub, token)
+    except WebSocketDisconnect:
+        pass
+    except Exception:
+        await _close_on_error(websocket, ride_id)
+    finally:
+        _release_slot(user.id)
+        if pubsub is not None:
+            await _close_pubsub(pubsub, ride_id)
+
+
+# ── Patient and driver → live chat for one ride ───────────────────────────────
+
+
+async def _chat_is_open(ride_id: str) -> bool:
+    async with AsyncSessionLocal() as db:
+        row = (
+            await db.execute(
+                select(Ride.status, Ride.driver_id).where(Ride.id == ride_id)
+            )
+        ).first()
+    return (
+        row is not None
+        and row.driver_id is not None
+        and row.status in chat_service.CHAT_OPEN_STATUSES
+    )
+
+
+async def _relay_chat(
+    websocket: WebSocket,
+    ride_id: str,
+    pubsub,
+    token: str,
+    closed_frame: dict | None = None,
+) -> None:
+    """Forward messages from the pubsub to the socket until the chat closes.
+    The call socket reuses this with its own [closed_frame].
+
+    Same rhythm as the location relay: wake at least every _PING_SECONDS, and
+    re-check the token and the ride on a timer, not per message.
+    """
+    last_checked = None
+    while True:
+        message = await pubsub.get_message(
+            ignore_subscribe_messages=True, timeout=_PING_SECONDS
+        )
+        if _expired(token):
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+        now = time.monotonic()
+        if (
+            message is None
+            or last_checked is None
+            or now - last_checked >= _STATUS_RECHECK_SECONDS
+        ):
+            last_checked = now
+            if await _revoked(token):
+                await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+                return
+            if not await _chat_is_open(ride_id):
+                # The ride ended or the driver gave it back: the chat is gone.
+                await websocket.send_json(closed_frame or {"event": "chat_closed"})
+                return
+        if message is None:
+            await websocket.send_json({"event": "ping"})
+        else:
+            await websocket.send_text(message["data"])
+
+
+@router.websocket("/chat/{ride_id}")
+async def ride_chat_ws(websocket: WebSocket, ride_id: str):
+    """Live messages for a ride's chat. Sending is a normal POST; this socket only
+    delivers, so there is no way to write through it."""
+    auth = await _accept_and_authenticate(websocket, ride_id)
+    if auth is None:
+        return
+    user, token = auth
+
+    try:
+        async with AsyncSessionLocal() as db:
+            await chat_service.open_chat(db, user, uuid.UUID(ride_id))
+    except HTTPException:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    if not _acquire_slot(user.id):
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+    pubsub = None
+    try:
+        pubsub = await location_manager.subscribe_chat(ride_id)
+        await _relay_chat(websocket, ride_id, pubsub, token)
+    except WebSocketDisconnect:
+        pass
+    except Exception:
+        await _close_on_error(websocket, ride_id)
+    finally:
+        _release_slot(user.id)
+        if pubsub is not None:
+            await _close_pubsub(pubsub, ride_id)
+
+
+# ── Patient and driver → set up an internet call ──────────────────────────────
+
+# Call set-up is a short burst (offer, answer, a few dozen candidates), then quiet.
+_CALL_WINDOW_SECONDS = 10.0
+_CALL_MAX_FRAMES_PER_WINDOW = 80
+
+
+async def _tell_caller_unreachable(websocket: WebSocket, access, why: str) -> None:
+    """The other person's app is not open: say so, and ring them with a push."""
+    log.info("call not delivered ride_id=%s (%s)", access.ride.id, why)
+    await websocket.send_json({"event": "unreachable"})
+    async with AsyncSessionLocal() as db:
+        await call_service.ring_other_side(db, access)
+
+
+async def _pass_on_call_frame(
+    websocket: WebSocket, ride_id: str, access, frame: dict
+) -> None:
+    other = "driver" if access.role == "patient" else "patient"
+    payload = {**frame, "from": access.role}
+    try:
+        heard = await location_manager.publish_call(ride_id, other, payload)
+    except _REDIS_ERRORS:
+        heard = 0
+        log.warning("call frame dropped ride_id=%s", ride_id, exc_info=True)
+    if frame["type"] == "invite" and not heard:
+        await _tell_caller_unreachable(websocket, access, "nobody listening")
+
+
+async def _read_call_frames(websocket: WebSocket, ride_id: str, access) -> None:
+    """Validate each frame the client sends and pass it to the other person."""
+    strikes = 0
+    recent: list[float] = []
+    while True:
+        try:
+            data = await websocket.receive_json()
+        except json.JSONDecodeError:
+            data = None
+        now = time.monotonic()
+        recent = [t for t in recent if now - t < _CALL_WINDOW_SECONDS]
+        problem = None
+        frame = call_service.sanitize_signal(data)
+        if frame is None:
+            problem = "invalid call message"
+        elif len(recent) >= _CALL_MAX_FRAMES_PER_WINDOW:
+            problem = "too many call messages"
+        if problem:
+            strikes += 1
+            if strikes >= _MAX_STRIKES:
+                await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+                return
+            await websocket.send_json({"error": problem})
+            continue
+        recent.append(now)
+        await _pass_on_call_frame(websocket, ride_id, access, frame)
+
+
+async def _run_call_session(
+    websocket: WebSocket, ride_id: str, access, pubsub, token: str
+) -> None:
+    """Read the caller and relay the other side at once; either ending ends both."""
+    reader = asyncio.create_task(_read_call_frames(websocket, ride_id, access))
+    relay = asyncio.create_task(
+        _relay_chat(websocket, ride_id, pubsub, token, {"event": "call_closed"})
+    )
+    try:
+        done, _ = await asyncio.wait(
+            {reader, relay}, return_when=asyncio.FIRST_COMPLETED
+        )
+        for task in done:
+            task.result()  # a disconnect or an error surfaces here
+    finally:
+        for task in (reader, relay):
+            task.cancel()
+        await asyncio.gather(reader, relay, return_exceptions=True)
+
+
+@router.websocket("/call/{ride_id}")
+async def ride_call_ws(websocket: WebSocket, ride_id: str):
+    """Call set-up messages for a ride. The audio itself never touches the server."""
+    auth = await _accept_and_authenticate(websocket, ride_id)
+    if auth is None:
+        return
+    user, token = auth
+
+    try:
+        async with AsyncSessionLocal() as db:
+            access = await chat_service.open_chat(db, user, uuid.UUID(ride_id))
+    except HTTPException:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    if not _acquire_slot(user.id):
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+    pubsub = None
+    try:
+        pubsub = await location_manager.subscribe_call(ride_id, access.role)
+        await _run_call_session(websocket, ride_id, access, pubsub, token)
     except WebSocketDisconnect:
         pass
     except Exception:

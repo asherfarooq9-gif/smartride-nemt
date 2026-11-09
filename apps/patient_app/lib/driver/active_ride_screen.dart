@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:patient_app/features/call/incoming_call_listener.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 import 'package:url_launcher/url_launcher.dart';
@@ -220,94 +221,104 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
       }
     });
 
-    return Scaffold(
-      appBar: AppBar(
-        title: rideAsync.whenOrNull(
-              data: (r) => Text(rideStatusLabel(context.l10n, r.status)),
-            ) ??
-            Text(context.l10n.activeRide),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: core.kSpaceLG),
-            child: _GpsStatusIcon(status: gpsStatus),
-          ),
-        ],
-      ),
-      body: rideAsync.when(
-        loading: () => const core.LoadingState(),
-        error: (e, _) => core.ErrorState(
-          message: e is core.AppError
-              ? (_isNoLongerYours(e) ? context.l10n.rideReassigned : e.message)
-              : context.l10n.failedLoadRide,
-          onRetry: () => ref.invalidate(_rideDetailProvider(widget.rideId)),
+    return IncomingCallListener(
+      rideId: widget.rideId,
+      callPath: '/driver/call/${widget.rideId}',
+      child: Scaffold(
+        appBar: AppBar(
+          title: rideAsync.whenOrNull(
+                data: (r) => Text(rideStatusLabel(context.l10n, r.status)),
+              ) ??
+              Text(context.l10n.activeRide),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: core.kSpaceLG),
+              child: _GpsStatusIcon(status: gpsStatus),
+            ),
+          ],
         ),
-        data: (ride) {
-          final pickupPos = (ride.pickupLat != null && ride.pickupLng != null)
-              ? LatLng(ride.pickupLat!, ride.pickupLng!)
-              : null;
+        body: rideAsync.when(
+          loading: () => const core.LoadingState(),
+          error: (e, _) => core.ErrorState(
+            message: e is core.AppError
+                ? (_isNoLongerYours(e)
+                    ? context.l10n.rideReassigned
+                    : e.message)
+                : context.l10n.failedLoadRide,
+            onRetry: () => ref.invalidate(_rideDetailProvider(widget.rideId)),
+          ),
+          data: (ride) {
+            final pickupPos = (ride.pickupLat != null && ride.pickupLng != null)
+                ? LatLng(ride.pickupLat!, ride.pickupLng!)
+                : null;
 
-          return Column(
-            children: [
-              _StatusBanner(ride.status),
-              Expanded(
-                child: FlutterMap(
-                  mapController: _mapController,
-                  options: MapOptions(
-                    initialCenter: pickupPos ?? _myPos ?? const LatLng(0, 0),
-                    initialZoom: 14,
-                  ),
-                  children: [
-                    ...englishTileLayers(),
-                    MarkerLayer(
-                      markers: [
-                        if (pickupPos != null)
-                          Marker(
-                            point: pickupPos,
-                            width: 40,
-                            height: 40,
-                            child: Tooltip(
-                              message: context.l10n.patientPickup,
-                              child: const Icon(
-                                Icons.location_on,
-                                color: core.kEmergencyRed,
-                                size: 40,
+            return Column(
+              children: [
+                _StatusBanner(ride.status),
+                Expanded(
+                  child: FlutterMap(
+                    mapController: _mapController,
+                    options: MapOptions(
+                      initialCenter: pickupPos ?? _myPos ?? const LatLng(0, 0),
+                      initialZoom: 14,
+                    ),
+                    children: [
+                      ...englishTileLayers(),
+                      MarkerLayer(
+                        markers: [
+                          if (pickupPos != null)
+                            Marker(
+                              point: pickupPos,
+                              width: 40,
+                              height: 40,
+                              child: Tooltip(
+                                message: context.l10n.patientPickup,
+                                child: const Icon(
+                                  Icons.location_on,
+                                  color: core.kEmergencyRed,
+                                  size: 40,
+                                ),
                               ),
                             ),
-                          ),
-                        if (_myPos != null)
-                          Marker(
-                            point: _myPos!,
-                            width: 24,
-                            height: 24,
-                            child: Tooltip(
-                              message: context.l10n.youAreHere,
-                              child: const DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: core.kPatientPrimary,
-                                  shape: BoxShape.circle,
-                                  border: Border.fromBorderSide(
-                                    BorderSide(color: Colors.white, width: 3),
+                          if (_myPos != null)
+                            Marker(
+                              point: _myPos!,
+                              width: 24,
+                              height: 24,
+                              child: Tooltip(
+                                message: context.l10n.youAreHere,
+                                child: const DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    color: core.kPatientPrimary,
+                                    shape: BoxShape.circle,
+                                    border: Border.fromBorderSide(
+                                      BorderSide(color: Colors.white, width: 3),
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              _ActionPanel(
-                ride: ride,
-                cancelling: _cancelling,
-                busy: _busy,
-                onAdvance: _advance,
-                onCancel: _cancel,
-                onNavigate: _navigate,
-              ),
-            ],
-          );
-        },
+                _ActionPanel(
+                  ride: ride,
+                  cancelling: _cancelling,
+                  busy: _busy,
+                  onAdvance: _advance,
+                  onCancel: _cancel,
+                  onNavigate: _navigate,
+                  onMessage: () =>
+                      context.push('/driver/chat/${widget.rideId}'),
+                  onCall: () =>
+                      context.push('/driver/call/${widget.rideId}?start=1'),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -344,6 +355,8 @@ class _ActionPanel extends StatelessWidget {
     required this.onAdvance,
     required this.onCancel,
     required this.onNavigate,
+    required this.onMessage,
+    required this.onCall,
   });
 
   final core.RideDetailResponse ride;
@@ -352,6 +365,8 @@ class _ActionPanel extends StatelessWidget {
   final Future<void> Function(core.RideStatus) onAdvance;
   final Future<void> Function() onCancel;
   final Future<void> Function(NavigationTarget) onNavigate;
+  final VoidCallback onMessage;
+  final VoidCallback onCall;
 
   core.RideStatus? get _nextStatus {
     switch (ride.status) {
@@ -419,6 +434,31 @@ class _ActionPanel extends StatelessWidget {
             ),
             const SizedBox(height: core.kSpaceSM),
           ],
+          SizedBox(
+            height: core.kMinTapTarget,
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    key: const ValueKey('message-patient-button'),
+                    onPressed: onMessage,
+                    icon: const Icon(Icons.chat_bubble_outline),
+                    label: Text(context.l10n.chatWithPatient),
+                  ),
+                ),
+                const SizedBox(width: core.kSpaceSM),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    key: const ValueKey('call-patient-button'),
+                    onPressed: onCall,
+                    icon: const Icon(Icons.phone),
+                    label: Text(context.l10n.callPatient),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: core.kSpaceSM),
           if (next != null)
             core.PrimaryButton(
               label: _nextLabel(context.l10n),

@@ -34,6 +34,33 @@ services:
       timeout: 5s
       retries: 5
 
+  # Relay for internet calls (WebRTC). Off by default: docker compose --profile calls up -d coturn
+  # Needs TURN_SECRET in .env, the same value the backend uses to mint logins.
+  coturn:
+    profiles: ["calls"]
+    image: coturn/coturn:4.6.2
+    container_name: smartride_coturn
+    ports:
+      - "127.0.0.1:3478:3478/udp"
+      - "127.0.0.1:3478:3478/tcp"
+      - "127.0.0.1:49160-49200:49160-49200/udp"
+    environment:
+      TURN_SECRET: ${TURN_SECRET:-}
+    # Refuses to start with no secret (an empty one would let anyone relay). Peers on
+    # private and loopback addresses are denied so the relay cannot be used to reach
+    # services inside the network.
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        test -n "$$TURN_SECRET" || { echo "set TURN_SECRET in .env"; exit 1; };
+        exec turnserver --use-auth-secret --static-auth-secret="$$TURN_SECRET"
+        --realm=smartride --listening-port=3478 --min-port=49160 --max-port=49200
+        --fingerprint --no-cli --no-tls --no-dtls --no-multicast-peers
+        --denied-peer-ip=0.0.0.0-0.255.255.255 --denied-peer-ip=10.0.0.0-10.255.255.255
+        --denied-peer-ip=127.0.0.0-127.255.255.255 --denied-peer-ip=169.254.0.0-169.254.255.255
+        --denied-peer-ip=172.16.0.0-172.31.255.255 --denied-peer-ip=192.168.0.0-192.168.255.255
+        --no-software-attribute
+
   backend:
     build: ./backend
     container_name: smartride_backend
@@ -51,6 +78,10 @@ services:
       # DEV ONLY: DEBUG=true opens /metrics and allows CORS "*". The prod override
       # forces DEBUG=false.
       DEBUG: ${DEBUG:-true}
+      # Internet calls: relay logins are issued only when these are set.
+      STUN_URLS: ${STUN_URLS:-[]}
+      TURN_URLS: ${TURN_URLS:-[]}
+      TURN_SECRET: ${TURN_SECRET:-}
     depends_on:
       postgres:
         condition: service_healthy

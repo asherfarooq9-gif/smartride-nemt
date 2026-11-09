@@ -1,4 +1,4 @@
-﻿name: patient_app
+name: patient_app
 description: SmartRide patient app for emergency and scheduled medical transport.
 publish_to: 'none'
 version: 1.0.0+1
@@ -33,6 +33,7 @@ dependencies:
   url_launcher: ^6.3.0
   # Where the map style download is kept between launches.
   path_provider: ^2.1.5
+  flutter_webrtc: ^1.6.3
 
 dev_dependencies:
   flutter_test:

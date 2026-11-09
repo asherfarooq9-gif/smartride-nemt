@@ -41,12 +41,44 @@ class LocationManager:
             timeout=REDIS_OP_TIMEOUT_SECONDS,
         )
 
+    def _chat_channel(self, ride_id: str) -> str:
+        return f"ride:{ride_id}:chat"
+
+    async def publish_chat(self, ride_id: str, payload: dict) -> None:
+        """Hand a chat message to everyone listening on this ride's chat."""
+        r = await self._get_redis()
+        await asyncio.wait_for(
+            r.publish(self._chat_channel(ride_id), json.dumps(payload)),
+            timeout=REDIS_OP_TIMEOUT_SECONDS,
+        )
+
+    def _call_channel(self, ride_id: str, role: str) -> str:
+        return f"ride:{ride_id}:call:{role}"
+
+    async def publish_call(self, ride_id: str, role: str, payload: dict) -> int:
+        """Send a call message to one side. Returns how many sockets heard it, so a
+        caller can tell the other person's app is not open."""
+        r = await self._get_redis()
+        return await asyncio.wait_for(
+            r.publish(self._call_channel(ride_id, role), json.dumps(payload)),
+            timeout=REDIS_OP_TIMEOUT_SECONDS,
+        )
+
+    async def subscribe_call(self, ride_id: str, role: str) -> aioredis.client.PubSub:
+        return await self._subscribe(self._call_channel(ride_id, role))
+
     async def subscribe(self, ride_id: str) -> aioredis.client.PubSub:
+        return await self._subscribe(self._channel(ride_id))
+
+    async def subscribe_chat(self, ride_id: str) -> aioredis.client.PubSub:
+        return await self._subscribe(self._chat_channel(ride_id))
+
+    async def _subscribe(self, channel: str) -> aioredis.client.PubSub:
         r = await self._get_redis()
         pubsub = r.pubsub()
         try:
             await asyncio.wait_for(
-                pubsub.subscribe(self._channel(ride_id)),
+                pubsub.subscribe(channel),
                 timeout=REDIS_OP_TIMEOUT_SECONDS,
             )
         except BaseException:

@@ -26,6 +26,8 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>SmartRide uses the microphone for internet calls between you and your driver or patient.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>SmartRide uses your location to send the nearest ambulance and to show your driver on the map.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>

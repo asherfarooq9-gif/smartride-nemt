@@ -11,6 +11,7 @@ from sqlalchemy import (
     ForeignKey,
     Text,
     Numeric,
+    BigInteger,
     Integer,
     Enum as SAEnum,
     JSON,
@@ -541,4 +542,38 @@ class AnalyticsHourly(Base):
     driver_utilisation_pct: Mapped[Optional[float]] = mapped_column(Numeric(5, 2))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class RideMessage(Base):
+    """One chat message between a ride's patient and its driver.
+
+    Only exists while the ride is live with a driver on it: the status update
+    deletes every message the moment the ride completes, is cancelled, or the
+    driver gives it back, and a sweep removes any that slip through. Messages can
+    mention health problems, so nothing here is kept after the trip.
+    """
+
+    __tablename__ = "ride_messages"
+
+    # A sequence, not a UUID, so clients can ask for "everything after id N".
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    ride_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("rides.id", ondelete="CASCADE"), nullable=False
+    )
+    sender_user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    sender_role: Mapped[str] = mapped_column(String(10), nullable=False)
+    body: Mapped[str] = mapped_column(String(500), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "sender_role IN ('patient', 'driver')", name="ck_ride_messages_role"
+        ),
+        CheckConstraint("char_length(btrim(body)) > 0", name="ck_ride_messages_body"),
+        Index("ix_ride_messages_ride_id_id", "ride_id", "id"),
     )

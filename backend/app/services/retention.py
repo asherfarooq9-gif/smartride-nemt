@@ -13,6 +13,7 @@ from sqlalchemy import delete, func, select, update
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.models.models import Ride, RideIdempotencyKey, TriageEvent
+from app.services import chat_service
 from app.services.ride_service import TERMINAL_STATUSES
 
 log = logging.getLogger("smartride.retention")
@@ -69,6 +70,7 @@ async def run_forever() -> None:
             async with AsyncSessionLocal() as db:
                 purged = await purge_old_symptoms(db)
                 await purge_old_idempotency_keys(db)
+                await chat_service.purge_ended_ride_messages(db)
             if purged:
                 log.info("retention purged symptom text on %d rides", purged)
         except asyncio.CancelledError:

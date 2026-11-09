@@ -28,7 +28,15 @@ def _audit_events(caplog) -> list[dict]:
 async def test_detail_read_by_driver_is_audited_without_symptom_text(
     client, db, caplog
 ):
+    from sqlalchemy import update
+
+    from app.models.models import Patient
+
     dual_token, _, ride_id = await _dual_role_driving_someone_elses_ride(client, db)
+    # The driver no longer receives the patient's number, so the thing they can
+    # read (and that must be audited) is the mobility needs.
+    await db.execute(update(Patient).values(mobility_needs="wheelchair"))
+    await db.commit()
 
     with caplog.at_level(logging.INFO, logger=AUDIT_LOGGER):
         r = await client.get(
@@ -40,6 +48,8 @@ async def test_detail_read_by_driver_is_audited_without_symptom_text(
     assert len(events) == 1
     assert events[0]["actor_role"] == "driver"
     assert events[0]["ride_id"] == ride_id
+    assert events[0]["fields"] == ["mobility_needs"]
+    assert "patient_phone" not in events[0]["fields"]
     assert "symptom_text" not in events[0]["fields"]
     assert SYMPTOMS not in json.dumps(events[0])
 

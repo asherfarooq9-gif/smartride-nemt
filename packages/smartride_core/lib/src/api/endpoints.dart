@@ -1,3 +1,5 @@
+import '../models/call.dart';
+import '../models/chat.dart';
 import '../models/user.dart';
 import '../models/patient.dart';
 import '../models/demand.dart';
@@ -239,4 +241,36 @@ Future<DemandForecast> getDemandForecast({int hoursAhead = 6}) async {
     queryParams: {'hours_ahead': hoursAhead},
   );
   return DemandForecast.fromJson(data);
+}
+
+// ── Ride chat ─────────────────────────────────────────────────────────────────
+
+/// The ride's chat, oldest first. Pass [afterId] to get only newer messages.
+/// 409 once the chat is closed (no driver yet, or the ride is over).
+Future<List<RideMessage>> getRideMessages(
+  String rideId, {
+  int? afterId,
+}) async {
+  final data = await _c.get(
+    '/api/v1/rides/$rideId/messages',
+    queryParams: afterId == null ? null : {'after_id': afterId},
+  );
+  return [
+    for (final item in data['items'] as List<dynamic>)
+      RideMessage.fromJson(item as Map<String, dynamic>),
+  ];
+}
+
+Future<RideMessage> sendRideMessage(String rideId, String body) async {
+  final data = await _c.post('/api/v1/rides/$rideId/messages', {'body': body});
+  return RideMessage.fromJson(data);
+}
+
+// ── Internet calls ────────────────────────────────────────────────────────────
+
+/// Relay servers and a login that expires, for this ride's call. 409 once the
+/// ride is over.
+Future<IceServers> getCallIceServers(String rideId) async {
+  final data = await _c.get('/api/v1/rides/$rideId/call/ice-servers');
+  return IceServers.fromJson(data);
 }

@@ -22,6 +22,7 @@ from app.services.emergency_dispatch import (
     DRIVER_FRESH_SECONDS,
     match_hospital_for_ride,
 )
+from app.services.chat_service import purge_ride_messages
 from app.services.fare import commission_for, fare_for
 from app.services.hospital_matching import haversine_km
 from app.services.notifications import notify_user, tell_hospital_ride_stopped
@@ -660,6 +661,11 @@ async def update_ride_status(
         await _cancel_ride(db, ride, body.cancel_reason or "Cancelled by patient")
     else:
         raise HTTPException(403, "Forbidden")
+
+    # The chat ends with the trip (or when the driver gives the ride back): no
+    # message outlives it, and the next driver never sees the last one's.
+    if ride.status in TERMINAL_STATUSES or ride.status == RideStatus.pending:
+        await purge_ride_messages(db, ride.id)
 
     await db.commit()
     await db.refresh(ride)

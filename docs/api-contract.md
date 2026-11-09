@@ -413,6 +413,47 @@ Drivers move the ride forward and may cancel before pickup. Patients and admins 
 
 **Errors:** `400` invalid transition | `403` not your ride, or driver not verified | `409` driver cancelling after pickup
 
+### `GET /rides/{id}/messages`
+**Auth:** the ride's own patient or the driver who accepted it. Nobody else, admins included.
+
+Query: `after_id` (optional integer): only messages with a larger id.
+
+```json
+{ "items": [
+  { "id": 12, "ride_id": "…", "sender": "patient", "body": "I am at the blue gate",
+    "created_at": "2026-11-08T10:15:00Z" }
+] }
+```
+Oldest first, at most 200. `403` not part of this ride, `404` unknown ride,
+`409` the chat is not open (no driver yet, the driver gave the ride back, or the
+ride is over). Rate limit 120/minute.
+
+### `POST /rides/{id}/messages`
+**Auth:** same as above. Body `{ "body": "text" }`; the text is trimmed, 1 to 500
+characters, stored and shown as plain text. Returns `201` with the message.
+`409` once the chat is closed, `422` for empty or over-long text. Rate limit
+30/minute. The other person is told by a live message on `WS /ws/chat/{ride_id}`
+and by a push notification that never carries the text.
+
+### `GET /rides/{id}/call/ice-servers`
+**Auth:** the ride's own patient or its accepted driver, while the ride is live
+(the same rule as the chat: `403`, `404`, `409`). Returns the relay servers for an
+internet call and a login that expires:
+```json
+{ "ice_servers": [
+    { "urls": ["stun:turn.example.com:3478"] },
+    { "urls": ["turn:turn.example.com:3478?transport=udp"],
+      "username": "1762600000:<user id>", "credential": "<base64 hmac>" }
+  ],
+  "ttl_seconds": 3600 }
+```
+The list is empty when no relay is configured. Rate limit 30/minute.
+
+Chat exists only while the ride is live with a driver on it. **Every message is
+deleted the moment the ride completes, is cancelled, or the driver gives it back**
+(and a periodic sweep removes any that slip through), because a chat can mention
+health problems. See ADR 0003.
+
 ---
 
 ## Analytics
@@ -526,6 +567,31 @@ When the ride is no longer live the server sends `{ "event": "ride_ended" }` and
 Server relays each driver frame `{ "lat": ..., "lng": ... }`, sends
 `{ "event": "ping" }` when quiet, and `{ "event": "ride_ended", "status": "<final status>" }`
 when the ride completes or is cancelled.
+
+### `WS /ws/chat/{ride_id}`
+**Auth:** the ride's patient or its assigned driver, while the chat is open.
+
+Delivers each new message as the same JSON object `GET /rides/{id}/messages`
+returns, `{ "event": "ping" }` when quiet, and `{ "event": "chat_closed" }` (then
+closes) when the ride ends or the driver gives it back. Sending is a normal
+`POST`; nothing written to this socket is read.
+
+### `WS /ws/call/{ride_id}`
+**Auth:** the ride's patient or its assigned driver, while the ride is live. Carries
+call set-up only; the audio goes peer to peer or through the relay, never through
+this server.
+
+Client sends one JSON object per message, `type` being one of `invite`, `accept`,
+`decline`, `offer` (with `sdp`), `answer` (with `sdp`), `ice` (with `candidate`:
+`{candidate, sdpMid, sdpMLineIndex}`) or `hangup`. Anything else is answered with
+`{ "error": "invalid call message" }`; ten strikes, or more than 80 messages in
+10 seconds, close the socket with `1008`. Fields outside the list are dropped.
+
+The other person receives the same object plus `"from": "patient" | "driver"`,
+which the server sets from the connection. The server also sends
+`{ "event": "unreachable" }` to a caller whose `invite` found nobody listening
+(it then pushes "Incoming call" to the other phone), and
+`{ "event": "call_closed" }` when the ride ends or the driver gives it back.
 
 ---
 

@@ -5,6 +5,9 @@ import 'package:patient_app/core/locale_provider.dart';
 import 'package:patient_app/core/providers.dart';
 // Auth
 import 'package:patient_app/features/auth/language_screen.dart';
+import 'package:patient_app/features/call/call_screen.dart';
+import 'package:patient_app/features/chat/chat_screen.dart';
+import 'package:smartride_core/smartride_core.dart' as core;
 import 'package:patient_app/features/auth/welcome_screen.dart';
 import 'package:patient_app/features/auth/login_screen.dart';
 import 'package:patient_app/features/auth/signup_screen.dart';
@@ -115,6 +118,21 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, s) =>
             BookingConfirmedScreen(rideId: s.pathParameters['id']!),
       ),
+      GoRoute(
+        path: '/call/:id',
+        builder: (_, s) => CallScreen(
+          rideId: s.pathParameters['id']!,
+          me: core.ChatSender.patient,
+          startCall: s.uri.queryParameters['start'] == '1',
+        ),
+      ),
+      GoRoute(
+        path: '/chat/:id',
+        builder: (_, s) => ChatScreen(
+          rideId: s.pathParameters['id']!,
+          me: core.ChatSender.patient,
+        ),
+      ),
       GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
       GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
       GoRoute(path: '/help', builder: (_, __) => const HelpScreen()),
@@ -152,6 +170,21 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/driver/ride/:id',
         builder: (_, s) => ActiveRideScreen(rideId: s.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/driver/call/:id',
+        builder: (_, s) => CallScreen(
+          rideId: s.pathParameters['id']!,
+          me: core.ChatSender.driver,
+          startCall: s.uri.queryParameters['start'] == '1',
+        ),
+      ),
+      GoRoute(
+        path: '/driver/chat/:id',
+        builder: (_, s) => ChatScreen(
+          rideId: s.pathParameters['id']!,
+          me: core.ChatSender.driver,
+        ),
       ),
       GoRoute(
         path: '/driver/profile',
