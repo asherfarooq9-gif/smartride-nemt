@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:flutter/cupertino.dart' show CupertinoSwitch;
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -328,9 +328,9 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 400));
 
-      expect(find.byType(CircularProgressIndicator), findsNWidgets(2));
+      expect(find.byType(CupertinoActivityIndicator), findsNWidgets(2));
       expect(find.byType(CupertinoSwitch), findsNothing);
-      await tester.tap(find.byType(CircularProgressIndicator).last);
+      await tester.tap(find.byType(CupertinoActivityIndicator).last);
       await tester.pump();
       expect(_fake.toggles, 0);
     });
@@ -451,7 +451,7 @@ void main() {
       expect(find.text('Loading your account'), findsOneWidget);
       expect(find.text("You're Offline"), findsNothing);
       expect(find.text('PKR 0'), findsNothing, reason: 'nothing is made up');
-      expect(find.byType(CircularProgressIndicator), findsWidgets);
+      expect(find.byType(CupertinoActivityIndicator), findsWidgets);
     });
 
     testWidgets('after a failure it shows the error, a retry, and no spinner',
@@ -466,7 +466,7 @@ void main() {
       expect(find.text('Status unavailable'), findsOneWidget);
       expect(find.text("You're Offline"), findsNothing,
           reason: 'a failed request is not an offline driver');
-      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.byType(CupertinoActivityIndicator), findsNothing);
       expect(find.text('PKR 0'), findsNothing);
 
       final before = _fake.refreshes;

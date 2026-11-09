@@ -2,6 +2,7 @@ import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
+import 'package:patient_app/shared/apple_list.dart';
 
 final _earningsProvider = FutureProvider.autoDispose<Map<String, dynamic>>(
   (_) => core.getDriverEarnings(),
@@ -38,13 +39,20 @@ class EarningsScreen extends ConsumerWidget {
                         message: context.l10n.noCompletedRidesYet,
                         icon: Icons.payments_outlined,
                       )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(core.kSpaceLG),
-                        itemCount: rides.length,
-                        itemBuilder: (context, i) {
-                          final ride = rides[i] as Map<String, dynamic>;
-                          return _EarningsTile(ride: ride);
-                        },
+                    : ListView(
+                        padding: const EdgeInsets.only(bottom: core.kSpaceXXL),
+                        children: [
+                          AppleSection(
+                            dividerIndent: appleIconDividerIndent,
+                            children: [
+                              for (final ride in rides)
+                                _earningsRow(
+                                  context,
+                                  ride as Map<String, dynamic>,
+                                ),
+                            ],
+                          ),
+                        ],
                       ),
               ),
             ],
@@ -98,44 +106,32 @@ class _SummaryCard extends StatelessWidget {
   }
 }
 
-class _EarningsTile extends StatelessWidget {
-  const _EarningsTile({required this.ride});
-
-  final Map<String, dynamic> ride;
-
-  @override
-  Widget build(BuildContext context) {
-    final fare = (ride['fare_pkr'] as num?)?.toDouble() ?? 0;
-    final address = ride['pickup_address'] as String? ?? 'Unknown';
-    final completedAt = ride['completed_at'] as String?;
-    final isEmergency = ride['ride_type'] == 'emergency';
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: core.kSpaceSM),
-      child: ListTile(
-        leading: Icon(
-          isEmergency ? Icons.emergency : Icons.calendar_today,
-          color: isEmergency ? core.kEmergencyRed : core.kDriverPrimary,
-        ),
-        title: Text(address, maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: completedAt != null ? Text(_formatDate(completedAt)) : null,
-        trailing: Text(
-          'PKR ${fare.toStringAsFixed(0)}',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: core.kFontMD,
-          ),
-        ),
+/// One completed ride: where it started, when it finished and what it paid.
+Widget _earningsRow(BuildContext context, Map<String, dynamic> ride) {
+  final fare = (ride['fare_pkr'] as num?)?.toDouble() ?? 0;
+  final address = ride['pickup_address'] as String? ?? 'Unknown';
+  final completedAt = ride['completed_at'] as String?;
+  final isEmergency = ride['ride_type'] == 'emergency';
+  return AppleRow(
+    icon: isEmergency ? Icons.emergency : Icons.calendar_today,
+    iconColor: isEmergency ? core.kEmergencyRed : null,
+    title: address,
+    subtitle: completedAt != null ? _formatDate(completedAt) : null,
+    trailing: Text(
+      'PKR ${fare.toStringAsFixed(0)}',
+      style: const TextStyle(
+        fontWeight: FontWeight.bold,
+        fontSize: core.kFontMD,
       ),
-    );
-  }
+    ),
+  );
+}
 
-  String _formatDate(String iso) {
-    try {
-      final dt = DateTime.parse(iso).toLocal();
-      return '${dt.day}/${dt.month}/${dt.year}';
-    } on FormatException {
-      return iso;
-    }
+String _formatDate(String iso) {
+  try {
+    final dt = DateTime.parse(iso).toLocal();
+    return '${dt.day}/${dt.month}/${dt.year}';
+  } on FormatException {
+    return iso;
   }
 }

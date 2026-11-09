@@ -1,8 +1,10 @@
+import 'package:patient_app/shared/apple_alert.dart';
 import 'package:patient_app/core/ride_status_label.dart';
 import 'package:patient_app/l10n/l10n.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart' show defaultTargetPlatform;
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -176,7 +178,7 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
   Future<void> _cancel() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (_) => AppleAlertDialog(
         title: Text(context.l10n.cancelRide),
         content: Text(context.l10n.cancelRideConfirm),
         actions: [
@@ -439,10 +441,7 @@ class _ActionPanel extends StatelessWidget {
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: core.kError,
-                        ),
+                        child: CupertinoActivityIndicator(color: core.kError),
                       )
                     : Text(context.l10n.cancelRide),
               ),
@@ -461,11 +460,11 @@ class _GpsStatusIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final (icon, color, message) = switch (status) {
       GpsStreamStatus.live => (
           Icons.gps_fixed,
-          // This icon sits on the blue app bar, where green was hard to see.
-          Colors.white,
+          core.kOnlineGreen,
           context.l10n.gpsSharing,
         ),
       GpsStreamStatus.starting || GpsStreamStatus.degraded => (
@@ -475,7 +474,7 @@ class _GpsStatusIcon extends StatelessWidget {
         ),
       GpsStreamStatus.idle => (
           Icons.gps_off,
-          const Color(0xFFFFB4AB),
+          isDark ? core.kDarkRed : core.kError,
           context.l10n.gpsOff,
         ),
     };

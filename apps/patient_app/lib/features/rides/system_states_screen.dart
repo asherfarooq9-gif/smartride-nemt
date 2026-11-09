@@ -128,8 +128,6 @@ class NoDriversScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: kRed600,
-        foregroundColor: Colors.white,
         title: Text(context.l10n.noDriversTitle),
         leading: const BackButton(),
       ),

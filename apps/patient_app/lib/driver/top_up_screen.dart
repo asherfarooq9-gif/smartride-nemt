@@ -1,6 +1,7 @@
 import 'package:patient_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:smartride_core/smartride_core.dart';
+import 'package:patient_app/shared/apple_list.dart';
 
 class _Plan {
   final String name;
@@ -128,371 +129,190 @@ class _TopUpScreenState extends State<TopUpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     return Scaffold(
-      backgroundColor: kCanvas,
       appBar: AppBar(
-        backgroundColor: kBlue600,
-        foregroundColor: Colors.white,
-        title: Text(context.l10n.topUpPlans),
+        title: Text(l.topUpPlans),
         leading: const BackButton(),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(kSpaceLG),
+        padding: const EdgeInsets.symmetric(vertical: kSpaceLG),
         children: [
-          Text(
-            context.l10n.choosePlan,
-            style: const TextStyle(
-              fontSize: kFontSubhead,
-              fontWeight: FontWeight.w700,
-              color: kText900,
-            ),
-          ),
-          const SizedBox(height: kSpaceMD),
-          ..._plans.asMap().entries.map(
-                (entry) => Padding(
-                  padding: const EdgeInsets.only(bottom: kSpaceMD),
-                  child: _PlanCard(
-                    plan: entry.value,
-                    isSelected: !_isCustom && _selectedPlan == entry.key,
-                    onTap: () => setState(() {
-                      _selectedPlan = entry.key;
-                      _isCustom = false;
-                    }),
-                  ),
+          AppleSection(
+            header: l.choosePlan,
+            children: [
+              for (final (i, plan) in _plans.indexed)
+                _planRow(
+                  context,
+                  plan,
+                  isSelected: !_isCustom && _selectedPlan == i,
+                  onTap: () => setState(() {
+                    _selectedPlan = i;
+                    _isCustom = false;
+                  }),
                 ),
+              AppleRow(
+                title: l.customAmount,
+                trailing:
+                    _isCustom ? const _Check() : const SizedBox(width: 22),
+                onTap: () => setState(() {
+                  _isCustom = !_isCustom;
+                  if (_isCustom) _selectedPlan = null;
+                }),
               ),
-          _CustomAmountTile(
-            isSelected: _isCustom,
-            controller: _customAmount,
-            onToggle: () => setState(() {
-              _isCustom = !_isCustom;
-              if (_isCustom) _selectedPlan = null;
-            }),
-            onAmountChanged: () => setState(() {}),
+              if (_isCustom)
+                _CustomAmountField(
+                  controller: _customAmount,
+                  onAmountChanged: () => setState(() {}),
+                ),
+            ],
           ),
-          const SizedBox(height: kSpaceXL),
-          Text(
-            context.l10n.payFrom,
-            style: const TextStyle(
-              fontSize: kFontSubhead,
-              fontWeight: FontWeight.w700,
-              color: kText900,
+          AppleSection(
+            header: l.payFrom,
+            dividerIndent: appleIconDividerIndent,
+            children: [
+              for (final m in _paymentMethods)
+                AppleRow(
+                  icon: m.icon,
+                  title: m.label,
+                  trailing: _paymentMethod == m.label
+                      ? const _Check()
+                      : const SizedBox(width: 22),
+                  onTap: () => setState(() => _paymentMethod = m.label),
+                ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              kSpaceLG,
+              kSpaceXL,
+              kSpaceLG,
+              kSpaceLG,
+            ),
+            child: PrimaryButton(
+              label: _confirmLabel(l),
+              onPressed: _canConfirm ? () => _showInstructions(context) : null,
+              color: kBlue600,
+              height: kButtonHeight,
             ),
           ),
-          const SizedBox(height: kSpaceMD),
-          Container(
-            decoration: BoxDecoration(
-              color: kSurface,
-              borderRadius: BorderRadius.circular(kRadiusXL),
-              border: Border.all(color: kBorder),
-            ),
-            child: Column(
-              children: _paymentMethods
-                  .map(
-                    (m) => _PaymentMethodRow(
-                      method: m,
-                      isSelected: _paymentMethod == m.label,
-                      onTap: () => setState(() => _paymentMethod = m.label),
-                    ),
-                  )
-                  .toList(),
-            ),
-          ),
-          const SizedBox(height: kSpaceXXL),
-          PrimaryButton(
-            label: _confirmLabel(context.l10n),
-            onPressed: _canConfirm ? () => _showInstructions(context) : null,
-            color: kBlue600,
-            height: kButtonHeight,
-          ),
-          const SizedBox(height: kSpaceLG),
         ],
       ),
     );
   }
 }
 
-class _PlanCard extends StatelessWidget {
-  final _Plan plan;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _PlanCard({
-    required this.plan,
-    required this.isSelected,
-    required this.onTap,
-  });
+/// The blue tick that marks the chosen row, as in iOS selection lists.
+class _Check extends StatelessWidget {
+  const _Check();
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.all(kSpaceLG),
-        decoration: BoxDecoration(
-          color: isSelected ? kBlue100 : kSurface,
-          borderRadius: BorderRadius.circular(kRadiusXL),
-          border: Border.all(
-            color: isSelected ? kBlue600 : kBorder,
-            width: isSelected ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        plan.name,
-                        style: const TextStyle(
-                          fontSize: kFontBody,
-                          fontWeight: FontWeight.w700,
-                          color: kText900,
-                        ),
-                      ),
-                      if (plan.isPopular) ...[
-                        const SizedBox(width: kSpaceSM),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: kSpaceSM,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: kDriverPrimary.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(kRadiusPill),
-                          ),
-                          child: Text(
-                            context.l10n.mostPopular,
-                            style: const TextStyle(
-                              fontSize: kFontCaption,
-                              fontWeight: FontWeight.w700,
-                              color: kDriverPrimary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: kSpaceXS),
-                  Text(
-                    '${plan.rides} rides · PKR ${plan.pricePerRide}/ride',
-                    style: const TextStyle(
-                      fontSize: kFontSmall,
-                      color: kText600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  'PKR ${plan.price}',
-                  style: const TextStyle(
-                    fontSize: kFontSubhead,
-                    fontWeight: FontWeight.w700,
-                    color: kBlue600,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: kSpaceSM,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: kOnlineGreen.withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(kRadiusPill),
-                  ),
-                  child: Text(
-                    '−${plan.savingsPct}%',
-                    style: const TextStyle(
-                      fontSize: kFontCaption,
-                      fontWeight: FontWeight.w700,
-                      color: kOnlineGreen,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Icon(
+      Icons.check,
+      size: 22,
+      color: isDark ? kDarkAccent : kBlue600,
     );
   }
 }
 
-class _CustomAmountTile extends StatelessWidget {
-  final bool isSelected;
+/// One plan: name and per-ride price on the left, total and saving on the right.
+Widget _planRow(
+  BuildContext context,
+  _Plan plan, {
+  required bool isSelected,
+  required VoidCallback onTap,
+}) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  final popular = plan.isPopular ? ' · ${context.l10n.mostPopular}' : '';
+  return AppleRow(
+    title: plan.name,
+    subtitle: '${plan.rides} rides · PKR ${plan.pricePerRide}/ride$popular',
+    trailing: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              'PKR ${plan.price}',
+              style: TextStyle(
+                fontSize: kFontBody,
+                fontWeight: FontWeight.w700,
+                color: isDark ? kDarkAccent : kBlue600,
+              ),
+            ),
+            Text(
+              '\u2212${plan.savingsPct}%',
+              style: TextStyle(
+                fontSize: kFontCaption,
+                fontWeight: FontWeight.w700,
+                color: isDark ? kIosGreen : kOnlineGreen,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(width: kSpaceSM),
+        SizedBox(width: 22, child: isSelected ? const _Check() : null),
+      ],
+    ),
+    onTap: onTap,
+  );
+}
+
+/// The amount box and quick amounts, shown under "Custom amount" once chosen.
+class _CustomAmountField extends StatelessWidget {
   final TextEditingController controller;
-  final VoidCallback onToggle;
   final VoidCallback onAmountChanged;
 
-  const _CustomAmountTile({
-    required this.isSelected,
+  const _CustomAmountField({
     required this.controller,
-    required this.onToggle,
     required this.onAmountChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 150),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
       padding: const EdgeInsets.all(kSpaceLG),
-      decoration: BoxDecoration(
-        color: isSelected ? kBlue100 : kSurface,
-        borderRadius: BorderRadius.circular(kRadiusXL),
-        border: Border.all(
-          color: isSelected ? kBlue600 : kBorder,
-          width: isSelected ? 1.5 : 1,
-        ),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GestureDetector(
-            onTap: onToggle,
-            child: Row(
-              children: [
-                SizedBox(
-                  width: kMinTapTarget,
-                  height: kMinTapTarget,
-                  child: Center(
-                    child: Container(
-                      width: 20,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isSelected ? kBlue600 : kBorder,
-                          width: isSelected ? 6 : 2,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Text(
-                  context.l10n.customAmount,
-                  style: const TextStyle(
-                    fontSize: kFontBody,
-                    fontWeight: FontWeight.w600,
-                    color: kText900,
-                  ),
-                ),
-              ],
+          TextFormField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            onChanged: (_) => onAmountChanged(),
+            decoration: InputDecoration(
+              prefixText: 'PKR  ',
+              hintText: context.l10n.enterAmount,
             ),
           ),
-          if (isSelected) ...[
-            const SizedBox(height: kSpaceMD),
-            TextFormField(
-              controller: controller,
-              keyboardType: TextInputType.number,
-              onChanged: (_) => onAmountChanged(),
-              decoration: InputDecoration(
-                prefixText: 'PKR  ',
-                hintText: context.l10n.enterAmount,
-                border: const OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: kSpaceMD),
-            Wrap(
-              spacing: kSpaceSM,
-              children: _quickAmounts
-                  .map(
-                    (amt) => GestureDetector(
-                      onTap: () {
-                        controller.text = amt.toString();
-                        onAmountChanged();
-                      },
-                      child: Chip(
-                        label: Text(
-                          amt >= 1000 ? '${amt ~/ 1000},000' : amt.toString(),
-                        ),
-                        backgroundColor: kCanvas,
-                        side: const BorderSide(color: kBorder),
-                        labelStyle: const TextStyle(
-                          fontSize: kFontSmall,
-                          color: kBlue600,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+          const SizedBox(height: kSpaceMD),
+          Wrap(
+            spacing: kSpaceSM,
+            children: [
+              for (final amt in _quickAmounts)
+                GestureDetector(
+                  onTap: () {
+                    controller.text = amt.toString();
+                    onAmountChanged();
+                  },
+                  child: Chip(
+                    label: Text(
+                      amt >= 1000 ? '${amt ~/ 1000},000' : amt.toString(),
                     ),
-                  )
-                  .toList(),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _PaymentMethodRow extends StatelessWidget {
-  final _PaymentMethod method;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _PaymentMethodRow({
-    required this.method,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: kMinTapTarget),
-        padding: const EdgeInsets.symmetric(horizontal: kSpaceLG),
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: kBorder, width: 0.5)),
-        ),
-        child: Row(
-          children: [
-            SizedBox(
-              width: kMinTapTarget,
-              height: kMinTapTarget,
-              child: Center(
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: isSelected ? kBlue600 : kBorder,
-                      width: isSelected ? 6 : 2,
+                    labelStyle: TextStyle(
+                      fontSize: kFontSmall,
+                      color: isDark ? kDarkAccent : kBlue600,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-              ),
-            ),
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: kBlue600.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(kRadiusSM),
-              ),
-              child: Icon(method.icon, color: kBlue600, size: 18),
-            ),
-            const SizedBox(width: kSpaceMD),
-            Text(
-              method.label,
-              style: const TextStyle(
-                fontSize: kFontBody,
-                fontWeight: FontWeight.w500,
-                color: kText900,
-              ),
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -539,17 +359,20 @@ class _InstructionsDialog extends StatelessWidget {
             const SizedBox(height: kSpaceLG),
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: kFontHeading,
                 fontWeight: FontWeight.w700,
-                color: kText900,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: kSpaceMD),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: kFontBody, color: kText600),
+              style: TextStyle(
+                fontSize: kFontBody,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: kSpaceXXL),
             PrimaryButton(

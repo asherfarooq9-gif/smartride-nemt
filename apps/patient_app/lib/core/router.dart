@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:patient_app/core/locale_provider.dart';
 import 'package:patient_app/core/providers.dart';
 // Auth
+import 'package:patient_app/features/auth/language_screen.dart';
 import 'package:patient_app/features/auth/welcome_screen.dart';
 import 'package:patient_app/features/auth/login_screen.dart';
 import 'package:patient_app/features/auth/signup_screen.dart';
@@ -34,7 +36,8 @@ import 'package:patient_app/features/profile/saved_places_screen.dart';
 import 'package:patient_app/features/rides/system_states_screen.dart';
 import 'package:patient_app/features/rides/rate_driver_screen.dart';
 
-const _authPages = {'/welcome', '/login', '/signup'};
+// Pages a signed-out person may see. Signed-in people are sent home from them.
+const _authPages = {'/language', '/welcome', '/login', '/signup'};
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authListenable = _AuthListenable(ref);
@@ -50,6 +53,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       final loc = state.matchedLocation;
 
       if (isLoading) return null;
+
+      // First launch: pick a language before anything else.
+      final toLanguage = languageRedirect(
+        chosen: ref.read(languageChosenProvider),
+        isLoggedIn: isLoggedIn,
+        location: loc,
+      );
+      if (toLanguage != null) return toLanguage;
 
       if (!isLoggedIn) {
         return _authPages.contains(loc) ? null : '/welcome';
@@ -68,9 +79,10 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: authListenable,
     routes: [
       // ── Auth ──────────────────────────────────────────────────────────────
+      GoRoute(path: '/language', builder: (_, __) => const LanguageScreen()),
       GoRoute(path: '/welcome', builder: (_, __) => const WelcomeScreen()),
-      GoRoute(path: '/login',   builder: (_, __) => const LoginScreen()),
-      GoRoute(path: '/signup',  builder: (_, __) => const SignupScreen()),
+      GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
+      GoRoute(path: '/signup', builder: (_, __) => const SignupScreen()),
       GoRoute(
         path: '/become-driver',
         builder: (_, __) => const AddRoleScreen(role: 'driver'),
@@ -96,21 +108,27 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/tracking/:id',
         builder: (_, s) => LiveTrackingScreen(rideId: s.pathParameters['id']!),
       ),
-      GoRoute(path: '/book-ride', builder: (_, __) => const ScheduleTripScreen()),
+      GoRoute(
+          path: '/book-ride', builder: (_, __) => const ScheduleTripScreen()),
       GoRoute(
         path: '/booking-confirmed/:id',
         builder: (_, s) =>
             BookingConfirmedScreen(rideId: s.pathParameters['id']!),
       ),
-      GoRoute(path: '/profile',  builder: (_, __) => const ProfileScreen()),
+      GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
       GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
-      GoRoute(path: '/help',     builder: (_, __) => const HelpScreen()),
-      GoRoute(path: '/contact',  builder: (_, __) => const ContactScreen()),
-      GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen(portal: 'patient')),
-      GoRoute(path: '/saved-places', builder: (_, __) => const SavedPlacesScreen()),
-      GoRoute(path: '/permissions', builder: (_, __) => const PermissionsScreen()),
+      GoRoute(path: '/help', builder: (_, __) => const HelpScreen()),
+      GoRoute(path: '/contact', builder: (_, __) => const ContactScreen()),
+      GoRoute(
+          path: '/notifications',
+          builder: (_, __) => const NotificationsScreen(portal: 'patient')),
+      GoRoute(
+          path: '/saved-places', builder: (_, __) => const SavedPlacesScreen()),
+      GoRoute(
+          path: '/permissions', builder: (_, __) => const PermissionsScreen()),
       GoRoute(path: '/no-drivers', builder: (_, __) => const NoDriversScreen()),
-      GoRoute(path: '/no-internet', builder: (_, __) => const NoInternetScreen()),
+      GoRoute(
+          path: '/no-internet', builder: (_, __) => const NoInternetScreen()),
       GoRoute(
         path: '/rate-driver/:id',
         builder: (_, s) => RateDriverScreen(rideId: s.pathParameters['id']!),
@@ -118,12 +136,19 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // ── Driver portal ─────────────────────────────────────────────────────
       GoRoute(path: '/driver', builder: (_, __) => const DashboardScreen()),
-      GoRoute(path: '/driver/earnings', builder: (_, __) => const EarningsScreen()),
-      GoRoute(path: '/driver/scheduled', builder: (_, __) => const DriverScheduledScreen()),
-      GoRoute(path: '/driver/demand', builder: (_, __) => const DemandForecastScreen()),
+      GoRoute(
+          path: '/driver/earnings', builder: (_, __) => const EarningsScreen()),
+      GoRoute(
+          path: '/driver/scheduled',
+          builder: (_, __) => const DriverScheduledScreen()),
+      GoRoute(
+          path: '/driver/demand',
+          builder: (_, __) => const DemandForecastScreen()),
       GoRoute(path: '/driver/wallet', builder: (_, __) => const WalletScreen()),
       GoRoute(path: '/driver/top-up', builder: (_, __) => const TopUpScreen()),
-      GoRoute(path: '/driver/notifications', builder: (_, __) => const NotificationsScreen(portal: 'driver')),
+      GoRoute(
+          path: '/driver/notifications',
+          builder: (_, __) => const NotificationsScreen(portal: 'driver')),
       GoRoute(
         path: '/driver/ride/:id',
         builder: (_, s) => ActiveRideScreen(rideId: s.pathParameters['id']!),
@@ -183,6 +208,7 @@ class _AuthListenable extends ChangeNotifier {
     _subs = [
       ref.listen(authProvider, (_, __) => notifyListeners()),
       ref.listen(activeRoleProvider, (_, __) => notifyListeners()),
+      ref.listen(languageChosenProvider, (_, __) => notifyListeners()),
     ];
   }
 

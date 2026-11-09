@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
+import 'package:patient_app/shared/apple_list.dart';
+import 'package:patient_app/shared/patient_nav_bar.dart';
 
 final _profileProvider = FutureProvider.autoDispose<core.PatientResponse>(
   (_) => core.getPatientMe(),
@@ -97,27 +99,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final isUpdating = ref.watch(_updateProvider) is AsyncLoading;
 
     return Scaffold(
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: 2,
-        onDestinationSelected: (i) {
-          if (i == 0) context.go('/');
-          if (i == 1) context.go('/rides');
-        },
-        destinations: [
-          NavigationDestination(
-              icon: const Icon(Icons.home_outlined),
-              selectedIcon: const Icon(Icons.home),
-              label: context.l10n.navHome),
-          NavigationDestination(
-              icon: const Icon(Icons.history_outlined),
-              selectedIcon: const Icon(Icons.history),
-              label: context.l10n.navMyRides),
-          NavigationDestination(
-              icon: const Icon(Icons.person_outline),
-              selectedIcon: const Icon(Icons.person),
-              label: context.l10n.navProfile),
-        ],
-      ),
+      bottomNavigationBar: const PatientNavBar(currentIndex: 2),
       appBar: AppBar(
         title: Text(context.l10n.myProfile),
         actions: [
@@ -128,14 +110,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 if (p != null) _populate(p);
                 setState(() => _editing = true);
               },
-              // White: the default blue text vanished on the blue app bar.
-              style: TextButton.styleFrom(foregroundColor: Colors.white),
               child: Text(context.l10n.edit),
             )
           else
             TextButton(
               onPressed: () => setState(() => _editing = false),
-              style: TextButton.styleFrom(foregroundColor: Colors.white),
               child: Text(context.l10n.cancel),
             ),
         ],
@@ -148,7 +127,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           onRetry: () => ref.refresh(_profileProvider),
         ),
         data: (profile) => SingleChildScrollView(
-          padding: const EdgeInsets.all(core.kSpaceLG),
+          // The grouped sections add their own side margin; the form does not.
+          padding: _editing
+              ? const EdgeInsets.all(core.kSpaceLG)
+              : const EdgeInsets.symmetric(vertical: core.kSpaceLG),
           child: _editing
               ? _EditForm(
                   formKey: _formKey,
@@ -223,11 +205,12 @@ class _ViewMode extends StatelessWidget {
         Center(
           child: CircleAvatar(
             radius: 40,
-            backgroundColor: core.kPatientPrimary.withValues(alpha: 0.12),
+            backgroundColor:
+                Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
             child: Text(
               initial,
-              style: const TextStyle(
-                color: core.kPatientPrimary,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
                 fontWeight: FontWeight.bold,
                 fontSize: 32,
               ),
@@ -238,13 +221,12 @@ class _ViewMode extends StatelessWidget {
         Text(
           profile.phone,
           textAlign: TextAlign.center,
-          style: Theme.of(context)
-              .textTheme
-              .bodyMedium
-              ?.copyWith(color: core.kTextSecondary),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
         ),
-        const SizedBox(height: core.kSpaceXL),
-        _InfoCard(title: context.l10n.personalInfo, rows: [
+        const SizedBox(height: core.kSpaceSM),
+        AppleSection(header: context.l10n.personalInfo, children: [
           _InfoRow(
               label: context.l10n.fullNameTitle,
               value: profile.fullName ?? '—'),
@@ -257,8 +239,7 @@ class _ViewMode extends StatelessWidget {
                 label: context.l10n.mobilityNeeds,
                 value: profile.mobilityNeeds!),
         ]),
-        const SizedBox(height: core.kSpaceLG),
-        _InfoCard(title: context.l10n.emergencyContact, rows: [
+        AppleSection(header: context.l10n.emergencyContact, children: [
           _InfoRow(
               label: context.l10n.nameTitle,
               value: profile.emergencyContactName ?? '—'),
@@ -266,7 +247,6 @@ class _ViewMode extends StatelessWidget {
               label: context.l10n.phoneTitle,
               value: profile.emergencyContactPhone ?? '—'),
         ]),
-        const SizedBox(height: core.kSpaceLG),
         const _QuickLinksCard(),
       ],
     );
@@ -278,122 +258,26 @@ class _QuickLinksCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).dividerColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-            child: Text(
-              context.l10n.quickLinks,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: core.kTextSecondary,
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-          ),
-          const Divider(height: 1),
-          _NavRow(
-            icon: Icons.notifications_outlined,
-            label: context.l10n.notificationsTitle,
-            onTap: () => context.push('/notifications'),
-          ),
-          const Divider(height: 1),
-          _NavRow(
-            icon: Icons.place_outlined,
-            label: context.l10n.savedPlaces,
-            onTap: () => context.push('/saved-places'),
-          ),
-          const Divider(height: 1),
-          _NavRow(
-            icon: Icons.settings_outlined,
-            label: context.l10n.settingsTitle,
-            onTap: () => context.push('/settings'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NavRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _NavRow({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: core.kMinTapTarget),
-        padding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: core.kSpaceMD,
+    return AppleSection(
+      header: context.l10n.quickLinks,
+      dividerIndent: appleIconDividerIndent,
+      children: [
+        AppleRow(
+          icon: Icons.notifications_outlined,
+          title: context.l10n.notificationsTitle,
+          onTap: () => context.push('/notifications'),
         ),
-        child: Row(
-          children: [
-            Icon(icon, size: 20, color: core.kTextSecondary),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(fontWeight: FontWeight.w500),
-              ),
-            ),
-            const Icon(Icons.chevron_right,
-                size: 20, color: core.kTextSecondary),
-          ],
+        AppleRow(
+          icon: Icons.place_outlined,
+          title: context.l10n.savedPlaces,
+          onTap: () => context.push('/saved-places'),
         ),
-      ),
-    );
-  }
-}
-
-class _InfoCard extends StatelessWidget {
-  final String title;
-  final List<Widget> rows;
-  const _InfoCard({required this.title, required this.rows});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).dividerColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-            child: Text(
-              title,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: core.kTextSecondary,
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-          ),
-          const Divider(height: 1),
-          ...rows,
-        ],
-      ),
+        AppleRow(
+          icon: Icons.settings_outlined,
+          title: context.l10n.settingsTitle,
+          onTap: () => context.push('/settings'),
+        ),
+      ],
     );
   }
 }
@@ -413,10 +297,9 @@ class _InfoRow extends StatelessWidget {
             width: 130,
             child: Text(
               label,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: core.kTextSecondary),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
             ),
           ),
           Expanded(
@@ -497,10 +380,8 @@ class _EditForm extends StatelessWidget {
           ),
           const SizedBox(height: core.kSpaceXL),
           Text(context.l10n.emergencyContact,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleSmall
-                  ?.copyWith(color: core.kTextSecondary)),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
           const SizedBox(height: core.kSpaceSM),
           TextFormField(
             controller: ecNameCtrl,

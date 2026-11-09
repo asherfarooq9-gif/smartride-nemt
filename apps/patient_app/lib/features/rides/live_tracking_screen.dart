@@ -1,3 +1,4 @@
+import 'package:patient_app/shared/apple_alert.dart';
 import 'package:patient_app/core/ride_status_label.dart';
 import 'dart:async';
 
@@ -143,7 +144,7 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => AlertDialog(
+      builder: (_) => AppleAlertDialog(
         title: Text(status == 'completed'
             ? context.l10n.rideCompletedTitle
             : context.l10n.rideEndedTitle),

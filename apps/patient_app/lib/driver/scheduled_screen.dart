@@ -112,7 +112,7 @@ class _DriverScheduledScreenState extends ConsumerState<DriverScheduledScreen> {
                 key: ValueKey(_tab),
                 child: rides.when(
                   loading: () =>
-                      const Center(child: CircularProgressIndicator()),
+                      const Center(child: CupertinoActivityIndicator()),
                   error: (_, __) => _Message(
                     icon: Icons.wifi_off_rounded,
                     title: context.l10n.couldNotLoadRides,
@@ -249,7 +249,7 @@ class _RideCard extends StatelessWidget {
       ? const SizedBox(
           width: 18,
           height: 18,
-          child: CircularProgressIndicator(strokeWidth: 2),
+          child: CupertinoActivityIndicator(),
         )
       : Text(text);
 }

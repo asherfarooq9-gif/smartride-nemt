@@ -1,3 +1,4 @@
+import 'package:patient_app/shared/apple_alert.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -169,7 +170,7 @@ Future<void> switchPortal(
   if (ref.read(gpsStreamProvider).isActive) {
     final leave = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (_) => AppleAlertDialog(
         title: Text(context.l10n.activeRideInProgress),
         content: const Text(
             'You are currently driving a ride. Switching portals will keep '

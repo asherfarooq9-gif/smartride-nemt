@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'design_tokens.dart';
 
@@ -83,6 +84,10 @@ class AppTheme {
       ),
     );
 
+    // Blue for text and outlines. The portal blue is 3.3:1 on the dark page,
+    // so dark mode uses the lighter blue; filled buttons keep the portal blue.
+    final link = dark ? kDarkAccent : primary;
+
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
@@ -93,17 +98,30 @@ class AppTheme {
         for (final platform in TargetPlatform.values)
           platform: const CupertinoPageTransitionsBuilder(),
       }),
+      // An iOS navigation bar: the page colour, a centred title in ink, and
+      // blue icons. Blue never fills the bar; it only marks what can be tapped.
       appBarTheme: AppBarTheme(
-        backgroundColor: primary,
-        foregroundColor: kOnPrimary,
+        backgroundColor: dark ? kDarkBg : kCanvas,
+        foregroundColor: dark ? kDarkText1 : kText900,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        centerTitle: false,
+        centerTitle: true,
+        iconTheme: IconThemeData(color: link),
+        actionsIconTheme: IconThemeData(color: link),
+        systemOverlayStyle:
+            dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         titleTextStyle: GoogleFonts.dmSans(
-          color: kOnPrimary,
-          fontSize: kFontSubhead,
-          fontWeight: FontWeight.w700,
+          color: dark ? kDarkText1 : kText900,
+          fontSize: 17,
+          fontWeight: FontWeight.w600,
         ),
+      ),
+      // The back arrow is the iOS chevron on every platform. It mirrors in
+      // right-to-left languages such as Urdu.
+      actionIconTheme: ActionIconThemeData(
+        backButtonIconBuilder: (_) =>
+            const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -122,9 +140,9 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: primary,
+          foregroundColor: link,
           minimumSize: const Size(double.infinity, kButtonHeight),
-          side: BorderSide(color: primary, width: 1.5),
+          side: BorderSide(color: link, width: 1.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(kRadiusLG),
           ),
@@ -136,7 +154,7 @@ class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: primary,
+          foregroundColor: link,
           minimumSize: const Size(kMinTapTarget, kMinTapTarget),
           textStyle: GoogleFonts.dmSans(
             fontSize: kFontSmall,

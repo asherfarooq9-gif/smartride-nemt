@@ -1,3 +1,5 @@
+import 'package:patient_app/shared/apple_alert.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
@@ -59,7 +61,7 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
+    return AppleAlertDialog(
       title: Text(context.l10n.deleteAccountTitle),
       content: SingleChildScrollView(
         child: Column(
@@ -104,7 +106,7 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
               ? const SizedBox(
                   width: 18,
                   height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  child: CupertinoActivityIndicator(),
                 )
               : Text(context.l10n.deleteAccountTitle),
         ),

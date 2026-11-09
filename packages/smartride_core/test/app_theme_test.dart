@@ -55,6 +55,39 @@ void main() {
         expect(build().appBarTheme.scrolledUnderElevation, 0);
       });
 
+      testWidgets('app bar is a light bar with a readable title and icons',
+          (tester) async {
+        final theme = build();
+        final bar = theme.appBarTheme;
+        expect(bar.backgroundColor, theme.scaffoldBackgroundColor,
+            reason: 'the bar sits on the page colour, like an iOS nav bar');
+        expect(bar.centerTitle, isTrue);
+        expect(
+          contrast(bar.titleTextStyle!.color!, bar.backgroundColor!),
+          greaterThanOrEqualTo(4.5),
+          reason: 'title on the bar',
+        );
+        expect(
+          contrast(bar.iconTheme!.color!, bar.backgroundColor!),
+          greaterThanOrEqualTo(4.5),
+          reason: 'back arrow and action icons on the bar',
+        );
+        expect(bar.actionsIconTheme!.color, bar.iconTheme!.color);
+      });
+
+      testWidgets('text and outlined buttons are readable on the page',
+          (tester) async {
+        final theme = build();
+        final bg = theme.scaffoldBackgroundColor;
+        final text = theme.textButtonTheme.style!.foregroundColor!.resolve({})!;
+        final outlined =
+            theme.outlinedButtonTheme.style!.foregroundColor!.resolve({})!;
+        expect(contrast(text, bg), greaterThanOrEqualTo(4.5),
+            reason: 'text button label');
+        expect(contrast(outlined, bg), greaterThanOrEqualTo(4.5),
+            reason: 'outlined button label');
+      });
+
       testWidgets('pages swipe back like iOS on every platform',
           (tester) async {
         final theme = build();

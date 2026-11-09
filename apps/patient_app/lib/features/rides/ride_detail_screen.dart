@@ -1,3 +1,4 @@
+import 'package:patient_app/shared/apple_alert.dart';
 import 'package:patient_app/core/ride_status_label.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +9,7 @@ import 'package:patient_app/core/payment_methods.dart';
 import 'package:patient_app/driver/money_format.dart';
 import 'package:patient_app/l10n/l10n.dart';
 import 'package:patient_app/features/rides/rides_notifier.dart';
+import 'package:patient_app/shared/apple_list.dart';
 
 final rideDetailProvider =
     FutureProvider.autoDispose.family<core.RideDetailResponse, String>(
@@ -62,91 +64,107 @@ class RideDetailScreen extends ConsumerWidget {
           message: e is core.AppError ? e.message : context.l10n.failedLoadRide,
           onRetry: () => ref.invalidate(rideDetailProvider(rideId)),
         ),
-        data: (ride) => SingleChildScrollView(
-          padding: const EdgeInsets.all(core.kSpaceLG),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _StatusBadge(ride.status),
-              const SizedBox(height: core.kSpaceLG),
-              _InfoCard(
-                title: context.l10n.pickupTitle,
-                value: ride.pickupAddress,
-                icon: Icons.location_on,
+        data: (ride) => ListView(
+          padding: const EdgeInsets.symmetric(vertical: core.kSpaceLG),
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: core.kSpaceLG),
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: _StatusBadge(ride.status),
               ),
-              if (ride.symptomText != null)
-                _InfoCard(
-                  title: context.l10n.symptomsTitle,
-                  value: ride.symptomText!,
-                  icon: Icons.medical_information,
+            ),
+            AppleSection(
+              dividerIndent: appleIconDividerIndent,
+              children: [
+                AppleRow(
+                  icon: Icons.location_on,
+                  title: context.l10n.pickupTitle,
+                  subtitle: ride.pickupAddress,
+                  detail: true,
                 ),
-              if (ride.createdAt != null)
-                _InfoCard(
-                  title: context.l10n.requestedTitle,
-                  value: formatIsoDateTime(ride.createdAt!,
-                      lang: Localizations.localeOf(context).languageCode),
-                  icon: Icons.access_time,
-                ),
-              if (ride.status == core.RideStatus.completed &&
-                  (ride.finalFarePkr ?? ride.estimatedFarePkr) != null)
-                _InfoCard(
-                  title: context.l10n.fareLabel,
-                  value:
-                      '${formatPkr((ride.finalFarePkr ?? ride.estimatedFarePkr)!)}\n'
-                      '${context.l10n.fareHint}',
-                  icon: Icons.payments_outlined,
-                ),
-              if (ride.driver != null) ...[
-                const SizedBox(height: core.kSpaceSM),
-                Text(
-                  context.l10n.roleDriver,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w600),
-                ),
-                Card(
-                  child: ListTile(
-                    leading: const CircleAvatar(child: Icon(Icons.person)),
-                    title: Text(
-                      (ride.driver!['full_name'] as String?) ??
-                          context.l10n.roleDriver,
-                    ),
-                    subtitle: Text(_driverSubtitle(context, ride.driver!)),
+                if (ride.symptomText != null)
+                  AppleRow(
+                    icon: Icons.medical_information,
+                    title: context.l10n.symptomsTitle,
+                    subtitle: ride.symptomText!,
+                    detail: true,
                   ),
-                ),
-              ],
-              const SizedBox(height: core.kSpaceXL),
-              if (ride.status == core.RideStatus.completed &&
-                  ride.patientRating == null)
-                core.PrimaryButton(
-                  label: context.l10n.rateDriverAction,
-                  onPressed: () => context.push('/rate-driver/$rideId'),
-                  color: core.kPatientPrimary,
-                ),
-              if (ride.isTrackable)
-                core.PrimaryButton(
-                  label: context.l10n.trackLive,
-                  onPressed: () => context.push('/tracking/$rideId'),
-                  color: core.kPatientPrimary,
-                ),
-              if (ride.status == core.RideStatus.pending ||
-                  ride.status == core.RideStatus.driverAssigned) ...[
-                const SizedBox(height: core.kSpaceMD),
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.cancel_outlined),
-                  label: Text(context.l10n.cancelRide),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Theme.of(context).colorScheme.error,
-                    side: BorderSide(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
+                if (ride.createdAt != null)
+                  AppleRow(
+                    icon: Icons.access_time,
+                    title: context.l10n.requestedTitle,
+                    subtitle: formatIsoDateTime(ride.createdAt!,
+                        lang: Localizations.localeOf(context).languageCode),
+                    detail: true,
                   ),
-                  onPressed: () => _confirmCancel(context, ref),
-                ),
+                if (ride.status == core.RideStatus.completed &&
+                    (ride.finalFarePkr ?? ride.estimatedFarePkr) != null)
+                  AppleRow(
+                    icon: Icons.payments_outlined,
+                    title: context.l10n.fareLabel,
+                    subtitle:
+                        '${formatPkr((ride.finalFarePkr ?? ride.estimatedFarePkr)!)}\n'
+                        '${context.l10n.fareHint}',
+                    detail: true,
+                  ),
               ],
-            ],
-          ),
+            ),
+            if (ride.driver != null)
+              AppleSection(
+                header: context.l10n.roleDriver,
+                dividerIndent: appleIconDividerIndent,
+                children: [
+                  AppleRow(
+                    icon: Icons.person,
+                    title: (ride.driver!['full_name'] as String?) ??
+                        context.l10n.roleDriver,
+                    subtitle: _driverSubtitle(context, ride.driver!),
+                  ),
+                ],
+              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                core.kSpaceLG,
+                core.kSpaceXL,
+                core.kSpaceLG,
+                0,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (ride.status == core.RideStatus.completed &&
+                      ride.patientRating == null)
+                    core.PrimaryButton(
+                      label: context.l10n.rateDriverAction,
+                      onPressed: () => context.push('/rate-driver/$rideId'),
+                      color: core.kPatientPrimary,
+                    ),
+                  if (ride.isTrackable)
+                    core.PrimaryButton(
+                      label: context.l10n.trackLive,
+                      onPressed: () => context.push('/tracking/$rideId'),
+                      color: core.kPatientPrimary,
+                    ),
+                  if (ride.status == core.RideStatus.pending ||
+                      ride.status == core.RideStatus.driverAssigned) ...[
+                    const SizedBox(height: core.kSpaceMD),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.cancel_outlined),
+                      label: Text(context.l10n.cancelRide),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Theme.of(context).colorScheme.error,
+                        side: BorderSide(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                      onPressed: () => _confirmCancel(context, ref),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -184,7 +202,7 @@ class _CancelReasonDialogState extends State<_CancelReasonDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
+    return AppleAlertDialog(
       title: Text(context.l10n.cancelRide),
       content: TextField(
         controller: _controller,
@@ -231,30 +249,6 @@ class _StatusBadge extends StatelessWidget {
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _InfoCard extends StatelessWidget {
-  const _InfoCard({
-    required this.title,
-    required this.value,
-    required this.icon,
-  });
-
-  final String title;
-  final String value;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: core.kSpaceSM),
-      child: ListTile(
-        leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
-        title: Text(title, style: const TextStyle(fontSize: core.kFontSM)),
-        subtitle: Text(value),
       ),
     );
   }

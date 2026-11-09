@@ -1,9 +1,11 @@
 import 'package:patient_app/l10n/l10n.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smartride_core/smartride_core.dart';
 import 'package:patient_app/driver/money_format.dart';
+import 'package:patient_app/shared/apple_list.dart';
 
 final _walletProvider = FutureProvider.autoDispose<Map<String, dynamic>>(
   (_) => getDriverWallet(),
@@ -15,22 +17,21 @@ class WalletScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      backgroundColor: kCanvas,
       appBar: AppBar(
-        backgroundColor: kBlue600,
-        foregroundColor: Colors.white,
         title: Text(context.l10n.walletTitle),
         leading: const BackButton(),
       ),
       body: ref.watch(_walletProvider).when(
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => const Center(child: CupertinoActivityIndicator()),
             error: (e, _) => Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     context.l10n.failedLoadWallet,
-                    style: const TextStyle(color: kText600),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                   const SizedBox(height: kSpaceMD),
                   TextButton(
@@ -52,24 +53,24 @@ class WalletScreen extends ConsumerWidget {
                   wallet['transactions'] as List<dynamic>? ?? [];
 
               return ListView(
-                padding: const EdgeInsets.all(kSpaceLG),
+                padding: const EdgeInsets.symmetric(vertical: kSpaceLG),
                 children: [
-                  _BalanceCard(
-                    balance: balance,
-                    lowBalance: lowBalance,
-                    onTopUp: () => context.push('/driver/top-up'),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: kSpaceLG),
+                    child: _BalanceCard(
+                      balance: balance,
+                      lowBalance: lowBalance,
+                      onTopUp: () => context.push('/driver/top-up'),
+                    ),
                   ),
-                  const SizedBox(height: kSpaceLG),
                   _CurrentPlanCard(
                     plan: plan,
                     onChangePlan: () => context.push('/driver/top-up'),
                   ),
-                  const SizedBox(height: kSpaceLG),
                   _WeekSummaryRow(
                     weeklyCommission: weeklyCommission,
                     weeklyNet: weeklyNet,
                   ),
-                  const SizedBox(height: kSpaceLG),
                   _TransactionsList(transactions: transactions),
                   const SizedBox(height: kSpaceSM),
                   Center(
@@ -77,10 +78,7 @@ class WalletScreen extends ConsumerWidget {
                       onPressed: () => context.push('/driver/earnings'),
                       child: Text(
                         context.l10n.driverEarningsHistory,
-                        style: const TextStyle(
-                          color: kBlue600,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ),
                   ),
@@ -185,6 +183,12 @@ class _BalanceCard extends StatelessWidget {
   }
 }
 
+/// The green and red that stay readable on the current surface.
+Color _gain(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark ? kIosGreen : kOnlineGreen;
+Color _loss(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark ? kDarkRed : kRed600;
+
 class _CurrentPlanCard extends StatelessWidget {
   final String plan;
   final VoidCallback onChangePlan;
@@ -196,54 +200,24 @@ class _CurrentPlanCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: kSurface,
-        borderRadius: BorderRadius.circular(kRadiusXL),
-        border: Border.all(color: kBorder),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: kSpaceLG,
-          vertical: kSpaceSM,
-        ),
-        leading: Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: kBlue600.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(kRadiusMD),
-          ),
-          child: const Icon(
-            Icons.workspace_premium_outlined,
-            color: kBlue600,
-            size: 22,
-          ),
-        ),
-        title: Text(
-          plan,
-          style: const TextStyle(
-            fontSize: kFontBody,
-            fontWeight: FontWeight.w700,
-            color: kText900,
-          ),
-        ),
-        subtitle: Text(
-          context.l10n.perCompletedRide,
-          style: const TextStyle(fontSize: kFontSmall, color: kText600),
-        ),
-        trailing: GestureDetector(
-          onTap: onChangePlan,
-          child: Text(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return AppleSection(
+      children: [
+        AppleRow(
+          icon: Icons.workspace_premium_outlined,
+          title: plan,
+          subtitle: context.l10n.perCompletedRide,
+          trailing: Text(
             context.l10n.changePlan,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: kFontSmall,
               fontWeight: FontWeight.w600,
-              color: kBlue600,
+              color: isDark ? kDarkAccent : kBlue600,
             ),
           ),
+          onTap: onChangePlan,
         ),
-      ),
+      ],
     );
   }
 }
@@ -259,33 +233,37 @@ class _WeekSummaryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(kSpaceLG),
-      decoration: BoxDecoration(
-        color: kSurface,
-        borderRadius: BorderRadius.circular(kRadiusXL),
-        border: Border.all(color: kBorder),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _SummaryItem(
-              label: context.l10n.commissionPaid,
-              value: formatPkr(weeklyCommission),
-              valueColor: kRed600,
-            ),
+    return AppleSection(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(kSpaceLG),
+          child: Row(
+            children: [
+              Expanded(
+                child: _SummaryItem(
+                  label: context.l10n.commissionPaid,
+                  value: formatPkr(weeklyCommission),
+                  valueColor: _loss(context),
+                ),
+              ),
+              SizedBox(
+                width: 0.5,
+                height: 40,
+                child: ColoredBox(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                ),
+              ),
+              Expanded(
+                child: _SummaryItem(
+                  label: context.l10n.netEarnings,
+                  value: formatPkr(weeklyNet),
+                  valueColor: _gain(context),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(
-              width: 1, height: 40, child: ColoredBox(color: kBorder)),
-          Expanded(
-            child: _SummaryItem(
-              label: context.l10n.netEarnings,
-              value: formatPkr(weeklyNet),
-              valueColor: kOnlineGreen,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -307,9 +285,9 @@ class _SummaryItem extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: kFontCaption,
-            color: kText600,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
           textAlign: TextAlign.center,
         ),
@@ -334,125 +312,48 @@ class _TransactionsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: kSurface,
-        borderRadius: BorderRadius.circular(kRadiusXL),
-        border: Border.all(color: kBorder),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return AppleSection(
+      header: context.l10n.recentTransactions,
+      dividerIndent: appleIconDividerIndent,
+      children: [
+        if (transactions.isEmpty)
           Padding(
-            padding: const EdgeInsets.fromLTRB(
-                kSpaceLG, kSpaceLG, kSpaceLG, kSpaceSM),
+            padding: const EdgeInsets.all(kSpaceLG),
             child: Text(
-              context.l10n.recentTransactions,
-              style: const TextStyle(
-                fontSize: kFontBody,
-                fontWeight: FontWeight.w700,
-                color: kText900,
+              context.l10n.noTransactionsYet,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           ),
-          const Divider(height: 1, color: kBorder),
-          if (transactions.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(kSpaceLG),
-              child: Text(
-                context.l10n.noTransactionsYet,
-                style: const TextStyle(color: kTextSecondary),
-              ),
-            ),
-          ...transactions.map((tx) {
-            final txMap = tx as Map<String, dynamic>;
-            final amount = (txMap['amount_pkr'] as num?)?.toDouble() ?? 0;
-            final description = txMap['description'] as String? ?? '';
-            final createdAt = txMap['created_at'] as String? ?? '';
-            // By the sign of the amount, not the type: commissions are stored
-            // negative and an opening 'adjustment' can be either.
-            final isCredit = isCreditAmount(amount);
-            return _TransactionRow(
-              amount: amount,
-              description: description,
-              isCredit: isCredit,
-              date: createdAt,
-            );
-          }),
-        ],
-      ),
+        for (final tx in transactions)
+          _transactionRow(context, tx as Map<String, dynamic>),
+      ],
     );
   }
 }
 
-class _TransactionRow extends StatelessWidget {
-  final double amount;
-  final String description;
-  final bool isCredit;
-  final String date;
-
-  const _TransactionRow({
-    required this.amount,
-    required this.description,
-    required this.isCredit,
-    required this.date,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final amountColor = isCredit ? kOnlineGreen : kRed600;
-    final amountText = formatSignedPkr(amount);
-    final icon =
-        isCredit ? Icons.add_circle_outline : Icons.remove_circle_outline;
-
-    return Container(
-      constraints: const BoxConstraints(minHeight: kMinTapTarget),
-      padding: const EdgeInsets.symmetric(
-        horizontal: kSpaceLG,
-        vertical: kSpaceMD,
+/// One wallet movement: green and + when money came in, red and - when it went out.
+Widget _transactionRow(BuildContext context, Map<String, dynamic> tx) {
+  final amount = (tx['amount_pkr'] as num?)?.toDouble() ?? 0;
+  final description = tx['description'] as String? ?? '';
+  final createdAt = tx['created_at'] as String? ?? '';
+  // By the sign of the amount, not the type: commissions are stored
+  // negative and an opening 'adjustment' can be either.
+  final isCredit = isCreditAmount(amount);
+  final color = isCredit ? _gain(context) : _loss(context);
+  return AppleRow(
+    icon: isCredit ? Icons.add : Icons.remove,
+    iconColor: isCredit ? kOnlineGreen : kRed600,
+    title: description,
+    subtitle: createdAt,
+    trailing: Text(
+      formatSignedPkr(amount),
+      style: TextStyle(
+        fontSize: kFontSmall,
+        fontWeight: FontWeight.w700,
+        color: color,
       ),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: kBorder, width: 0.5)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: amountColor, size: 20),
-          const SizedBox(width: kSpaceMD),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  description,
-                  style: const TextStyle(
-                    fontSize: kFontSmall,
-                    fontWeight: FontWeight.w500,
-                    color: kText900,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  date,
-                  style: const TextStyle(
-                    fontSize: kFontCaption,
-                    color: kText400,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            amountText,
-            style: TextStyle(
-              fontSize: kFontSmall,
-              fontWeight: FontWeight.w700,
-              color: amountColor,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+    ),
+  );
 }

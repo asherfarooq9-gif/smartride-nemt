@@ -1,5 +1,5 @@
 import 'package:patient_app/l10n/l10n.dart';
-import 'package:flutter/cupertino.dart' show CupertinoSwitch;
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
@@ -169,7 +169,7 @@ class _AvailabilitySwitch extends StatelessWidget {
             ? const SizedBox(
                 width: 24,
                 height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2.5),
+                child: CupertinoActivityIndicator(),
               )
             : Semantics(
                 toggled: isOnline,
@@ -227,10 +227,7 @@ class GoOnlineButton extends ConsumerWidget {
                   ? const SizedBox(
                       width: 24,
                       height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: Colors.white,
-                      ),
+                      child: CupertinoActivityIndicator(color: Colors.white),
                     )
                   : Row(
                       mainAxisSize: MainAxisSize.min,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:patient_app/l10n/l10n.dart';
+import 'package:patient_app/shared/apple_list.dart';
 import 'package:smartride_core/smartride_core.dart' as core;
 
 /// Static Help and FAQ screen. No backend call; the content is bundled.
@@ -17,6 +18,10 @@ class HelpScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The plain emergency red is too dim to read on dark surfaces.
+    final alarm = Theme.of(context).brightness == Brightness.dark
+        ? core.kDarkRed
+        : core.kEmergencyRed;
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.helpTitle)),
       body: ListView(
@@ -27,20 +32,19 @@ class HelpScreen extends StatelessWidget {
             padding: const EdgeInsets.all(core.kSpaceLG),
             decoration: BoxDecoration(
               color: core.kEmergencyRed.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(core.kRadiusLG),
+              borderRadius: BorderRadius.circular(core.kRadiusMD),
               border:
                   Border.all(color: core.kEmergencyRed.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.warning_amber_rounded,
-                    color: core.kEmergencyRed),
+                Icon(Icons.warning_amber_rounded, color: alarm),
                 const SizedBox(width: core.kSpaceMD),
                 Expanded(
                   child: Text(
                     context.l10n.helpBanner,
-                    style: const TextStyle(
-                      color: core.kEmergencyRed,
+                    style: TextStyle(
+                      color: alarm,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -48,26 +52,40 @@ class HelpScreen extends StatelessWidget {
               ],
             ),
           ),
-          for (final faq in _faqsFor(context.l10n))
-            ExpansionTile(
-              leading: const Icon(Icons.help_outline),
-              title: Text(faq.question),
-              childrenPadding: const EdgeInsets.fromLTRB(
-                core.kSpaceLG,
-                0,
-                core.kSpaceLG,
-                core.kSpaceLG,
-              ),
-              expandedAlignment: Alignment.topLeft,
-              expandedCrossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  faq.answer,
-                  style:
-                      const TextStyle(color: core.kTextSecondary, height: 1.4),
+          AppleSection(
+            dividerIndent: core.kSpaceLG,
+            children: [
+              for (final faq in _faqsFor(context.l10n))
+                ExpansionTile(
+                  // No lines of its own: the section draws the dividers.
+                  shape: const Border(),
+                  collapsedShape: const Border(),
+                  tilePadding: const EdgeInsets.symmetric(
+                    horizontal: core.kSpaceLG,
+                  ),
+                  title: Text(
+                    faq.question,
+                    style: const TextStyle(fontSize: core.kFontBody),
+                  ),
+                  childrenPadding: const EdgeInsets.fromLTRB(
+                    core.kSpaceLG,
+                    0,
+                    core.kSpaceLG,
+                    core.kSpaceLG,
+                  ),
+                  expandedCrossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      faq.answer,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+            ],
+          ),
         ],
       ),
     );
@@ -80,77 +98,92 @@ class ContactScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(title: Text(context.l10n.contactTitle)),
+      appBar: AppBar(title: Text(l10n.contactTitle)),
       body: ListView(
-        padding: const EdgeInsets.all(core.kSpaceLG),
+        padding: const EdgeInsets.symmetric(vertical: core.kSpaceSM),
         children: [
-          Text(
-            context.l10n.contactIntro,
-            style: const TextStyle(color: core.kTextSecondary, height: 1.4),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              core.kSpaceXL,
+              core.kSpaceSM,
+              core.kSpaceXL,
+              core.kSpaceXS,
+            ),
+            child: Text(
+              l10n.contactIntro,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                height: 1.4,
+              ),
+            ),
           ),
-          const SizedBox(height: core.kSpaceLG),
-          _ContactCard(
-            icon: Icons.emergency,
-            iconColor: core.kEmergencyRed,
-            label: context.l10n.contactEmergency,
-            value: '1122',
-          ),
-          _ContactCard(
-            icon: Icons.support_agent,
-            label: context.l10n.contactHotline,
-            value: '+92 51 111 1122',
-          ),
-          _ContactCard(
-            icon: Icons.email_outlined,
-            label: context.l10n.contactEmail,
-            value: 'support@smartride.pk',
-          ),
-          _ContactCard(
-            icon: Icons.schedule,
-            label: context.l10n.contactHours,
-            value: context.l10n.contactHoursValue,
-            copyable: false,
+          AppleSection(
+            dividerIndent: appleIconDividerIndent,
+            children: [
+              _contactRow(
+                context,
+                icon: Icons.emergency,
+                iconColor: core.kEmergencyRed,
+                label: l10n.contactEmergency,
+                value: '1122',
+              ),
+              _contactRow(
+                context,
+                icon: Icons.support_agent,
+                label: l10n.contactHotline,
+                value: '+92 51 111 1122',
+              ),
+              _contactRow(
+                context,
+                icon: Icons.email_outlined,
+                label: l10n.contactEmail,
+                value: 'support@smartride.pk',
+              ),
+              _contactRow(
+                context,
+                icon: Icons.schedule,
+                label: l10n.contactHours,
+                value: l10n.contactHoursValue,
+                copyable: false,
+              ),
+            ],
           ),
         ],
       ),
     );
   }
-}
 
-class _ContactCard extends StatelessWidget {
-  const _ContactCard({
-    required this.icon,
-    required this.label,
-    required this.value,
-    this.iconColor,
-    this.copyable = true,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color? iconColor;
-  final bool copyable;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: core.kSpaceMD),
-      child: ListTile(
-        leading: Icon(icon, color: iconColor ?? core.kPatientPrimary),
-        title: Text(label),
-        subtitle: Text(value),
-        trailing: copyable ? const Icon(Icons.copy, size: 18) : null,
-        onTap: copyable
-            ? () {
-                Clipboard.setData(ClipboardData(text: value));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(context.l10n.copiedMessage(label))),
-                );
-              }
-            : null,
-      ),
+  /// A contact line. Tapping a copyable one puts its value on the clipboard.
+  Widget _contactRow(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String value,
+    Color? iconColor,
+    bool copyable = true,
+  }) {
+    final hint = Theme.of(context).brightness == Brightness.dark
+        ? core.kDarkText3
+        : core.kText400;
+    return AppleRow(
+      icon: icon,
+      iconColor: iconColor,
+      title: label,
+      subtitle: value,
+      trailing: copyable
+          ? Icon(Icons.copy_rounded,
+              size: 18, color: hint.withValues(alpha: 0.6))
+          : null,
+      onTap: copyable
+          ? () {
+              Clipboard.setData(ClipboardData(text: value));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(context.l10n.copiedMessage(label))),
+              );
+            }
+          : null,
     );
   }
 }

@@ -79,6 +79,8 @@ const Color kEmergencyDarkBg = Color(0xFF1A0808);
 // ── Status ────────────────────────────────────────────────────────────────────
 const Color kOnlineGreen = Color(0xFF2E7D32);
 const Color kAmberWarning = Color(0xFFE65100);
+// The track of an iOS switch when it is on. A graphic only, never text.
+const Color kIosGreen = Color(0xFF34C759);
 
 // ── Spacing (8-pt grid) ───────────────────────────────────────────────────────
 const double kSpaceXS = 4;

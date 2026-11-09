@@ -1,4 +1,5 @@
 import 'package:patient_app/l10n/l10n.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -208,7 +209,7 @@ class _LocationCard extends StatelessWidget {
                 ? const SizedBox(
                     width: 22,
                     height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2.5),
+                    child: CupertinoActivityIndicator(),
                   )
                 : Icon(
                     icon,
